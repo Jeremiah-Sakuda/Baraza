@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "baraza"
+version = "0.1.0"
+description = "Succession intelligence: an agent that reads an organization's mess, finds what it disagrees with, and conducts the exit interview."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+
+# Runtime dependencies.
+#
+# The compliance matrix may only name a framework that appears here. ADK is the
+# agent framework (BAR-020); google-genai is present because BAR-020's
+# pre-committed fallback scopes the interview service to direct GenAI SDK calls,
+# and because the Gemma pre-filter path calls it directly. If the fallback is
+# never taken, docs/framework-decision.md records that and the matrix still says
+# ADK, because that is what the interviewer imports.
+dependencies = [
+  "google-adk>=1.0.0",
+  "google-genai>=1.0.0",
+  "google-cloud-firestore>=2.16",
+  "google-cloud-storage>=2.16",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "pydantic>=2.6",
+  "httpx>=0.27",
+  "python-multipart>=0.0.9",
+  # Corpus readers. Each maps to one native format in fixtures/corpus/.
+  "pypdf>=4.2",              # scanned-constitution text layer
+  "pdfplumber>=0.11",        # layout-aware fallback for the skewed scan
+  "openpyxl>=3.1",           # headerless budget sheets
+  "python-docx>=1.1",        # meeting minutes
+  # Observability. OpenTelemetry-compliant spans over the reasoning chain.
+  "opentelemetry-sdk>=1.24",
+  "opentelemetry-exporter-gcp-trace>=1.6",
+  "opentelemetry-api>=1.24",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.1",
+  "pytest-asyncio>=0.23",
+  "hypothesis>=6.100",       # the fold-stability offset permutation test
+  "ruff>=0.4",
+  "mypy>=1.10",
+  "types-openpyxl",
+]
+
+[project.scripts]
+baraza = "baraza.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+  "emulator: requires the Firestore emulator (scripts/with_emulator.sh)",
+  "vertex: requires live Vertex AI credentials; excluded from the offline demo",
+  "slow: excluded from the per-session gate",
+]
+
+[tool.ruff]
+line-length = 90
+src = ["src", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+strict_optional = true
+warn_unused_ignores = true
+disallow_untyped_defs = false

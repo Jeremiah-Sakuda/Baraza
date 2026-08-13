@@ -1,0 +1,54 @@
+{
+  "_readme": [
+    "Every number Baraza displays anywhere — README, architecture diagram, video",
+    "overlay, console output — traces to an entry in this file, to a live query, or",
+    "to a script a judge can run. Nothing is typed into a document by hand.",
+    "",
+    "An entry is either the literal string \"not yet measured\" or an object carrying",
+    "value, provenance, run_id and date. There is no third form, and no placeholder",
+    "estimate: a plausible number where a measured one belongs is the defect this",
+    "file exists to prevent.",
+    "",
+    "provenance is one of:",
+    "  \"measured in-process\"  — timed inside a local process; NOT a deployed number",
+    "  \"measured deployed\"    — timed against the deployed Cloud Run surface",
+    "  \"not yet measured\"     — no run has produced this yet",
+    "",
+    "scripts/compliance.py fails the build on any entry that breaks this shape."
+  ],
+
+  "metrics": {
+    "gemma_prefilter_survival_rate": "not yet measured",
+    "gemma_prefilter_mode_used": "not yet measured",
+
+    "entity_scorecard_precision": "not yet measured",
+    "entity_scorecard_recall": "not yet measured",
+
+    "corpus_documents_ingested": "not yet measured",
+    "corpus_chunks_total": "not yet measured",
+    "claims_extracted_total": "not yet measured",
+    "claims_committed_total": "not yet measured",
+
+    "contradictions_detected_total": "not yet measured",
+    "contradiction_precision_on_manifest": "not yet measured",
+    "manifest_landmines_found": "not yet measured",
+
+    "agenda_items_generated": "not yet measured",
+    "agenda_items_retired_after_interview": "not yet measured",
+
+    "interview_first_token_ms_replay": "not yet measured",
+    "adaptation_mean_followup_depth_persona_a": "not yet measured",
+    "adaptation_mean_followup_depth_persona_b": "not yet measured",
+    "adaptation_in_session_change_turn_id": "not yet measured",
+
+    "scheduler_nightly_runs_completed": "not yet measured",
+    "scheduler_stub_to_real_replacement_date": "not yet measured",
+
+    "kill_survival_resumed_turn_index": "not yet measured",
+
+    "claim_embedding_count": "not yet measured",
+    "topk_bruteforce_scan_ms": "not yet measured"
+  },
+
+  "runs": []
+}

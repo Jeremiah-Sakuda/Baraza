@@ -1,0 +1,34 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Local secrets and per-machine config. Never committed; .env.example is the
+# documented shape and is committed.
+.env
+.env.local
+*-key.json
+service-account*.json
+application_default_credentials.json
+
+# Emulator scratch
+.firestore-emulator/
+firebase-debug.log
+
+# Generated corpus artifacts are committed (judges need them to run make demo);
+# intermediate render scratch is not.
+fixtures/corpus/.render/
+fixtures/corpus/*.tmp
+
+# Run outputs
+out/
+*.log
+!fixtures/**/*.jsonl
+
+.DS_Store
