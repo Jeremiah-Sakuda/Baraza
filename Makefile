@@ -10,9 +10,16 @@
 # one, because only one of those gets noticed.
 
 SHELL := /bin/bash
-PY ?= python3
 VENV ?= .venv
 BIN := $(VENV)/bin
+
+# Prefer the interpreter `make install` created. Without this, the documented
+# `make install && make demo` sequence installs the corpus readers into .venv
+# and then runs the demo under the *system* interpreter, which does not have
+# them. Observed: `make corpus` printed six SKIPPED round-trip lines and, before
+# the accompanying fix, still exited 0. Overridable — `make PY=python3.11 demo`.
+PY ?= $(shell [ -x $(BIN)/python ] && echo $(BIN)/python || echo python3)
+
 PYTHONPATH := src
 
 export PYTHONPATH
@@ -35,7 +42,7 @@ demo-agenda: ## Cold ingest -> disputed ledger + interview agenda, unattended
 
 .PHONY: demo-interview
 demo-interview: ## Interview loop. Add REPLAY=1 to feed canned answers on a timer
-	@$(PY) -m baraza.cli demo-interview $(if $(REPLAY),--replay,) $(if $(PERSONA),--persona $(PERSONA),)
+	@$(PY) -m baraza.cli demo-interview --offline $(if $(REPLAY),--replay,) $(if $(PERSONA),--persona $(PERSONA),)
 
 .PHONY: verify-manifest
 verify-manifest: ## Prints "found N of N planted problems" AND the misses
@@ -83,8 +90,8 @@ bootstrap: ## Provision GCP: APIs, Firestore, service accounts, Jobs, Scheduler
 	@scripts/bootstrap_gcp.sh
 
 .PHONY: teardown
-teardown: ## Remove everything bootstrap created. Safe to run repeatedly
-	@scripts/teardown.sh
+teardown: ## Remove everything bootstrap created. Safe to run repeatedly. Needs CONFIRM=--yes-destroy
+	@scripts/teardown.sh $(CONFIRM)
 
 .PHONY: gate
 gate: ## The mechanical phase gate: compliance + tests + named ACs

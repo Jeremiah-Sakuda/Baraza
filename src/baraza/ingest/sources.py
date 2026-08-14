@@ -32,7 +32,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, Optional, Tuple
 
 from baraza.schema.claim import Anchor
 from baraza.schema.temporal import EpochMillis, to_epoch_millis

@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 from baraza.fold.graph import GraphState
 from baraza.reconcile.ledger import DisputedLedger

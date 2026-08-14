@@ -31,7 +31,7 @@ from baraza.ingest.chunking import Chunk
 from baraza.ingest.sources import Source, SourceRegistry
 from baraza.llm import LLMClient
 from baraza.schema.claim import Anchor, CitationError, Claim, Provenance, Tier
-from baraza.schema.temporal import TemporalError, to_epoch_millis
+from baraza.schema.temporal import TemporalError
 from baraza.schema.visibility import Visibility
 
 __all__ = ["ExtractionResult", "ClaimExtractor", "EXTRACTION_SCHEMA_NAME"]

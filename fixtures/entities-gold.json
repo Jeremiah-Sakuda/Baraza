@@ -1,0 +1,262 @@
+{
+  "_readme": [
+    "Hand-labelled sameAs gold for the entity scorecard.",
+    "",
+    "Written against fixtures/corpus/ — what the corpus actually says — and NOT",
+    "against what the alias pass can currently reach. That distinction is the",
+    "whole value of the file. A gold set trimmed to the rules' capabilities",
+    "measures nothing: it reports 100% and means 'the rules agree with",
+    "themselves'. Several pairs below are known to be unreachable by",
+    "AliasPass._compare's normalization rules and are expected to score as false",
+    "negatives until the ambiguous-residue pass or a human confirms them. The",
+    "'reachable' field records that prediction so a drop in the measured rate can",
+    "be attributed rather than argued about.",
+    "",
+    "Entity IDs follow ingest/extract.py::_entity_key — 'ent:' + the surface form",
+    "lowercased with whitespace collapsed to hyphens. They are deliberately naive;",
+    "normalizing them at extraction time would hide the aliasing problem this file",
+    "exists to measure.",
+    "",
+    "Two label sets, and the negative one is load-bearing:",
+    "  same_as   pairs that ARE the same thing. Scored as true positives.",
+    "  distinct  pairs that are NOT, and that a similarity heuristic wants to",
+    "            merge anyway. A proposal on any of these is a false positive and",
+    "            two of them (L-05, L-10) are planted landmines with consequences",
+    "            spelled out in fixtures/MANIFEST.md.",
+    "",
+    "Loading, for EntityScorecard.score(proposed, gold):",
+    "  gold = [tuple(e['pair']) for e in json.load(open(path))['same_as']]",
+    "",
+    "No real person, member, or organization appears here. Every handle and every",
+    "office belongs to the fictional organization described in",
+    "fixtures/corpus/BIBLE.md."
+  ],
+
+  "corpus": "fixtures/corpus/",
+  "seed": "fixtures/corpus/BIBLE.md",
+  "labelled_by": "hand, against the generated corpus",
+
+  "entities": [
+    {
+      "entity_id": "ent:treasurer",
+      "kind": "office",
+      "surface_forms": ["Treasurer", "the Treasurer"],
+      "note": "signatory on every account; holds the disputed signing authority"
+    },
+    {
+      "entity_id": "ent:assistant-treasurer",
+      "kind": "office",
+      "surface_forms": ["Assistant Treasurer", "the Assistant Treasurer"],
+      "note": "created by the 2019 amendment; explicitly barred from disbursing"
+    },
+    {
+      "entity_id": "ent:president",
+      "kind": "office",
+      "surface_forms": ["President", "the President"]
+    },
+    {
+      "entity_id": "ent:vice-president",
+      "kind": "office",
+      "surface_forms": ["Vice President"]
+    },
+    {
+      "entity_id": "ent:archivist",
+      "kind": "office",
+      "surface_forms": ["Archivist", "the Archivist"]
+    },
+    {
+      "entity_id": "ent:secretary",
+      "kind": "office",
+      "surface_forms": ["Secretary", "the Secretary"]
+    },
+    {
+      "entity_id": "ent:equipment-steward",
+      "kind": "office",
+      "surface_forms": ["Equipment Steward"]
+    },
+    {
+      "entity_id": "ent:sablewick",
+      "kind": "person",
+      "surface_forms": ["sablewick"],
+      "note": "Treasurer FY21-22, Archivist FY22-24; account lost July 2024"
+    },
+    {
+      "entity_id": "ent:sable.w",
+      "kind": "person",
+      "surface_forms": ["sable.w"],
+      "note": "the same human as sablewick, new account from August 2024"
+    },
+    {
+      "entity_id": "ent:sablewood",
+      "kind": "person",
+      "surface_forms": ["sablewood"],
+      "note": "Equipment Steward FY25. A DIFFERENT human, one character apart"
+    },
+    {
+      "entity_id": "ent:kestrel9",
+      "kind": "person",
+      "surface_forms": ["kestrel9"],
+      "note": "the departing officer the demo interviews"
+    },
+    {
+      "entity_id": "ent:vell.ory",
+      "kind": "person",
+      "surface_forms": ["vell.ory"]
+    },
+    {
+      "entity_id": "ent:operating-account",
+      "kind": "account",
+      "surface_forms": ["operating account", "the operating account", "operating acct"]
+    },
+    {
+      "entity_id": "ent:spring-appeal-fund",
+      "kind": "account",
+      "surface_forms": ["Spring Appeal Fund", "the appeal fund", "restricted fund"],
+      "note": "restricted; untouched since 2019"
+    },
+    {
+      "entity_id": "ent:spring-appeal",
+      "kind": "event",
+      "surface_forms": ["Spring Appeal", "the spring appeal"],
+      "note": "the fundraiser, not the fund it pays into"
+    },
+    {
+      "entity_id": "ent:lantern-lecture-series",
+      "kind": "programme",
+      "surface_forms": ["Lantern Lecture Series", "lantern series", "the Lantern evenings"]
+    },
+    {
+      "entity_id": "ent:equipment-lending-library",
+      "kind": "programme",
+      "surface_forms": ["equipment lending library", "lending library"]
+    },
+    {
+      "entity_id": "ent:meridian-society",
+      "kind": "org",
+      "surface_forms": ["The Meridian Society", "the Society", "MERIDIAN SOC"]
+    }
+  ],
+
+  "same_as": [
+    {
+      "pair": ["ent:treasurer", "ent:the-treasurer"],
+      "why": "the same office; the article is not part of the name",
+      "evidence": ["minutes-2021-11-09#¶9", "constitution#Article III Section 3"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:president", "ent:the-president"],
+      "why": "the same office",
+      "evidence": ["minutes-2021-11-09#¶7"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:secretary", "ent:the-secretary"],
+      "why": "the same office",
+      "evidence": ["minutes-2023-10-10#¶9"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:archivist", "ent:the-archivist"],
+      "why": "the same office",
+      "evidence": ["minutes-2023-10-10#¶7"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:meridian-society", "ent:the-meridian-society"],
+      "why": "the organization's own name, with and without the article",
+      "evidence": ["constitution#Article I Section 1"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:spring-appeal", "ent:the-spring-appeal"],
+      "why": "the fundraiser, with and without the article",
+      "evidence": ["notes-postmortem#L5-L8"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:operating-account", "ent:the-operating-account"],
+      "why": "the everyday account at the campus credit union",
+      "evidence": ["minutes-2023-09-12#¶6", "notes-handover#L5-L12"],
+      "reachable": "yes — identical after normalization; auto-confirmed"
+    },
+    {
+      "pair": ["ent:lantern-series", "ent:lantern-lecture-series"],
+      "why": "the chat and the budget sheet drop the middle word",
+      "evidence": ["budget-workbook#Sheet1!A4", "constitution#Article I Section 2"],
+      "reachable": "yes — token subset; proposed, needs human confirmation"
+    },
+    {
+      "pair": ["ent:lending-library", "ent:equipment-lending-library"],
+      "why": "the same programme, short form used in the notes",
+      "evidence": ["notes-inventory#L1-L3"],
+      "reachable": "yes — token subset; proposed, needs human confirmation"
+    },
+    {
+      "pair": ["ent:sablewick", "ent:sable.w"],
+      "why": "one human across an account change in August 2024 — the Archivist role runs uninterrupted across it and the new account says so in the chat",
+      "evidence": ["gm-officers#msg:1722359700", "gm-officers#msg:1724083320"],
+      "reachable": "NO — normalizes to 'sablewick' vs 'sable w'; neither identical nor a token subset, and no shared surface form. Expected false negative for the rule pass. Landmine L-10."
+    },
+    {
+      "pair": ["ent:operating-acct", "ent:operating-account"],
+      "why": "an abbreviation in the handover note",
+      "evidence": ["notes-handover#L5-L12"],
+      "reachable": "NO — 'acct' is not a token subset of 'account'. Expected false negative."
+    },
+    {
+      "pair": ["ent:meridian-soc", "ent:meridian-society"],
+      "why": "the workbook's A1 label, truncated by whoever made the sheet in 2016",
+      "evidence": ["budget-workbook#Sheet1!A1"],
+      "reachable": "NO — truncation, not a subset. Expected false negative."
+    }
+  ],
+
+  "distinct": [
+    {
+      "pair": ["ent:treasurer", "ent:assistant-treasurer"],
+      "why": "two offices that differ by one token and by the entire question of who may sign a cheque",
+      "consequence": "merged, the November 2024 $600 disbursement reads as authorized under the 2021 motion and the corpus's highest-value finding disappears",
+      "landmine": "L-05",
+      "guarded_by": "AliasPass._compare's distinguishing-modifier check, before any similarity rule"
+    },
+    {
+      "pair": ["ent:sablewick", "ent:sablewood"],
+      "why": "two different humans, one character apart; the chat says so explicitly",
+      "consequence": "merged, an Assistant Treasurer's disbursement is attributed to a former Treasurer and the succession record is silently wrong",
+      "landmine": "L-10",
+      "evidence": ["gm-officers#msg:1727212440"]
+    },
+    {
+      "pair": ["ent:spring-appeal", "ent:spring-appeal-fund"],
+      "why": "the fundraiser and the restricted account it pays into. The fund has not been drawn on since 2019; the appeal runs every year",
+      "consequence": "merged, 'the appeal fund has not been touched since 2019' becomes a claim about the event, and the postmortem's central question — whether the fund could have covered the gap — stops being askable",
+      "reachable": "this pair IS proposed by the token-subset rule and is the false positive that keeps the measured precision honest"
+    },
+    {
+      "pair": ["ent:president", "ent:vice-president"],
+      "why": "two offices",
+      "guarded_by": "distinguishing modifier 'vice'"
+    },
+    {
+      "pair": ["ent:archivist", "ent:acting-archivist"],
+      "why": "the office and a temporary holder of it",
+      "guarded_by": "distinguishing modifier 'acting'"
+    },
+    {
+      "pair": ["ent:treasurer", "ent:former-treasurer"],
+      "why": "an office and a description of someone who used to hold it",
+      "guarded_by": "distinguishing modifier 'former'"
+    },
+    {
+      "pair": ["ent:kestrel9", "ent:vell.ory"],
+      "why": "two humans who each held the Treasurer office in consecutive years",
+      "consequence": "merged, the FY24/FY25 false-positive pair (L-02) collapses into one subject holding contradictory authority, and the temporal gate is asked the wrong question"
+    },
+    {
+      "pair": ["ent:lantern-lecture-series", "ent:spring-appeal"],
+      "why": "the programme and the fundraiser that funds it",
+      "consequence": "merged, the FY24 speaker-fee overrun and the appeal's shortfall become the same line item"
+    }
+  ]
+}

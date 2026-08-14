@@ -1,0 +1,80 @@
+# Cloud Run Job image — the nightly reconciler (BAR-021/BAR-321) and the
+# ingestion Job (BAR-410).
+#
+# Build context is the repository root:
+#   docker build -f deploy/Dockerfile.job -t <image> .
+#
+# Two properties this file is responsible for, both of which fail silently if
+# nobody is watching:
+#
+# 1. **No credentials in the image.** Nothing here copies a key file, and
+#    `.dockerignore` at the repository root excludes `*-key.json`,
+#    `service-account*.json`, and `.env` from the build context entirely — so a
+#    stray key on a developer's machine cannot be baked in by a `COPY . .` that
+#    somebody adds later. Cloud Run supplies credentials through the attached
+#    service account's metadata server; the container never holds one.
+# 2. **Non-root at runtime.** A Job that can write to its own filesystem as root
+#    is a Job whose compromised dependency can rewrite its own entrypoint.
+
+# ------------------------------------------------------------------- builder
+
+FROM python:3.11-slim AS builder
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /build
+
+# Build into a venv rather than the system site-packages so the runtime stage
+# copies one self-contained directory and inherits no build toolchain.
+RUN python -m venv /opt/baraza
+ENV PATH="/opt/baraza/bin:${PATH}"
+
+# README* is globbed rather than named: pyproject declares `readme = "README.md"`
+# and setuptools refuses to build without it, but that README is BAR-501's
+# deliverable and lands in a later session. A glob that matches nothing is fine
+# as long as one source in the COPY does match, and the placeholder below keeps
+# the build honest instead of blocking the deploy lane on a docs task.
+COPY pyproject.toml README* ./
+RUN [ -f README.md ] || printf '%s\n' \
+    'Placeholder. The real README is BAR-501 and is written in a later session.' \
+    > README.md
+
+COPY src ./src
+RUN pip install --no-cache-dir .
+
+# ------------------------------------------------------------------- runtime
+
+FROM python:3.11-slim AS runtime
+
+# System user, no login shell, no home write beyond what it needs. UID is
+# pinned so the numeric owner in the image matches whatever the platform
+# reports, rather than depending on whichever UID useradd picks that day.
+RUN useradd --system --uid 10001 --user-group --no-create-home \
+      --shell /usr/sbin/nologin baraza
+
+ENV PATH="/opt/baraza/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    BARAZA_JOB=reconcile \
+    BARAZA_RECONCILE_MODE=stub
+
+COPY --from=builder /opt/baraza /opt/baraza
+
+WORKDIR /srv/baraza
+
+# The corpus travels in the image rather than in a bucket. At this cardinality a
+# bucket would be one more IAM surface and one more failure mode in exchange for
+# nothing — the fixtures are a few megabytes and are already versioned with the
+# code that reads them.
+COPY fixtures ./fixtures
+
+COPY deploy/entrypoint-job.sh /usr/local/bin/baraza-job
+RUN chmod 0555 /usr/local/bin/baraza-job \
+ && mkdir -p /srv/baraza/out \
+ && chown -R 10001:10001 /srv/baraza/out
+
+USER 10001:10001
+
+ENTRYPOINT ["/usr/local/bin/baraza-job"]

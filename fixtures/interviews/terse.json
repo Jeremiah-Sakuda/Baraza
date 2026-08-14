@@ -1,0 +1,61 @@
+{
+  "schema": "baraza.persona.v1",
+  "_note": [
+    "INPUT fixture. Hand-authored on purpose.",
+    "",
+    "This file is the canned side of the replay: what a departing officer says.",
+    "The OUTPUT of a replay run — fixtures/transcripts/terse.json — is generated",
+    "by an actual run and is never hand-authored or hand-edited. Keeping the two",
+    "directories separate is the whole distinction BAR-330 AC 1 turns on.",
+    "",
+    "Every answer below is under 180 characters, which is",
+    "baraza.interview.interviewer.TERSE_CHAR_THRESHOLD. That is not decoration:",
+    "it is what drives the follow-up budget UP during the run. The harness",
+    "re-checks it at load time and refuses to run if it stops being true, because",
+    "a persona that quietly drifted across the threshold would still produce a",
+    "number — just not a number about anything.",
+    "",
+    "No real person, member, or organization is named anywhere in this file. The",
+    "speaker is a role."
+  ],
+
+  "persona_id": "persona-terse",
+  "role": "outgoing treasurer",
+  "style": "terse",
+  "description": "Answers in fragments. Cooperative, not evasive — this is someone doing you a favour between two other things, and the detail has to be drawn out of them one clarifier at a time.",
+
+  "typing": {
+    "chars_per_minute": 240,
+    "min_pause_ms": 400,
+    "max_pause_ms": 15000
+  },
+
+  "answers": [
+    { "text": "Two signers. Me and the president." },
+    { "text": "The bylaws say three. We only ever used two." },
+    { "text": "Advisor countersigned anything over five hundred." },
+    { "text": "Dues were forty. The sheet still says thirty-five." },
+    { "text": "Nobody updated the sheet after the vote." },
+    { "text": "It was a typo. The real number is in the bank export." },
+    { "text": "We switched banks in January. Same two signers." },
+    { "text": "Quorum was a third of members. Not half." },
+    { "text": "Reimbursements came to me first, then the advisor." },
+    { "text": "That vendor was dropped two years ago." },
+    { "text": "Only for spring. Fall was different." },
+    { "text": "The card was in the president's name." },
+    { "text": "Honestly, nobody tracked that." },
+    { "text": "Closer to eight hundred, I think." },
+    { "text": "That form stopped being required." },
+    { "text": "I don't remember. Sorry." },
+    { "text": "Ask the incoming treasurer. They have the folder." },
+    { "text": "It's in the October minutes." },
+    { "text": "We never wrote it down." },
+    { "text": "Same as the year before." },
+    { "text": "No. That never got approved." },
+    { "text": "The advisor kept the second key." },
+    { "text": "Petty cash was fifty, not a hundred." },
+    { "text": "Both are right. The rule changed midyear." },
+    { "text": "It went through the events team, not me." },
+    { "text": "One account. It just looks like two." }
+  ]
+}

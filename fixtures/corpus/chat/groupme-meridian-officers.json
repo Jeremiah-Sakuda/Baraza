@@ -1,0 +1,440 @@
+{
+  "export_note": "Timestamps are epoch seconds unless a message was re-imported from an older archive, in which case they are milliseconds. Per-segment tz_offset records the local offset the segment was captured under; it is metadata, not a sort key.",
+  "group_id": "gm-674f12e6b1ef",
+  "messages": [
+    {
+      "created_at": 1474409040,
+      "id": "m1474409040",
+      "name": "corvid.ash",
+      "segment_id": "seg-2016-fall",
+      "sender_type": "user",
+      "text": "ok we are official. student activities approved the constitution today, filed 14 sept"
+    },
+    {
+      "created_at": 1474409220,
+      "id": "m1474409220",
+      "name": "pell.marrow",
+      "segment_id": "seg-2016-fall",
+      "sender_type": "user",
+      "text": "dues are 15 a semester, i have the cash box"
+    },
+    {
+      "created_at": 1474471860,
+      "id": "m1474471860",
+      "name": "wisk",
+      "segment_id": "seg-2016-fall",
+      "sender_type": "user",
+      "text": "minutes template is in the shared folder, please actually use it"
+    },
+    {
+      "created_at": 1478128320,
+      "id": "m1478128320",
+      "name": "pell.marrow",
+      "segment_id": "seg-2016-fall",
+      "sender_type": "user",
+      "text": "reminder anything over 250 needs both me and corvid.ash to sign. that is in the constitution, article 7"
+    },
+    {
+      "created_at": 1487097900,
+      "id": "m1487097900",
+      "name": "corvid.ash",
+      "segment_id": "seg-2016-fall",
+      "sender_type": "user",
+      "text": "first lantern of the spring is booked. 400 speaker fee"
+    },
+    {
+      "created_at": 1520370120,
+      "id": "m1520370120",
+      "name": "oriole.k",
+      "segment_id": "seg-2018-spring",
+      "sender_type": "user",
+      "text": "dues still 15, we voted in september, nobody move"
+    },
+    {
+      "created_at": 1524168900,
+      "id": "m1524168900",
+      "name": "wisk",
+      "segment_id": "seg-2018-spring",
+      "sender_type": "user",
+      "text": "archive box is in the office closet. there is a paper constitution in it. nobody has opened it since i joined"
+    },
+    {
+      "created_at": 1525279200,
+      "id": "m1525279200",
+      "name": "corvid.ash",
+      "segment_id": "seg-2018-spring",
+      "sender_type": "user",
+      "text": "last one from me, handing the group over. good luck"
+    },
+    {
+      "created_at": 1568764200,
+      "id": "m1568764200",
+      "name": "harrowgate",
+      "segment_id": "seg-2019-fall",
+      "sender_type": "user",
+      "text": "taking over the books from dunmoss. the sheet has no headers and i cannot tell what column B is"
+    },
+    {
+      "created_at": 1568765040,
+      "id": "m1568765040",
+      "name": "dunmoss",
+      "segment_id": "seg-2019-fall",
+      "sender_type": "user",
+      "text": "B is the per person rate, C is how many people, D is the total. i inherited it like that"
+    },
+    {
+      "created_at": 1570573800,
+      "id": "m1570573800",
+      "name": "brightmoor",
+      "segment_id": "seg-2019-fall",
+      "sender_type": "user",
+      "text": "new assistant treasurer here. the 2019 amendment says i help with the books and do not sign. noted"
+    },
+    {
+      "created_at": 1573766280,
+      "id": "m1573766280",
+      "name": "harrowgate",
+      "segment_id": "seg-2019-fall",
+      "sender_type": "user",
+      "text": "dues went to 20 this year btw"
+    },
+    {
+      "created_at": 1635893700,
+      "id": "m1635893700",
+      "name": "sablewick",
+      "segment_id": "seg-2021-fall",
+      "sender_type": "user",
+      "text": "the november invoice sat for 11 days because i could not get quillon.b to sign before break. this is untenable"
+    },
+    {
+      "created_at": 1636494000,
+      "id": "m1636494000",
+      "name": "quillon.b",
+      "segment_id": "seg-2021-fall",
+      "sender_type": "user",
+      "text": "motion carried tonight 7-2. treasurer can sign alone up to 1000"
+    },
+    {
+      "created_at": 1636494240,
+      "id": "m1636494240",
+      "name": "brightmoor",
+      "segment_id": "seg-2021-fall",
+      "sender_type": "user",
+      "text": "did anyone check whether that needs a constitutional amendment"
+    },
+    {
+      "created_at": 1636494360,
+      "id": "m1636494360",
+      "name": "tamsyn.qv",
+      "segment_id": "seg-2021-fall",
+      "sender_type": "user",
+      "text": "a motion of the membership is enough, we did it properly"
+    },
+    {
+      "created_at": 1636552920,
+      "id": "m1636552920",
+      "name": "sablewick",
+      "segment_id": "seg-2021-fall",
+      "sender_type": "user",
+      "text": "credit union informed. done"
+    },
+    {
+      "created_at": 1651605600,
+      "id": "m1651605600",
+      "name": "sablewick",
+      "segment_id": "seg-2021-fall",
+      "sender_type": "user",
+      "text": "spring appeal netted 1250 this year, best since 2017"
+    },
+    {
+      "created_at": 1694563080,
+      "id": "m1694563080",
+      "name": "vell.ory",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "seated tonight. dues are 25 a semester for 23-24, same as last year"
+    },
+    {
+      "created_at": 1695669120,
+      "id": "m1695669120",
+      "name": "kestrel9",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "collecting at the door thursday. bring exact change, 25 each"
+    },
+    {
+      "created_at": 1696980600,
+      "id": "m1696980600",
+      "name": "vell.ory",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "motion passed, dues go to 40 for spring. fall stays 25 since people already paid"
+    },
+    {
+      "created_at": 1697036700,
+      "id": "m1697036700",
+      "name": "orinth.vay",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "so what do i put on the roster"
+    },
+    {
+      "created_at": 1697036940,
+      "id": "m1697036940",
+      "name": "vell.ory",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "25 for fall, 40 for spring. i will fix the sheet"
+    },
+    {
+      "created_at": 1700001660,
+      "id": "m1700001660",
+      "name": "vell.ory",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "dues are still 25 this semester, stop telling people 40"
+    },
+    {
+      "created_at": 1701368520,
+      "id": "m1701368520",
+      "name": "kestrel9",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "equipment fund is at 640 after the projector lamp"
+    },
+    {
+      "created_at": 1701368760,
+      "id": "m1701368760",
+      "name": "kestrel9",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "scratch that, 640 was before the lamp. it is 415"
+    },
+    {
+      "created_at": 1707251580,
+      "id": "m1707251580",
+      "name": "vell.ory",
+      "segment_id": "seg-2023-fall",
+      "sender_type": "user",
+      "text": "signed the february speaker invoice myself, 780. that is under 1000 so we are fine"
+    },
+    {
+      "created_at": 1722359700,
+      "id": "m1722359700",
+      "name": "sablewick",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "losing this account, phone died and i cannot get back in. new handle incoming"
+    },
+    {
+      "created_at": 1724083320,
+      "id": "m1724083320",
+      "name": "sable.w",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "it is me, sablewick. still archivist. someone re-add me to the drive"
+    },
+    {
+      "created_at": 1725368400,
+      "id": "m1725368400",
+      "name": "Meridian Reminder Bot",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "bot",
+      "text": "Reminder: dues are due by the end of the second week of term."
+    },
+    {
+      "created_at": 1727212260,
+      "id": "m1727212260",
+      "name": "sablewood",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "equipment steward for the year, taking the chair inventory on monday"
+    },
+    {
+      "created_at": 1727212440,
+      "id": "m1727212440",
+      "name": "kestrel9",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "welcome sablewood. note for everyone, sablewood and sable.w are two different people"
+    },
+    {
+      "created_at": 1729021620000,
+      "id": "m1729021620000",
+      "name": "kestrel9",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "re-imported from the old archive export, keeping it for the record: lantern series line is 2400 for the year"
+    },
+    {
+      "created_at": 1731449280,
+      "id": "m1731449280",
+      "name": "sable.w",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "signed the venue deposit today, 600. bank did not ask for a second signature"
+    },
+    {
+      "created_at": 1731449700,
+      "id": "m1731449700",
+      "name": "orinth.vay",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "you are assistant treasurer, are you allowed to do that"
+    },
+    {
+      "created_at": 1731449940,
+      "id": "m1731449940",
+      "name": "sable.w",
+      "segment_id": "seg-2024-fall",
+      "sender_type": "user",
+      "text": "nobody stopped me. it went through"
+    },
+    {
+      "created_at": 1741118400,
+      "id": "m1741118400",
+      "name": "kestrel9",
+      "segment_id": "seg-2025-spring",
+      "sender_type": "user",
+      "text": "appeal fund has not been touched since 2019 as far as i can tell"
+    },
+    {
+      "created_at": 1744137300,
+      "id": "m1744137300",
+      "name": "sablewood",
+      "segment_id": "seg-2025-spring",
+      "sender_type": "user",
+      "text": "four chairs cracked, rental price is 40 each to replace"
+    },
+    {
+      "created_at": 1746054300,
+      "id": "m1746054300",
+      "name": "vell.ory",
+      "segment_id": "seg-2025-spring",
+      "sender_type": "user",
+      "text": "postmortem is in the notes folder. short version, we underpriced the appeal"
+    },
+    {
+      "created_at": 1750777920,
+      "id": "m1750777920",
+      "name": "vell.ory",
+      "segment_id": "seg-2025-spring",
+      "sender_type": "user",
+      "text": "done here. kestrel9 has the books"
+    },
+    {
+      "created_at": 1777312800,
+      "id": "m1777312800",
+      "name": "Meridian Reminder Bot",
+      "segment_id": "seg-2026-spring",
+      "sender_type": "bot",
+      "text": "Reminder: officer transition paperwork is due to student activities by 15 May."
+    },
+    {
+      "created_at": 1777683600,
+      "id": "m1777683600",
+      "name": "kestrel9",
+      "segment_id": "seg-2026-may",
+      "sender_type": "user",
+      "text": "last officers meeting of my term. i will write up what i know but honestly most of it is in my head"
+    },
+    {
+      "created_at": 1777683840,
+      "id": "m1777683840",
+      "name": "orinth.vay",
+      "segment_id": "seg-2026-may",
+      "sender_type": "user",
+      "text": "please write down the signing thing. nobody agrees on what the rule is"
+    },
+    {
+      "created_at": 1777684140,
+      "id": "m1777684140",
+      "name": "kestrel9",
+      "segment_id": "seg-2026-may",
+      "sender_type": "user",
+      "text": "the rule is i sign up to 1000. that has been true since before i got here"
+    },
+    {
+      "created_at": 1777689000,
+      "id": "m1777689000",
+      "name": "thren.mo",
+      "segment_id": "seg-2026-may",
+      "sender_type": "user",
+      "text": "i have the treasurer job next year and i have read none of this"
+    },
+    {
+      "created_at": 1777731300,
+      "id": "m1777731300",
+      "name": "sable.w",
+      "segment_id": "seg-2026-may",
+      "sender_type": "user",
+      "text": "archive box is still in the office closet. the paper constitution is in it"
+    }
+  ],
+  "name": "Meridian Society - Officers",
+  "segments": [
+    {
+      "message_count": 5,
+      "note": "founding term, exported from the original group",
+      "segment_id": "seg-2016-fall",
+      "segment_started_at_iso": "2016-09-20T22:04:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 3,
+      "note": "-",
+      "segment_id": "seg-2018-spring",
+      "segment_started_at_iso": "2018-03-06T21:02:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 4,
+      "note": "-",
+      "segment_id": "seg-2019-fall",
+      "segment_started_at_iso": "2019-09-17T23:50:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 6,
+      "note": "the single-signature motion",
+      "segment_id": "seg-2021-fall",
+      "segment_started_at_iso": "2021-11-02T22:55:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 9,
+      "note": "the dues dispute",
+      "segment_id": "seg-2023-fall",
+      "segment_started_at_iso": "2023-09-12T23:58:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 9,
+      "note": "handle change, bot joins, authority creep",
+      "segment_id": "seg-2024-fall",
+      "segment_started_at_iso": "2024-07-30T17:15:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 4,
+      "note": "-",
+      "segment_id": "seg-2025-spring",
+      "segment_started_at_iso": "2025-03-04T20:00:00+00:00",
+      "tz_offset": "+00:00"
+    },
+    {
+      "message_count": 1,
+      "note": "-",
+      "segment_id": "seg-2026-spring",
+      "segment_started_at_iso": "2026-04-27T13:00:00-05:00",
+      "tz_offset": "-05:00"
+    },
+    {
+      "message_count": 5,
+      "note": "EXPORT SEGMENT CAPTURED IN CENTRAL DAYLIGHT TIME - L-01",
+      "segment_id": "seg-2026-may",
+      "segment_started_at_iso": "2026-05-01T20:00:00-05:00",
+      "tz_offset": "-05:00"
+    }
+  ]
+}

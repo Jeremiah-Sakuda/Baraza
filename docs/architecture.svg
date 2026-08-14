@@ -1,0 +1,265 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1160" width="1300" height="1160" role="img" aria-labelledby="svg-title svg-desc">
+  <title id="svg-title">Baraza architecture</title>
+  <desc id="svg-desc">Corpus in four native formats flows into a Cloud Run ingestion Job: chunking, a Gemma relevance pre-filter, Gemini fast-role claim extraction, validation gates and an entity alias pass. Claims are appended to an append-only Firestore event log. Contradiction detection runs on write against a blocked, temporally gated set of at most twenty claims with a single Gemini reasoning-role call. The log folds into a graph state, which produces a disputed ledger and an interview agenda. The exit interview service on Cloud Run reaches the divergence turn, then approval promotes claims and records a visibility choice. Below a dashed visibility boundary, the successor service reads only claims that are committed and readable by the successor. Cloud Scheduler triggers the nightly reconcile Cloud Run Job, whose events are all marked as scheduled.</desc>
+
+  <style>
+    /* Theme handling, and why it is written the long way.
+       Colours are declared as literal values, not CSS custom properties. A
+       renderer that does not support var() — librsvg and most thumbnailers —
+       resolves an unsupported stroke to the initial value, which is `none`,
+       and silently drops every box on the page while keeping the text. That
+       failure was observed, not theorised. Literals degrade to the light theme
+       instead, which is correct on the white background such renderers use.
+       Browsers, including GitHub's, honour the media query below and flip to
+       light ink. Every shape is fill:none, so the page background shows
+       through in either theme. */
+    text { font-family: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .box   { fill: none; stroke: #1f2328; stroke-width: 1.5; }
+    .heavy { fill: none; stroke: #1f2328; stroke-width: 3; }
+    .bound { fill: none; stroke: #1f2328; stroke-width: 3; stroke-dasharray: 9 6; }
+    .note  { fill: none; stroke: #59636e; stroke-width: 1; stroke-dasharray: 3 4; }
+    .arw   { fill: none; stroke: #1f2328; stroke-width: 1.5; marker-end: url(#head); }
+    .plain { fill: none; stroke: #1f2328; stroke-width: 1.5; }
+    .h1    { font-size: 20px; font-weight: 700; }
+    .h2    { font-size: 13.5px; font-weight: 650; }
+    .lane  { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; fill: #59636e; }
+    .t     { font-size: 11px; fill: #1f2328; }
+    .s     { font-size: 11px; fill: #59636e; }
+    .edge  { font-size: 10.5px; fill: #59636e; }
+    #head path { fill: #1f2328; }
+
+    @media (prefers-color-scheme: dark) {
+      text, .t { fill: #e6edf3; }
+      .s, .lane, .edge { fill: #9198a1; }
+      .box, .heavy, .bound, .arw, .plain { stroke: #e6edf3; }
+      .note { stroke: #9198a1; }
+      #head path { fill: #e6edf3; }
+    }
+  </style>
+
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+    <marker id="headdim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <!-- ================================================================ header -->
+  <text class="h1" x="60" y="40">Baraza — architecture</text>
+  <text class="s"  x="60" y="62">append-only log → fold → graph · contradiction detection on write, never a sweep · one visibility predicate in front of every reader</text>
+  <text class="s"  x="60" y="80">Model roles, not model IDs: the pins live in src/baraza/schema/models.py and nowhere else, and no document here names a version until make verify-models has run green.</text>
+
+  <!-- ================================================================ corpus -->
+  <text class="lane" x="60" y="112">CORPUS · FOUR NATIVE FORMATS · FULLY SYNTHETIC</text>
+
+  <rect class="box" x="60"  y="120" width="280" height="58" rx="4"/>
+  <text class="h2" x="76" y="141">Scanned PDF — constitution</text>
+  <text class="s"  x="76" y="157">skewed; dates carry no time of day</text>
+  <text class="s"  x="76" y="171">locators like p.4 ¶2</text>
+
+  <rect class="box" x="360" y="120" width="280" height="58" rx="4"/>
+  <text class="h2" x="376" y="141">GroupMe JSON export</text>
+  <text class="s"  x="376" y="157">bare epoch-second timestamps</text>
+  <text class="s"  x="376" y="171">mixed UTC offsets — the planted trap</text>
+
+  <rect class="box" x="660" y="120" width="280" height="58" rx="4"/>
+  <text class="h2" x="676" y="141">Headerless XLSX budget</text>
+  <text class="s"  x="676" y="157">column meaning lost with the header row</text>
+  <text class="s"  x="676" y="171">locators like Sheet1!B14</text>
+
+  <rect class="box" x="960" y="120" width="280" height="58" rx="4"/>
+  <text class="h2" x="976" y="141">DOCX meeting minutes</text>
+  <text class="s"  x="976" y="157">amendments never folded back</text>
+  <text class="s"  x="976" y="171">into the constitution</text>
+
+  <!-- corpus collector -->
+  <path class="plain" d="M 200 178 V 196"/>
+  <path class="plain" d="M 500 178 V 196"/>
+  <path class="plain" d="M 800 178 V 196"/>
+  <path class="plain" d="M 1100 178 V 196"/>
+  <path class="plain" d="M 172 196 H 1100"/>
+  <path class="arw"   d="M 172 196 V 214"/>
+
+  <!-- ============================================================= ingestion -->
+  <text class="lane" x="1240" y="206" text-anchor="end">1 · INGESTION — CLOUD RUN JOB, UNATTENDED, RETRY-SAFE</text>
+
+  <rect class="box" x="60"  y="214" width="216" height="80" rx="4"/>
+  <text class="h2" x="74" y="235">chunking</text>
+  <text class="s"  x="74" y="252">never crosses a source</text>
+  <text class="s"  x="74" y="266">every line tagged with</text>
+  <text class="s"  x="74" y="280">its own locator</text>
+
+  <rect class="box" x="301" y="214" width="216" height="80" rx="4"/>
+  <text class="h2" x="315" y="235">relevance pre-filter</text>
+  <text class="s"  x="315" y="252">GEMMA · keep or drop</text>
+  <text class="s"  x="315" y="266">flag: stub or gemma</text>
+  <text class="s"  x="315" y="280">rate: not yet measured</text>
+
+  <rect class="box" x="542" y="214" width="216" height="80" rx="4"/>
+  <text class="h2" x="556" y="235">claim extraction</text>
+  <text class="s"  x="556" y="252">GEMINI · fast role</text>
+  <text class="s"  x="556" y="266">anchor SELECTED from a</text>
+  <text class="s"  x="556" y="280">closed set, never written</text>
+
+  <rect class="box" x="783" y="214" width="216" height="80" rx="4"/>
+  <text class="h2" x="797" y="235">three validation gates</text>
+  <text class="s"  x="797" y="252">anchor membership ·</text>
+  <text class="s"  x="797" y="266">quote grounding · schema</text>
+  <text class="s"  x="797" y="280">drops counted, with reasons</text>
+
+  <rect class="box" x="1024" y="214" width="216" height="80" rx="4"/>
+  <text class="h2" x="1038" y="235">entity alias pass</text>
+  <text class="s"  x="1038" y="252">sameAs edges only,</text>
+  <text class="s"  x="1038" y="266">human-confirmed</text>
+  <text class="s"  x="1038" y="280">no destructive merges</text>
+
+  <path class="arw" d="M 276 254 H 301"/>
+  <path class="arw" d="M 517 254 H 542"/>
+  <path class="arw" d="M 758 254 H 783"/>
+  <path class="arw" d="M 999 254 H 1024"/>
+
+  <path class="arw" d="M 1132 294 V 330"/>
+  <text class="edge" x="1124" y="316" text-anchor="end">claim.asserted</text>
+
+  <!-- =================================================================== log -->
+  <rect class="heavy" x="60" y="330" width="1180" height="72" rx="4"/>
+  <text class="h2" x="76" y="354">APPEND-ONLY EVENT LOG — Firestore</text>
+  <text class="s"  x="76" y="371">create-only writes · security rules reject update and delete at the database level · event IDs are content hashes, so a retried Job appends nothing twice</text>
+  <text class="s"  x="76" y="389">claim.asserted · contradiction.detected · claim.committed · claim.rejected · claim.visibility_set · entity.alias_linked · session.turn · heartbeat</text>
+
+  <!-- ============================================================= detection -->
+  <text class="lane" x="300" y="438">2 · CONTRADICTION DETECTION — ON WRITE</text>
+  <text class="lane" x="880" y="438">THE FOLD</text>
+
+  <path class="arw" d="M 150 402 V 446"/>
+  <text class="edge" x="158" y="424">on each claim written</text>
+
+  <rect class="box" x="60" y="446" width="180" height="76" rx="4"/>
+  <text class="h2" x="74" y="467">blocking</text>
+  <text class="s"  x="74" y="484">subject ∪ object entities</text>
+  <text class="s"  x="74" y="498">∪ predicate_hint</text>
+  <text class="s"  x="74" y="512">block size: single digits</text>
+
+  <rect class="box" x="260" y="446" width="180" height="76" rx="4"/>
+  <text class="h2" x="274" y="467">temporal gate</text>
+  <text class="s"  x="274" y="484">epoch interval overlap</text>
+  <text class="s"  x="274" y="498">consecutive fiscal years</text>
+  <text class="s"  x="274" y="512">cannot conflict</text>
+
+  <rect class="box" x="460" y="446" width="180" height="76" rx="4"/>
+  <text class="h2" x="474" y="467">cap</text>
+  <text class="s"  x="474" y="484">MAX_RETRIEVED = 20</text>
+  <text class="s"  x="474" y="498">ranked by recency</text>
+  <text class="s"  x="474" y="512">and confidence</text>
+
+  <rect class="box" x="660" y="446" width="180" height="76" rx="4"/>
+  <text class="h2" x="674" y="467">adjudication</text>
+  <text class="s"  x="674" y="484">ONE call, about 3k tokens</text>
+  <text class="s"  x="674" y="498">GEMINI · reasoning role</text>
+  <text class="s"  x="674" y="512">which of these conflict?</text>
+
+  <path class="arw" d="M 240 484 H 260"/>
+  <path class="arw" d="M 440 484 H 460"/>
+  <path class="arw" d="M 640 484 H 660"/>
+
+  <path class="arw" d="M 750 446 V 402"/>
+  <text class="edge" x="758" y="424">contradiction.detected</text>
+
+  <rect class="note" x="60" y="534" width="780" height="44" rx="4"/>
+  <text class="t" x="74" y="553">All-pairs at the 3,000-claim design assumption: 3000 × 2999 / 2 = 4,498,500 comparisons. Refused, not deferred.</text>
+  <text class="s" x="74" y="569">On write and blocked: one bounded call per claim, at most 20 retrieved. Cost per write does not grow with the corpus.</text>
+
+  <rect class="box" x="880" y="446" width="360" height="60" rx="4"/>
+  <text class="h2" x="894" y="467">fold over the log → GraphState</text>
+  <text class="s"  x="894" y="484">ordered by occurred_at_millis, then event_id</text>
+  <text class="s"  x="894" y="498">integers, never ISO strings</text>
+
+  <rect class="box" x="880" y="520" width="360" height="60" rx="4"/>
+  <text class="h2" x="894" y="541">graph state</text>
+  <text class="s"  x="894" y="558">claims · open contradictions · alias map</text>
+  <text class="s"  x="894" y="572">heartbeats held apart from organic activity</text>
+
+  <path class="arw" d="M 1060 402 V 446"/>
+  <path class="arw" d="M 1060 506 V 520"/>
+  <path class="arw" d="M 1060 580 V 590 H 200 V 606"/>
+
+  <!-- =================================================== ledger to divergence -->
+  <text class="lane" x="1240" y="602" text-anchor="end">3 · LEDGER → AGENDA → EXIT INTERVIEW</text>
+
+  <rect class="box" x="60" y="606" width="280" height="80" rx="4"/>
+  <text class="h2" x="76" y="627">disputed ledger</text>
+  <text class="s"  x="76" y="644">ranked: confidence · stakes ·</text>
+  <text class="s"  x="76" y="658">recency · spread</text>
+  <text class="s"  x="76" y="672">every component printed with the row</text>
+
+  <rect class="box" x="360" y="606" width="280" height="80" rx="4"/>
+  <text class="h2" x="376" y="627">interview agenda</text>
+  <text class="s"  x="376" y="644">questions no human wrote</text>
+  <text class="s"  x="376" y="658">GEMINI · reasoning role</text>
+  <text class="s"  x="376" y="672">unreadable sides downgrade, never drop</text>
+
+  <rect class="box" x="660" y="606" width="280" height="80" rx="4"/>
+  <text class="h2" x="676" y="627">exit interview — Cloud Run</text>
+  <text class="s"  x="676" y="644">agenda-led, clarifying follow-ups</text>
+  <text class="s"  x="676" y="658">GEMINI · fast role per turn</text>
+  <text class="s"  x="676" y="672">every turn appended before the next</text>
+
+  <rect class="heavy" x="960" y="606" width="280" height="80" rx="4"/>
+  <text class="h2" x="976" y="627">THE DIVERGENCE TURN</text>
+  <text class="s"  x="976" y="644">testimony against record,</text>
+  <text class="s"  x="976" y="658">both citations, in the moment</text>
+  <text class="s"  x="976" y="672">GEMINI · reasoning role</text>
+
+  <path class="arw" d="M 340 646 H 360"/>
+  <path class="arw" d="M 640 646 H 660"/>
+  <path class="arw" d="M 940 646 H 960"/>
+
+  <!-- =============================================================== approval -->
+  <path class="arw" d="M 1100 686 V 712"/>
+
+  <rect class="box" x="660" y="712" width="580" height="68" rx="4"/>
+  <text class="h2" x="676" y="733">approval — the only writer of claim.committed</text>
+  <text class="s"  x="676" y="750">visibility chosen explicitly; the default stays private · rejection retracts, permanently</text>
+  <text class="s"  x="676" y="766">appends claim.committed · claim.visibility_set · contradiction.resolved — and the next agenda is shorter</text>
+
+  <!-- approval writes back to the log, on the right margin -->
+  <path class="arw" d="M 1240 746 H 1268 V 366 H 1240"/>
+  <text class="edge" transform="rotate(-90 1284 556)" x="1284" y="556" text-anchor="middle">appended to the log</text>
+
+  <!-- ====================================================== visibility boundary -->
+  <path class="arw" d="M 950 780 V 812"/>
+
+  <rect class="bound" x="60" y="812" width="1180" height="80" rx="4"/>
+  <text class="h2" x="76" y="836">THE VISIBILITY BOUNDARY — readable_by(claim, audience), defined once, in src/baraza/schema/visibility.py</text>
+  <text class="s"  x="76" y="855">the quote is reachable only through quote_for(audience) · visibility defaults to private at append time · the predicate fails CLOSED on an unknown audience or visibility</text>
+  <text class="s"  x="76" y="873">every reader above and below crosses this line: ledger · agenda · question renderer · graph view · successor. The reconciler may COUNT an unreadable claim; it may never quote it.</text>
+
+  <path class="arw" d="M 950 892 V 922"/>
+
+  <rect class="box" x="560" y="922" width="680" height="80" rx="4"/>
+  <text class="h2" x="576" y="943">successor service — Cloud Run</text>
+  <text class="s"  x="576" y="960">reads only claims that are committed AND readable by the asking audience — successor in handover, PUBLIC on the hosted instance</text>
+  <text class="s"  x="576" y="974">every sentence carries a citation; nothing is synthesized across claims it cannot cite</text>
+  <text class="s"  x="576" y="990">when the readable committed record cannot support an answer: refusal — with its own acceptance criterion</text>
+
+  <!-- ============================================================== scheduler -->
+  <text class="lane" x="360" y="1024">4 · AUTONOMY — SCHEDULED, AND LABELLED AS SCHEDULED</text>
+
+  <rect class="box" x="360" y="1032" width="280" height="68" rx="4"/>
+  <text class="h2" x="376" y="1053">Cloud Scheduler — nightly</text>
+  <text class="s"  x="376" y="1070">deployed early, stubbed, so execution</text>
+  <text class="s"  x="376" y="1086">history accumulates in real time</text>
+
+  <rect class="box" x="680" y="1032" width="560" height="68" rx="4"/>
+  <text class="h2" x="696" y="1053">baraza-reconcile — Cloud Run Job</text>
+  <text class="s"  x="696" y="1070">re-folds the log · re-detects over claims written since the last run · snapshots the ledger</text>
+  <text class="s"  x="696" y="1086">and diffs it against last night: what was added, what a new document retracted, what moved</text>
+
+  <path class="arw" d="M 640 1066 H 680"/>
+
+  <!-- the nightly job writes back to the log, on the left margin -->
+  <path class="arw" d="M 680 1100 V 1120 H 28 V 384 H 60"/>
+  <text class="s" x="60" y="1140">Every event this Job appends is marked scheduled=True. A scheduled run is never counted as organic activity, in any accounting, anywhere.</text>
+</svg>

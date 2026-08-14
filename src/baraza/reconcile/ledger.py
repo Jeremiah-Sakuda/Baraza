@@ -27,10 +27,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional
 
 from baraza.fold.graph import GraphState
-from baraza.schema.claim import Claim
 from baraza.schema.contradiction import Contradiction, RenderedContradiction
 from baraza.schema.temporal import EpochMillis
 from baraza.schema.visibility import Audience

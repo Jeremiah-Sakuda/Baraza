@@ -34,7 +34,9 @@ make test                # unit + property
 | Fold is stable under permuted UTC offsets | `tests/property/test_fold_stability.py` |
 | Consecutive FY terms do not overlap | `tests/unit/test_temporal.py` |
 
-**Status:** green as of session B0 (lints; PRD audit blocked — see below).
+**Status:** green as of session B0, re-verified 2026-08-13 (B3): `readable_by`
+returns exactly one definition, and `pytest tests/unit tests/property` is
+**154 passed**. The PRD audit is still blocked — see below.
 
 > ⚠️ **The BAR-007 PRD audit cannot run.** `docs/PRD.md` is absent, and the
 > amendments file §6 forbids reconstructing the unrecovered v1.1 sections from
@@ -59,6 +61,14 @@ make test-emulator
 | Session survives SIGKILL mid-turn and resumes at the same turn | `tests/emulator/test_kill_survival.py` |
 | Replay harness feeds canned answers on a timer | `make demo-interview REPLAY=1` |
 
+**Status 2026-08-13 (B3): red, on the first and third rows only.** `make
+demo-agenda` and `make demo-interview` exit 2 — `fixtures/cassettes/` holds no
+recordings and the offline client will not invent one. The SIGKILL row is
+**green on the JSONL backend**: `pytest tests/emulator -k jsonl` is 1 passed, a
+real `os.kill(pid, SIGKILL)` against a live child process. The Firestore variant
+of that same test could not be run here — `make test-emulator` exits 1 because
+the Firestore emulator is a JVM process and this machine has no JDK.
+
 ---
 
 ## G2 — Ingestion spine (BAR-301–309)
@@ -77,6 +87,15 @@ make verify-manifest
 | Gemma filter selected by flag; night-1 runs `stub` | `metrics.json` records the mode |
 | No naive datetime reaches a comparison | `make compliance` temporal lint |
 
+**Status 2026-08-13 (B3): red, blocked behind G1.** `make corpus` is exit 0 (13
+artifacts, every one round-tripped through `baraza.ingest.readers`) and the
+temporal lint is green. `make verify-manifest` prints `found 18 of 18 planted
+problems` — but that is the *plants*, not the *catches*: it also reports 0 of 17
+behaviour probes observed, and exits 2, because no ingest run has produced an
+event log. `make verify-anchors` exits 2 for the same reason: 11 sources
+re-register from the bytes on disk and there are zero citations to resolve.
+Neither row can go green until the cassettes exist.
+
 ---
 
 ## G3 — Reconciler (BAR-320–323)
@@ -87,6 +106,13 @@ make verify-manifest
 | FY-pair false positive does **not** fire | `tests/unit/test_detection.py`, under permuted offsets |
 | Rejected claim leaves ledger and every future agenda | `tests/unit/test_retraction.py` |
 | Unreadable claim can be counted but never quoted | `tests/unit/test_boundary_offpath.py` |
+
+**Status 2026-08-13 (B3): green as unit properties.** All four rows are covered
+by tests inside the 154 that pass. Every one is an in-process assertion over
+constructed claims; none has yet been observed over a real ingest, because G1 is
+red. Landmine **L-15** (the BAR-323 differential across two nights) is marked
+`delegated` by `make verify-manifest` and cannot be closed here at all — it needs
+two genuinely separated nightly runs.
 
 ---
 

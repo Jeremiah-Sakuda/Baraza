@@ -1,0 +1,52 @@
+# Cloud Build — both images from one submission of one context.
+#
+# Why Cloud Build rather than `docker build && docker push`: the bootstrap
+# script must run on a judge's or an operator's machine with nothing installed
+# but gcloud. Requiring a local Docker daemon and a configured Artifact Registry
+# credential helper would add two failure modes to a one-command deploy.
+#
+# Why one build for both images: they share a dependency set, and building them
+# in separate submissions lets them drift the first time one is rebuilt and the
+# other is not. Same submission, same context, same tag — so "which build is the
+# successor service running" always has the same answer as "which build is the
+# interview service running".
+
+substitutions:
+  _REGION: us-central1
+  _REPO: baraza
+  _TAG: bootstrap
+
+steps:
+  - id: build-job
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=deploy/Dockerfile.job
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/job:${_TAG}
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/job:latest
+      - .
+
+  - id: build-service
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=deploy/Dockerfile.service
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/service:${_TAG}
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/service:latest
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/job:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/job:latest
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/service:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/service:latest
+
+options:
+  machineType: E2_HIGHCPU_8
+  # CLOUD_LOGGING_ONLY is required on projects that have no default Cloud Build
+  # logs bucket — without it the build fails on a storage permission that has
+  # nothing to do with the build itself, and the obvious "fix" is to grant the
+  # build account a bucket role it does not need.
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

@@ -25,7 +25,7 @@ import os
 import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Sequence
+from typing import Iterable, Iterator, List, Optional
 
 from baraza.schema.event import Event, EventType
 

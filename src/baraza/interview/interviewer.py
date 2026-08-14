@@ -32,17 +32,16 @@ Everything above it is setup.
 
 from __future__ import annotations
 
-import json
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Dict, Iterator, List, Optional, Sequence, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from baraza.fold.graph import GraphState
 from baraza.llm import LLMClient
 from baraza.reconcile.agenda import Agenda, AgendaItem
 from baraza.schema.claim import Anchor, Claim, Provenance, Tier
-from baraza.schema.session import Session, Turn, TurnKind, TurnRole
+from baraza.schema.session import Session, Turn, TurnKind
 from baraza.schema.temporal import EpochMillis
 from baraza.schema.visibility import Audience, Visibility, readable_by
 

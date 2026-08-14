@@ -15,11 +15,16 @@ Three implementations behind one protocol:
 **On the honesty of cassettes.** A cassette is a recording of something that
 happened. It is not a hand-authored "what Gemini would probably say", and
 nothing in this repository fabricates model output. Every cassette file carries
-the model ID, the run ID, and the UTC date it was recorded, and
-``make verify-cassettes`` fails if any cassette references a model ID that is no
-longer pinned. If a cassette is missing for a prompt, the offline client raises
-:class:`CassetteMiss` — it does not invent a response, and it does not silently
-fall through to a stub.
+the model ID, the run ID, and the UTC date it was recorded. If a cassette is
+missing for a prompt, the offline client raises :class:`CassetteMiss` — it does
+not invent a response, and it does not silently fall through to a stub.
+
+**Not yet checked:** nothing cross-checks a recorded ``model_id`` against the
+current pins in ``schema/models.py``, so a cassette recorded against a since-
+repinned model would replay without complaint. An earlier revision of this
+docstring claimed a ``make verify-cassettes`` target performed that check; no
+such target and no such script exist, and a claimed check that does not exist is
+worse than a named gap.
 
 A number derived from a cassette replay is a *replayed* measurement and says so
 wherever it appears. It is never reported as a live deployed measurement.
@@ -277,8 +282,9 @@ class CassetteClient(LLMClient):
                 f"no recording for role={role!r} key={key}\n"
                 f"  prompt begins: {prompt.strip()[:160]!r}\n"
                 f"  cassette dir : {self.directory}\n"
-                "  Re-record with: make record-cassettes (requires Vertex "
-                "credentials). The offline client will not invent a response."
+                "  Re-record with: python3 scripts/record_cassettes.py --yes\n"
+                "  (requires Vertex credentials and costs live calls). The "
+                "offline client will not invent a response."
             )
         return entry
 

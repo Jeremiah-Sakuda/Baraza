@@ -1,0 +1,32 @@
+{
+  "interview_id": "prior-exit-interview-2026-05",
+  "note": "The previous year's exit interview, cut short. Not a corpus source: it is read by the interview layer, and it is the baseline the closed loop is supposed to beat. Turn ts values are ISO-8601 with explicit offsets and are NEVER a sort key.",
+  "subject_handle": "kestrel9",
+  "subject_role": "Treasurer",
+  "turns": [
+    {
+      "speaker": "interviewer",
+      "text": "The constitution says a disbursement over $250 needs two signatures. The November 2021 minutes say you can sign alone up to $1,000. Which one has the club been following?",
+      "ts": "2026-05-01T23:40:00-05:00",
+      "turn_id": "t-1"
+    },
+    {
+      "speaker": "officer",
+      "text": "The motion. I have signed alone for everything under a thousand since I took the books, and so did the two treasurers before me.",
+      "ts": "2026-05-02T00:00:00Z",
+      "turn_id": "t-2"
+    },
+    {
+      "speaker": "interviewer",
+      "text": "Was the constitution ever amended to match?",
+      "ts": "2026-05-02T00:06:00Z",
+      "turn_id": "t-3"
+    },
+    {
+      "speaker": "officer",
+      "text": "I do not know. I have never read it. I have to go, the room closes at seven.",
+      "ts": "2026-05-02T00:09:00Z",
+      "turn_id": "t-4"
+    }
+  ]
+}

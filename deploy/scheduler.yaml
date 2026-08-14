@@ -1,0 +1,85 @@
+# Cloud Scheduler — the nightly reconcile trigger (BAR-021, BAR-410).
+#
+# This file is the source of truth for the schedule. `scripts/bootstrap_gcp.sh`
+# reads `schedule:`, `timeZone:`, `attemptDeadline:` and the retry block out of
+# it and passes them to `gcloud scheduler jobs create/update http` — it does not
+# keep its own copy. Changing the cadence means changing this file, which means
+# the change appears in a diff instead of in somebody's shell history.
+#
+# (Cloud Scheduler has no `gcloud ... replace <file>` verb the way Cloud Run
+# does, so this is a read-and-pass rather than a true declarative apply. That is
+# a real difference and it is named here rather than implied by the file
+# extension.)
+#
+# ---------------------------------------------------------------------------
+# WHY 03:17Z, AND WHY THE RUN ID IS NOT IN THIS FILE
+#
+# 03:17 rather than 03:00: the top of the hour is when every cron on the
+# platform fires, and a queued trigger that lands minutes late is a night that
+# reads as missing in the execution history.
+#
+# 03:17 rather than 23:47: the run ID is derived from the *UTC day* inside the
+# container (see deploy/entrypoint-job.sh). A trigger close to midnight could
+# have its retries land on the far side of a date boundary and mint a second run
+# ID for the same night, which would append a second heartbeat and turn the
+# nightly count into a count of attempts. Firing in the small hours puts the
+# whole retry window inside one UTC day.
+#
+# The run ID is absent from `body` on purpose. Cloud Scheduler cannot inject a
+# per-run timestamp: the target is the Run Admin API, and the
+# `X-CloudScheduler-ScheduleTime` header Scheduler sends is consumed there and
+# never reaches the container. A literal `--run-id` written here would be
+# byte-identical every night; event IDs are content hashes, so night two's
+# heartbeat would collide with night one's, be dropped as a duplicate, and the
+# heartbeat count would sit at 1 while the execution history kept growing. The
+# container composes the run ID instead, and BAR-021's evidence stays real.
+# ---------------------------------------------------------------------------
+
+name: baraza-reconcile-nightly
+
+description: >-
+  BAR-021 nightly reconcile trigger. Runs the baraza-reconcile Cloud Run Job in
+  whichever mode the Job is currently configured for (stub until BAR-321 lands,
+  real afterwards; the Job is replaced in place so the execution history is
+  continuous and the changeover date is identifiable in it). Every run this
+  produces is a scheduled run and is labelled as such in any accounting — it is
+  never counted as organic activity.
+
+# 03:17 every day, UTC. See the note above.
+schedule: "17 3 * * *"
+timeZone: "Etc/UTC"
+
+# 30 minutes. A stub run finishes in seconds; the real reconciler's ceiling is
+# one bounded Vertex call per claim written since the last heartbeat, and this
+# deadline is what stops a wedged call from holding an execution open all night.
+attemptDeadline: "1800s"
+
+retryConfig:
+  # Three attempts, then leave the night missing. A silently-retried-forever job
+  # produces an execution history that looks healthy while the work never
+  # completes; a gap is legible.
+  retryCount: 3
+  minBackoffDuration: "30s"
+  maxBackoffDuration: "300s"
+  maxRetryDuration: "3600s"
+  maxDoublings: 3
+
+httpTarget:
+  # Cloud Run Admin API v2. v2 is used rather than the v1 `namespaces` endpoint
+  # because it accepts `overrides`, which is how the run is labelled as
+  # scheduled at the container level rather than only in Scheduler's own logs.
+  uri: https://run.googleapis.com/v2/projects/__PROJECT_ID__/locations/__REGION__/jobs/baraza-reconcile:run
+  httpMethod: POST
+  headers:
+    Content-Type: application/json
+  oauthToken:
+    # The Scheduler runs as the same identity the Job runs as. That is not a
+    # shortcut to avoid a fifth service account — it is the least-privilege
+    # answer: the binding is `roles/run.invoker` scoped to this one Job
+    # resource, so the identity that can trigger the reconciler is exactly the
+    # identity that can do the reconciler's work, and nothing else can do
+    # either.
+    serviceAccountEmail: baraza-reconcile@__PROJECT_ID__.iam.gserviceaccount.com
+    scope: https://www.googleapis.com/auth/cloud-platform
+  body: |
+    {"overrides":{"containerOverrides":[{"env":[{"name":"BARAZA_RUN_TRIGGER","value":"cloud-scheduler"}]}]}}

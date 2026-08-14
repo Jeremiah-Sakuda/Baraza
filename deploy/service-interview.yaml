@@ -1,0 +1,105 @@
+# Cloud Run service — the interview surface (BAR-330 / BAR-334 / BAR-410).
+#
+# Applied declaratively by scripts/bootstrap_gcp.sh:
+#   gcloud run services replace <rendered copy> --region <region>
+#
+# The double-underscore tokens below are substituted by the bootstrap script
+# into a temporary rendered copy; this file stays free of project identifiers so
+# it can be read, diffed, and committed without carrying anyone's project ID.
+# The bootstrap refuses to deploy a rendered file that still contains one, so no
+# other double-underscore token may appear here — including in a comment.
+#
+# Two deliberate choices worth stating rather than leaving to be inferred:
+#
+# **This service is not public.** No `allUsers` invoker binding is created for
+# it. The interview renders private testimony — quotes at `visibility: private`,
+# read as `Audience.OWNER` — and an unauthenticated interview surface would put
+# exactly the material the visibility boundary exists to protect on the open
+# internet. The departing officer reaches it through an authenticated proxy:
+#   gcloud run services proxy baraza-interview --region <region>
+# The successor service is the public one, and it reads a strictly narrower set.
+#
+# **min-instances is 0.** A warm instance would remove roughly a second of cold
+# start from the first question of a demo, and would bill for every idle hour
+# between now and judging. The first-token budget (BAR-330) is measured on the
+# replay path, in-process, and is not a cold-start number — so paying to hide a
+# cold start would buy a nicer demo and no measurable property.
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: baraza-interview
+  namespace: __PROJECT_ID__
+  labels:
+    baraza-lane: interview
+    baraza-managed-by: bootstrap
+  annotations:
+    # `all` rather than `internal`: the officer's browser is not inside the VPC.
+    # Access control is the invoker binding (authenticated only), not the
+    # network edge.
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      labels:
+        baraza-lane: interview
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        # A hackathon interview is one conversation at a time. A ceiling of 3
+        # bounds the blast radius of a retry storm against Vertex, which is the
+        # only part of this system with a per-call cost that matters.
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: baraza-interview@__PROJECT_ID__.iam.gserviceaccount.com
+      # Concurrency above 1 is safe because no session state lives in the
+      # process: every turn is externalized to the append-only log before the
+      # next is solicited (BAR-334), so two concurrent requests against the same
+      # session converge on the same folded state rather than racing an
+      # in-memory object.
+      containerConcurrency: 8
+      # Long enough for a full agenda-led exchange including a reasoning call,
+      # short enough that a hung Vertex call does not bill for an hour.
+      timeoutSeconds: 900
+      containers:
+        - name: interview
+          image: __SERVICE_IMAGE__
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: BARAZA_APP
+              value: baraza.interview.service:app
+            - name: BARAZA_PROJECT_ID
+              value: __PROJECT_ID__
+            - name: BARAZA_LOCATION
+              value: __REGION__
+            - name: BARAZA_SERVICE_NAME
+              value: baraza-interview
+            # Explicitly not offline. The offline cassette path is the demo
+            # path; a deployed service that silently replayed cassettes would
+            # let a recorded latency be written up as a deployed measurement.
+            - name: BARAZA_OFFLINE
+              value: "0"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+  traffic:
+    - percent: 100
+      latestRevision: true

@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from baraza.schema.temporal import EpochMillis, to_epoch_millis, to_epoch_millis_optional
+from baraza.schema.temporal import EpochMillis, to_epoch_millis
 from baraza.schema.visibility import Audience, Visibility, readable_by
 
 __all__ = ["Tier", "Provenance", "Anchor", "Claim", "CitationError"]

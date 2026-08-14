@@ -1,0 +1,136 @@
+// Baraza — Firestore security rules.
+//
+// The log is append-only and the graph is a fold over it. This file is the
+// database-level half of that guarantee: no principal governed by these rules
+// can update or delete an event, on any path, under any condition. Fixing bad
+// data means appending a superseding event.
+//
+// ---------------------------------------------------------------------------
+// READ THIS BEFORE TRUSTING THIS FILE ON ITS OWN
+//
+// Firestore security rules govern client-SDK and Firebase-Auth-authenticated
+// access. They are **bypassed** by requests authenticated with Google Cloud
+// service-account credentials — which is exactly how `FirestoreEventStore`
+// writes from Cloud Run. So these rules are not what stops the reconcile job
+// from deleting an event; IAM is (`scripts/bootstrap_gcp.sh` grants the
+// appender role `datastore.entities.create` and withholds `.update` and
+// `.delete`).
+//
+// What these rules do stop: anything holding a leaked web config, anything
+// reaching the database from a browser, and any future surface someone adds
+// with a client SDK because it was quicker. Those are real, and they are the
+// paths nobody is watching. Two layers, each named, neither claimed to be the
+// other — `deploy/README.md` carries the full matrix of which layer enforces
+// which row.
+// ---------------------------------------------------------------------------
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // An event carries exactly these six fields (see schema/event.py). A write
+    // missing any of them is a write from something that does not know the
+    // schema, which in practice means a hand-rolled console write or a
+    // half-migrated client. Rejecting it keeps the fold total: `fold()` raises
+    // on an event it cannot apply, so a malformed document does not corrupt the
+    // graph quietly — it breaks every read until someone appends a fix.
+    function isEventShaped() {
+      return request.resource.data.keys().hasAll(
+               ['event_id', 'event_type', 'occurred_at', 'payload', 'actor', 'scheduled']
+             )
+          && request.resource.data.event_id is string
+          && request.resource.data.event_type is string
+          && request.resource.data.actor is string
+          && request.resource.data.scheduled is bool
+          && request.resource.data.payload is map;
+    }
+
+    // BAR-309, enforced at the storage layer. `occurred_at` is integer epoch
+    // millis and nothing else. An ISO-8601 string stored here would compare as
+    // text in any range query written against it later, which is the defect
+    // class that kept a revoked grant active under mixed UTC offsets. The
+    // stored form is the comparison form, and the database refuses any other.
+    function hasEpochInstant() {
+      return request.resource.data.occurred_at is int;
+    }
+
+    // Event IDs are content hashes (`evt_` + 32 hex chars). Binding the
+    // document ID to the hash in the payload is what makes `create()`-only
+    // writes idempotent: a retried Cloud Run Job re-derives the same ID and
+    // collides instead of duplicating. A client free to choose its own document
+    // ID could append the same event under a hundred names and inflate every
+    // count derived from the log.
+    function idIsContentAddressed(eventId) {
+      return request.resource.data.event_id == eventId
+          && eventId.matches('^evt_[0-9a-f]{32}$');
+    }
+
+    // Promotion and the visibility choice are the approval path's alone. Only
+    // the interview service ever writes these, and it writes them with a
+    // service account, which bypasses rules — so this predicate can only ever
+    // tighten. It exists so that no rules-governed client can promote a claim
+    // to `committed` or widen its visibility, which is the leak that would cost
+    // the most: private testimony published by something that was never meant
+    // to be able to publish anything.
+    function isApprovalOnlyEvent() {
+      return request.resource.data.event_type in [
+        'claim.committed',
+        'claim.visibility_set'
+      ];
+    }
+
+    match /events/{eventId} {
+
+      // CREATE — the only mutation the log accepts, and only for a
+      // well-formed, content-addressed, epoch-stamped, non-promotion event.
+      allow create: if isEventShaped()
+                    && hasEpochInstant()
+                    && idIsContentAddressed(eventId)
+                    && !isApprovalOnlyEvent();
+
+      // UPDATE — denied unconditionally.
+      // Prevents: rewriting history. An edited event changes every graph state
+      // folded after it, retroactively and invisibly, because the fold is
+      // deterministic over its input and has no way to know the input moved.
+      // A corrected fact is a new event that supersedes the old one; the
+      // original stays inspectable, which is the difference between a record
+      // and a rumour.
+      allow update: if false;
+
+      // DELETE — denied unconditionally.
+      // Prevents: a retraction that leaves no trace. `rejected` is a tier and
+      // it retracts (claim.rejected removes the claim from retrieval, the
+      // ledger, and every future agenda) — but the tombstone remains, so the
+      // question "was this ever asserted?" always has an answer. A deleted
+      // event makes that question unanswerable, which is precisely the failure
+      // an institutional-memory system exists to prevent.
+      allow delete: if false;
+
+      // READ — denied to every rules-governed client.
+      // Prevents: the visibility boundary being bypassed by reading the raw
+      // log. `quote` is a plain field in the stored document; the boundary
+      // lives in `Claim.quote_for(audience)`, which is application code. A
+      // browser reading documents directly would route around the predicate
+      // entirely. Every legitimate read goes through a service that applies
+      // `readable_by` first.
+      allow read: if false;
+    }
+
+    // Any subcollection under an event, now or in future. Prevents an
+    // append-only collection from growing a mutable annex — a `revisions/` or
+    // `notes/` subcollection that everybody forgets is outside the guarantee.
+    match /events/{eventId}/{descendant=**} {
+      allow read, write: if false;
+    }
+
+    // Everything else in the database, at any depth. Default-deny, so a
+    // collection added later is closed until somebody writes a rule for it
+    // rather than open until somebody notices. `write` covers create, update
+    // and delete, so the "no update, no delete, on every path" guarantee holds
+    // for paths that do not exist yet.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

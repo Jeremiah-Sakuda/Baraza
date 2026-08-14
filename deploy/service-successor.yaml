@@ -1,0 +1,101 @@
+# Cloud Run service — the successor surface (BAR-410 / BAR-411).
+#
+# Applied declaratively by scripts/bootstrap_gcp.sh:
+#   gcloud run services replace <rendered copy> --region <region>
+#
+# **This is the hosted URL a judge visits, logged out.** That single fact drives
+# every choice below.
+#
+# It is bound to `allUsers` as an invoker, and it is the only surface in the
+# system that is. What makes that safe is not the service — it is what the
+# service can read. Its service account holds a read-only Firestore role, and
+# its request path constructs the librarian with `Audience.PUBLIC`, so the only
+# claims it can render are those an approver explicitly promoted to `committed`
+# and explicitly chose to publish. `visibility` defaults to `private`; a claim
+# nobody made a decision about is invisible here by construction, not by filter.
+#
+# The consequence is worth stating plainly rather than engineering away: on a
+# fresh deployment this page shows nothing. That is the boundary working. A demo
+# surface that showed private testimony because someone forgot a predicate would
+# be the failure this project keeps naming, and an empty page is what the
+# correct version looks like before anyone has approved anything.
+#
+# min-instances is 0. A judge hitting a cold start waits about a second; a warm
+# instance would bill every idle hour from now to Oct 1 to avoid that second.
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: baraza-successor
+  namespace: __PROJECT_ID__
+  labels:
+    baraza-lane: successor
+    baraza-managed-by: bootstrap
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      labels:
+        baraza-lane: successor
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        # Higher than the interview ceiling because this one is public and a
+        # judging window can produce a burst of simultaneous visitors. Still
+        # bounded: an unbounded ceiling on a public endpoint is an unbounded
+        # Vertex bill.
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: baraza-successor@__PROJECT_ID__.iam.gserviceaccount.com
+      containerConcurrency: 20
+      # Shorter than the interview: a librarian answer is one bounded reasoning
+      # call. A request still running after two minutes is stuck, and holding
+      # the connection open only makes a public surface easier to exhaust.
+      timeoutSeconds: 120
+      containers:
+        - name: successor
+          image: __SERVICE_IMAGE__
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: BARAZA_APP
+              value: baraza.successor.service:app
+            - name: BARAZA_PROJECT_ID
+              value: __PROJECT_ID__
+            - name: BARAZA_LOCATION
+              value: __REGION__
+            - name: BARAZA_SERVICE_NAME
+              value: baraza-successor
+            # The public audience, set as configuration so it is visible in
+            # `gcloud run services describe` rather than only in code. Anything
+            # other than `public` here would widen what a logged-out visitor can
+            # read; the service validates it and refuses to start on a value it
+            # does not recognize, rather than falling back to a default.
+            - name: BARAZA_PUBLIC_AUDIENCE
+              value: public
+            - name: BARAZA_OFFLINE
+              value: "0"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+  traffic:
+    - percent: 100
+      latestRevision: true

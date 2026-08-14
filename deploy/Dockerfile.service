@@ -1,0 +1,59 @@
+# Cloud Run service image — the interview service and the successor service.
+#
+# Build context is the repository root:
+#   docker build -f deploy/Dockerfile.service -t <image> .
+#
+# One image, two apps, selected at deploy time by `BARAZA_APP`. Building two
+# images from the same dependency set would let them drift the first time one
+# was rebuilt and the other was not, and "the public successor surface is
+# running a different build of the visibility boundary than the interview
+# service" is not a sentence this project can afford to be true.
+#
+# Same two guarantees as Dockerfile.job: no credentials in the image (see the
+# repository-root `.dockerignore`), and a non-root runtime user.
+
+# ------------------------------------------------------------------- builder
+
+FROM python:3.11-slim AS builder
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /build
+
+RUN python -m venv /opt/baraza
+ENV PATH="/opt/baraza/bin:${PATH}"
+
+# See Dockerfile.job for why README is globbed and backfilled.
+COPY pyproject.toml README* ./
+RUN [ -f README.md ] || printf '%s\n' \
+    'Placeholder. The real README is BAR-501 and is written in a later session.' \
+    > README.md
+
+COPY src ./src
+RUN pip install --no-cache-dir .
+
+# ------------------------------------------------------------------- runtime
+
+FROM python:3.11-slim AS runtime
+
+RUN useradd --system --uid 10001 --user-group --no-create-home \
+      --shell /usr/sbin/nologin baraza
+
+ENV PATH="/opt/baraza/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8080
+
+COPY --from=builder /opt/baraza /opt/baraza
+
+WORKDIR /srv/baraza
+
+COPY deploy/entrypoint-service.sh /usr/local/bin/baraza-service
+RUN chmod 0555 /usr/local/bin/baraza-service
+
+USER 10001:10001
+
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/baraza-service"]

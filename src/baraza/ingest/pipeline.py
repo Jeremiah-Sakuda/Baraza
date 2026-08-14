@@ -27,7 +27,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Callable, List, Optional, Sequence
 
 from baraza.fold.store import EventStore
 from baraza.ingest.chunking import Chunk, chunk_source
