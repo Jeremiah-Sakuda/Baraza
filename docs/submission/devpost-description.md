@@ -86,9 +86,10 @@ with alias edges resolved at query time); temporally gate that block on epoch
 interval overlap, which removes the single largest source of false positives —
 two claims about consecutive fiscal years cannot contradict each other; cap the
 survivors at 20; make **one** bounded call. One call per claim written, not per
-pair. There is no vector database: claims are embedded, the corpus is not, and
-brute-force top-k over a few thousand in-memory vectors at this cardinality does
-not deserve infrastructure.
+pair. There is no vector database and no embedding step: exact-match blocking on
+subject, object and relation is what this cardinality needs, typical block size
+here is single digits, and an index earns its keep somewhere north of a million
+vectors.
 
 **The visibility boundary is structural, not conventional.** This is the
 architectural decision I would defend hardest. The first design had the claim's
@@ -253,11 +254,10 @@ features, no enterprise deployment claims.
 `google-cloud-logging` · `opentelemetry` · `fastapi` · `uvicorn` · `pydantic` ·
 `pytest` · `hypothesis` · `pypdf` · `pdfplumber` · `openpyxl` · `python-docx`
 
-> **Before submitting:** add `google-adk` to this list **only if** a module under
-> `src/` imports it. It is currently a declared dependency that nothing imports,
-> and the repository's own rule is that a framework is named only where the code
-> uses it. Do **not** list specific pinned model version strings here until
-> `make verify-models` has run green.
+> **Before submitting:** the `google-adk` condition is now met — `src/baraza/agents.py`
+> imports `google.adk.agents.LlmAgent` and `google.adk.tools.FunctionTool` — so add
+> `google-adk` to the list above. Do **not** list specific pinned model version
+> strings here until `make verify-models` has run green.
 
 ---
 
@@ -281,9 +281,14 @@ The partnership shows up in four concrete places:
    right. It never adjudicates a person against a document on its own authority.
 3. **Approval is the only path to committed memory**, and it carries the
    visibility choice. The extractor cannot write `committed`; the reconciler
-   cannot write `committed`; in the deployed design neither service account holds
-   the IAM permission to. The human is not a rubber stamp in the loop — they are
-   the only writer of the tier that matters.
+   cannot write `committed`. What stops them is the code path — that event is
+   constructed in exactly one module, which neither of them imports — plus a
+   Firestore rule that denies the event type on create, plus a test that asserts
+   the negative.
+   Not IAM: Firestore permissions cannot be conditioned on a field, and the repo
+   says so rather than claiming a stronger guarantee than it has. The human is
+   not a rubber stamp in the loop — they are the only writer of the tier that
+   matters.
 4. **The relationship compounds.** Every approved answer retires a question
    permanently, so the agent asks for less of the person's time each cycle. The
    collaboration gets cheaper for the human, which is the only kind of
@@ -364,21 +369,29 @@ correction is a new event rather than a lost one.
 
 ## Also engineered for — Multi-Agent Nexus
 
-Four agents, with separation of concerns **enforced** rather than described:
+Five roles, with separation of concerns **enforced** rather than described. The
+names below are the names in `src/baraza/agents.py`, so the table and the code
+cannot drift apart:
 
-| Agent | Reads | Writes | Cannot |
+| Role | Reads | Writes | Cannot |
 |---|---|---|---|
-| **Extractor** | Corpus chunks | `pending` claims with mandatory citations | Write `committed`. Not by convention — the deployed service account does not hold the permission. |
+| **Extractor** | Corpus chunks | `pending` claims with mandatory citations | Write `committed`. It holds no tool that does, and a startup check refuses any tool defined in a module that even references the promotion event type. (Precisely: `claim.committed` is constructed only in `interview/approval.py`. The reconcile container never loads that module; the ingest container enters through `baraza.cli`, which does — so there the isolation is the path taken, backed by the startup check, rather than the module being absent.) |
 | **Reconciler** | The claim pool, including claims the current audience cannot read | Contradiction events, ledger, agenda | Render an unreadable claim's text into a question. It may *count* it; `render_for` redacts per audience. |
 | **Interviewer** | The agenda and the readable record | Session turns, testimony claims | Promote anything. It asks; it never commits. |
-| **Librarian** (successor mode) | `committed` ∧ readable-by-successor only | Nothing | Answer uncited. It refuses instead, and the refusal has its own acceptance criterion. |
+| **Approver** | The pending claim under review | `claim.committed`, `claim.rejected`, `claim.visibility_set` | Reason. It is deliberately **not** an LLM agent — a deterministic tool surface driven by a human decision, because promotion is the one operation that must never be a model's judgement call. |
+| **Successor librarian** | `committed` ∧ readable-by-successor only | Nothing | Answer uncited. It refuses instead, and the refusal has its own acceptance criterion. |
+
+The approver is the role the whole argument rests on, which is why it is in the
+table rather than implied by the other four.
 
 The separation is enforced at three levels, which is the part I would point a
 judge at: **the type system** (protected text is unreachable without an
 audience), **the build** (a compliance script fails on any access that routes
 around the boundary, on a model literal outside the pin module, and on an
-ISO-string comparison), and **IAM** (per-stage least-privilege service accounts,
-where only the approval path can promote a claim to `committed`).
+ISO-string comparison), and **the deployment shape** (per-stage service accounts
+and separate containers, with IAM holding the append-only guarantee — create,
+never update or delete — and the code path plus a Firestore rule holding the
+promotion boundary, since IAM cannot condition on an event type).
 
 A separation of concerns that exists only in a diagram is a naming convention.
 This one fails the build.

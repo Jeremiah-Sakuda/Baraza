@@ -30,8 +30,8 @@ import argparse
 import datetime as _dt
 import sys
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -113,8 +113,8 @@ def main(argv: Sequence[str]) -> int:
             console.fail("aborted; nothing recorded")
             return EXIT_CANNOT_RUN
 
-    run_id = f"rec-{_dt.datetime.now(_dt.timezone.utc):%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex[:6]}"
-    recorded_at = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
+    run_id = f"rec-{_dt.datetime.now(_dt.UTC):%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex[:6]}"
+    recorded_at = _dt.datetime.now(_dt.UTC).isoformat(timespec="seconds")
 
     recorder = RecordingClient(
         VertexClient(),
@@ -132,6 +132,13 @@ def main(argv: Sequence[str]) -> int:
             store=store,
             manifest=args.corpus,
             offline=False,
+            # Explicit, and load-bearing. A live run defaults to the ADK agent
+            # path, whose calls go through the framework's own model layer and
+            # therefore past the RecordingClient wrapped around VertexClient —
+            # nothing would be captured and `make demo` would miss on every
+            # extraction prompt. The recorder records the direct path because
+            # the direct path is what the offline demo replays.
+            agent_extraction=False,
         )
         state, agenda = cli.stage_agenda(
             console,

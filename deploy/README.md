@@ -98,9 +98,18 @@ version, since it is the version a reviewer would believe.
 What actually holds the `claim.committed` boundary:
 
 1. **Code path.** `claim.committed` and `claim.visibility_set` are constructed
-   in exactly one module, `interview/approval.py`, which only the interview
-   service's container runs. The ingest and reconcile Jobs do not import it. A
-   unit test asserts the extractor cannot produce a committed claim.
+   in exactly one module, `interview/approval.py`, and only the interview
+   service's request handlers call it. Stated precisely, because the looser
+   version was in this file and was wrong: the **reconcile** Job does not import
+   `approval` at all (`import baraza.reconcile.job` leaves it out of
+   `sys.modules`), but the **ingest** Job does — `entrypoint-job.sh` runs
+   `python -m baraza.cli demo-agenda`, and `baraza.cli` imports the module. On the
+   ingest container the isolation is therefore *which code path runs*, not *what is
+   loaded*. What backs it: `BarazaAgents.assert_promotion_isolated()` runs at
+   extractor construction on every deployed ingest run — not only under pytest —
+   and refuses any tool defined in a module that so much as references the
+   promotion event type. A unit test asserts the extractor cannot produce a
+   committed claim.
 2. **`firestore.rules`.** `isApprovalOnlyEvent()` denies those two event types
    on the `create` rule. This binds every rules-governed caller — browsers,
    leaked web configs, any surface someone later builds with a client SDK. It

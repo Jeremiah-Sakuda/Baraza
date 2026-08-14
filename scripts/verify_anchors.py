@@ -50,9 +50,9 @@ import json
 import os
 import re
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
@@ -107,7 +107,7 @@ class Failure:
 # --------------------------------------------------------------- the registry
 
 
-def rebuild_registry() -> Tuple[SourceRegistry, List[str]]:
+def rebuild_registry() -> tuple[SourceRegistry, list[str]]:
     """Read every corpus source off disk, right now.
 
     Includes ``deferred_sources``: the BAR-323 artifact is dropped into the
@@ -123,7 +123,7 @@ def rebuild_registry() -> Tuple[SourceRegistry, List[str]]:
 
     index = json.loads(CORPUS_INDEX.read_text(encoding="utf-8"))
     registry = SourceRegistry()
-    notes: List[str] = []
+    notes: list[str] = []
 
     for record in index["sources"] + index["deferred_sources"]:
         path = REPO / record["path"]
@@ -150,9 +150,9 @@ def rebuild_registry() -> Tuple[SourceRegistry, List[str]]:
     return registry, notes
 
 
-def load_registry(path: Path) -> Tuple[SourceRegistry, List[str]]:
+def load_registry(path: Path) -> tuple[SourceRegistry, list[str]]:
     registry = SourceRegistry.load(path)
-    notes: List[str] = []
+    notes: list[str] = []
     for source in registry:
         notes.append(
             f"  {source.source_id:<22} loaded  {len(source.units):>4} units  "
@@ -161,9 +161,9 @@ def load_registry(path: Path) -> Tuple[SourceRegistry, List[str]]:
     return registry, notes
 
 
-def check_source_integrity(registry: SourceRegistry) -> List[Failure]:
+def check_source_integrity(registry: SourceRegistry) -> list[Failure]:
     """Every registered document still exists and still hashes the same."""
-    failures: List[Failure] = []
+    failures: list[Failure] = []
     for source in registry:
         path = source.path if source.path.is_absolute() else REPO / source.path
         if not path.exists():
@@ -199,7 +199,7 @@ def check_source_integrity(registry: SourceRegistry) -> List[Failure]:
 # ------------------------------------------------------------------- the log
 
 
-def load_claims(explicit: Optional[str]) -> Tuple[Path, List[Claim]]:
+def load_claims(explicit: str | None) -> tuple[Path, list[Claim]]:
     candidates = (
         [Path(explicit)]
         if explicit
@@ -281,8 +281,8 @@ def diagnose(
 
 def check_claims(
     registry: SourceRegistry, claims: Sequence[Claim]
-) -> Tuple[List[Failure], Dict[str, int]]:
-    failures: List[Failure] = []
+) -> tuple[list[Failure], dict[str, int]]:
+    failures: list[Failure] = []
     stats = {"claims": len(claims), "resolved": 0, "grounded": 0, "partial": 0}
 
     for claim in sorted(claims, key=lambda c: c.claim_id):

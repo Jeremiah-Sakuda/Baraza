@@ -29,10 +29,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Tuple
 
 from baraza.schema.claim import Anchor
 from baraza.schema.temporal import EpochMillis, to_epoch_millis
@@ -46,7 +46,7 @@ __all__ = [
 ]
 
 
-class SourceFormat(str, Enum):
+class SourceFormat(StrEnum):
     PDF = "pdf"
     GROUPME = "groupme"
     XLSX = "xlsx"
@@ -64,7 +64,7 @@ class SourceUnit:
 
     locator: str
     text: str
-    observed_at: Optional[EpochMillis] = None
+    observed_at: EpochMillis | None = None
     """When the unit's content was authored, where the format records it.
 
     Chat messages carry their own timestamp; a spreadsheet cell does not, and
@@ -72,7 +72,7 @@ class SourceUnit:
     source-level instant rather than guess.
     """
 
-    speaker: Optional[str] = None
+    speaker: str | None = None
     confidence: float = 1.0
     """OCR confidence for scanned formats. Below the source's threshold, the
     unit is flagged for the manifest rather than silently trusted — the skewed
@@ -93,7 +93,7 @@ class Source:
     timestamp inherits this."""
 
     title: str = ""
-    units: Dict[str, SourceUnit] = field(default_factory=dict)
+    units: dict[str, SourceUnit] = field(default_factory=dict)
     notes: str = ""
 
     def unit(self, locator: str) -> SourceUnit:
@@ -111,7 +111,7 @@ class SourceRegistry:
     """Every document the system has read, and the locators inside them."""
 
     def __init__(self) -> None:
-        self._sources: Dict[str, Source] = {}
+        self._sources: dict[str, Source] = {}
 
     # ------------------------------------------------------------ registration
 
@@ -160,7 +160,7 @@ class SourceRegistry:
             )
         return unit
 
-    def verify_quote(self, anchor: Anchor, quote: str) -> Tuple[bool, str]:
+    def verify_quote(self, anchor: Anchor, quote: str) -> tuple[bool, str]:
         """Check that a claim's quote actually appears at its anchor.
 
         Returns ``(ok, detail)``. Whitespace is normalized before comparison
@@ -187,7 +187,7 @@ class SourceRegistry:
 
     # --------------------------------------------------------------- persistence
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "sources": [
                 {
@@ -222,7 +222,7 @@ class SourceRegistry:
         return target
 
     @staticmethod
-    def load(path: Path | str) -> "SourceRegistry":
+    def load(path: Path | str) -> SourceRegistry:
         registry = SourceRegistry()
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
         for entry in payload.get("sources", []):

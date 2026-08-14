@@ -34,8 +34,8 @@ from __future__ import annotations
 
 import re
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, Optional, Tuple
 
 from baraza.fold.graph import GraphState
 from baraza.llm import LLMClient
@@ -84,7 +84,7 @@ class AdaptationState:
     answers_seen: int = 0
     terse_answers: int = 0
     expansive_answers: int = 0
-    last_change_turn_id: Optional[str] = None
+    last_change_turn_id: str | None = None
     last_change_reason: str = ""
 
     @property
@@ -93,7 +93,7 @@ class AdaptationState:
             return 0.0
         return self.terse_answers / self.answers_seen
 
-    def observe(self, answer: str, *, turn_id: str) -> Optional[str]:
+    def observe(self, answer: str, *, turn_id: str) -> str | None:
         """Update from one answer. Returns a reason string if the budget moved.
 
         The change is the adaptation moment, and returning the reason rather
@@ -135,7 +135,7 @@ class AdaptationState:
         self.last_change_reason = reason
         return reason
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "persona_id": self.persona_id,
             "follow_up_budget": self.follow_up_budget,
@@ -173,11 +173,11 @@ class TurnPlan:
 
     kind: TurnKind
     text: str
-    agenda_item_id: Optional[str] = None
-    contradiction_id: Optional[str] = None
-    cited_claim_ids: List[str] = field(default_factory=list)
+    agenda_item_id: str | None = None
+    contradiction_id: str | None = None
+    cited_claim_ids: list[str] = field(default_factory=list)
     follow_up_depth: int = 0
-    divergence: Optional[DivergenceFinding] = None
+    divergence: DivergenceFinding | None = None
     adaptation_note: str = ""
 
 
@@ -267,7 +267,7 @@ class Interviewer:
         last_answer: str,
         current_item: AgendaItem,
         current_depth: int,
-    ) -> Optional[TurnPlan]:
+    ) -> TurnPlan | None:
         """Decide the next agent turn: divergence, follow-up, or move on."""
 
         # 1. Divergence check runs first and always. It is the highest-value
@@ -318,7 +318,7 @@ class Interviewer:
 
     # -------------------------------------------------------------- follow-up
 
-    def compose_follow_up(self, item: AgendaItem, answer: str) -> Optional[str]:
+    def compose_follow_up(self, item: AgendaItem, answer: str) -> str | None:
         prompt = (
             f"Original question: {item.question}\n"
             f"Why it matters: {item.why_it_matters}\n"
@@ -348,7 +348,7 @@ class Interviewer:
 
     def check_divergence(
         self, testimony: str, item: AgendaItem
-    ) -> Optional[DivergenceFinding]:
+    ) -> DivergenceFinding | None:
         """Hold testimony against the record.
 
         Candidates are restricted to claims **readable by this audience**. The
@@ -360,7 +360,7 @@ class Interviewer:
         if len(testimony.strip()) < 20:
             return None
 
-        candidates: List[Claim] = []
+        candidates: list[Claim] = []
         for claim_id in item.cited_claim_ids:
             claim = self.state.claims.get(claim_id)
             if claim is None or not claim.in_retrieval_pool:
@@ -419,7 +419,7 @@ class Interviewer:
 
     # ---------------------------------------------------------------- streaming
 
-    def stream_turn(self, plan: TurnPlan) -> Iterator[Tuple[str, int]]:
+    def stream_turn(self, plan: TurnPlan) -> Iterator[tuple[str, int]]:
         """Yield ``(chunk, elapsed_ms)`` for a planned turn.
 
         A planned turn's text is already decided, so streaming it is a
@@ -441,7 +441,7 @@ class Interviewer:
         session: Session,
         turn: Turn,
         occurred_at: EpochMillis,
-    ) -> Optional[Claim]:
+    ) -> Claim | None:
         """Turn an approved answer into a citable claim.
 
         The anchor points at the interview turn itself — ``turn:t-14`` — which

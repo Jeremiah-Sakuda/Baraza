@@ -14,25 +14,47 @@ can be checked rather than believed.
                                               on-write contradiction detection
 
 The pipeline never writes a ``committed`` claim and has no code path that could.
-Promotion happens only through the approval flow in ``interview/``, and in
-production the ingestion service account lacks the IAM permission to write a
-``claim.committed`` event at all.
+``claim.committed`` is constructed in exactly one module,
+``interview/approval.py``; nothing in ``baraza.ingest`` imports it, and nothing
+here constructs that event type. Stated precisely, because the looser version is
+tempting and false: the deployed ingest Job enters through ``baraza.cli`` (see
+``deploy/entrypoint-job.sh``), and ``cli.py`` *does* import ``ApprovalFlow`` for
+the local demo flow — so what isolates this Job is the code path it takes, not
+the absence of the module from its process. Alongside that,
+``deploy/firestore.rules`` denies the event type on ``create`` for every
+rules-governed caller.
+
+It is **not** IAM. Firestore's permissions are per-operation and carry no
+predicate over document contents, so the ingest and interview accounts hold the
+same append role. What IAM does enforce is the append-only guarantee — create,
+never update or delete. ``deploy/README.md`` has the per-row matrix.
 
 Idempotence is inherited, not implemented: claim IDs and event IDs are content
 hashes, so a Job that dies halfway and is retried appends nothing twice.
+
+**One bad chunk does not cost the night.** A transient model failure on chunk 40
+of 200 used to propagate out of ``run`` and kill the container; Scheduler would
+retry, hit the same weather, and the night would end up missing from the
+execution history that is this project's primary evidence of autonomy. Each
+chunk's extraction is now wrapped: a failure is appended to the rejection list
+under ``extraction-call-failed`` and the run continues. The rejection summary
+already prints, so a degraded night is legible rather than silent — and a run
+that lost half its chunks looks nothing like a run that found nothing.
 """
 
 from __future__ import annotations
 
+import os
 import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence
+from typing import Any
 
 from baraza.fold.store import EventStore
 from baraza.ingest.chunking import Chunk, chunk_source
 from baraza.ingest.entities import AliasPass, EntityTable
-from baraza.ingest.extract import ClaimExtractor, ExtractionResult
+from baraza.ingest.extract import AgentClaimExtractor, ClaimExtractor, ExtractionResult
 from baraza.ingest.prefilter import FilterReport, RelevanceFilter, open_filter
 from baraza.ingest.readers import read_source
 from baraza.ingest.sources import Source, SourceRegistry
@@ -41,6 +63,16 @@ from baraza.schema.claim import Claim
 from baraza.schema.event import Event, EventType
 
 __all__ = ["IngestionReport", "IngestionPipeline", "SourceSpec"]
+
+
+def _resolve_agent_extraction(explicit: bool | None, offline: bool) -> bool:
+    """Choose the extraction path: argument, then environment, then offline."""
+    if explicit is not None:
+        return explicit
+    flag = os.environ.get("BARAZA_AGENT_EXTRACTION")
+    if flag is not None and flag.strip() != "":
+        return flag.strip().lower() in {"1", "true", "yes", "on"}
+    return not offline
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +97,7 @@ class IngestionReport:
     sources_read: int = 0
     units_registered: int = 0
     chunks_built: int = 0
-    filter_report: Optional[FilterReport] = None
+    filter_report: FilterReport | None = None
     extraction: ExtractionResult = field(default_factory=ExtractionResult)
     entities_observed: int = 0
     alias_proposals: int = 0
@@ -74,12 +106,17 @@ class IngestionReport:
     events_deduplicated: int = 0
     elapsed_ms: int = 0
     offline: bool = True
+    extraction_path: str = "direct"
+    """``"adk-agent"`` or ``"direct"``. Printed, because "which code path
+    actually ran" is exactly the kind of thing a compliance matrix should not
+    have to be trusted about."""
 
-    def describe(self) -> List[str]:
+    def describe(self) -> list[str]:
         lines = [
             f"sources read        {self.sources_read}",
             f"units registered    {self.units_registered}",
             f"chunks built        {self.chunks_built}",
+            f"extraction path     {self.extraction_path}",
         ]
         if self.filter_report:
             lines.append(f"{self.filter_report.describe()}")
@@ -111,10 +148,11 @@ class IngestionPipeline:
         *,
         client: LLMClient,
         store: EventStore,
-        registry: Optional[SourceRegistry] = None,
-        prefilter: Optional[RelevanceFilter] = None,
-        on_claim: Optional[Callable[[Claim], None]] = None,
+        registry: SourceRegistry | None = None,
+        prefilter: RelevanceFilter | None = None,
+        on_claim: Callable[[Claim], None] | None = None,
         offline: bool = True,
+        agent_extraction: bool | None = None,
     ):
         self.client = client
         self.store = store
@@ -124,6 +162,31 @@ class IngestionPipeline:
         self.alias_pass = AliasPass(client)
         self.offline = offline
         self._on_claim = on_claim
+        self.agent_extraction = _resolve_agent_extraction(agent_extraction, offline)
+        """Which extraction path runs.
+
+        Resolution order: the explicit argument, then ``BARAZA_AGENT_EXTRACTION``
+        (``1``/``0``), then ``not offline``.
+
+        The default is not arbitrary. The ADK agent talks to Vertex through the
+        framework's own model layer, which the cassette client cannot intercept
+        — so an offline replay *must* take the direct path, and there is no
+        configuration in which the agent path could quietly replay a recording
+        and be reported as a live run. A live run takes the agent path, which is
+        what makes ADK a production execution path rather than an import.
+
+        ``scripts/record_cassettes.py`` passes ``False`` explicitly: it drives a
+        live run precisely in order to record the direct path's prompts.
+        """
+
+        # Built once, here, so that the ADK fleet's promotion-isolation check
+        # runs at pipeline construction — before a document is read, on a
+        # deployed run and not only under pytest.
+        self.extractor: Any = (
+            AgentClaimExtractor(self.registry)
+            if self.agent_extraction
+            else ClaimExtractor(self.client, self.registry)
+        )
         """Called for each accepted claim, immediately after its event is
         appended. This is the hook the reconciler attaches to for **on-write**
         contradiction detection — detection is not a separate sweep over the
@@ -131,8 +194,8 @@ class IngestionPipeline:
 
     # ------------------------------------------------------------------ read
 
-    def register(self, specs: Sequence[SourceSpec]) -> List[Source]:
-        sources: List[Source] = []
+    def register(self, specs: Sequence[SourceSpec]) -> list[Source]:
+        sources: list[Source] = []
         for spec in specs:
             source = read_source(
                 spec.path, source_id=spec.source_id, observed_at=spec.observed_at
@@ -147,13 +210,16 @@ class IngestionPipeline:
 
     def run(self, specs: Sequence[SourceSpec]) -> IngestionReport:
         started = time.perf_counter()
-        report = IngestionReport(offline=self.offline)
+        report = IngestionReport(
+            offline=self.offline,
+            extraction_path="adk-agent" if self.agent_extraction else "direct",
+        )
 
         sources = self.register(specs)
         report.sources_read = len(sources)
         report.units_registered = sum(len(s.units) for s in sources)
 
-        chunks: List[Chunk] = []
+        chunks: list[Chunk] = []
         for source in sources:
             chunks.extend(chunk_source(source))
         report.chunks_built = len(chunks)
@@ -161,9 +227,21 @@ class IngestionPipeline:
         kept, filter_report = self.prefilter.run(chunks)
         report.filter_report = filter_report
 
-        extractor = ClaimExtractor(self.client, self.registry)
         for chunk in kept:
-            result = extractor.extract_chunk(chunk)
+            try:
+                result = self.extractor.extract_chunk(chunk)
+            except Exception as exc:  # noqa: BLE001 - deliberate boundary
+                # The unattended path's answer to "what happens at 3am". One
+                # transient 429 on chunk 40 of 200 used to end the night; now it
+                # costs one chunk and says which one, by name, in the summary.
+                report.extraction.rejected.append(
+                    (
+                        f"extraction-call-failed: {type(exc).__name__}: {exc}",
+                        {"chunk_id": chunk.chunk_id},
+                    )
+                )
+                report.extraction.chunks_processed += 1
+                continue
             report.extraction.claims.extend(result.claims)
             report.extraction.rejected.extend(result.rejected)
             report.extraction.raw_returned += result.raw_returned

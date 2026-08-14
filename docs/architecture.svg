@@ -49,7 +49,7 @@
   <!-- ================================================================ header -->
   <text class="h1" x="60" y="40">Baraza — architecture</text>
   <text class="s"  x="60" y="62">append-only log → fold → graph · contradiction detection on write, never a sweep · one visibility predicate in front of every reader</text>
-  <text class="s"  x="60" y="80">Model roles, not model IDs: the pins live in src/baraza/schema/models.py and nowhere else, and no document here names a version until make verify-models has run green.</text>
+  <text class="s"  x="60" y="80">Model roles, not model IDs — every Gemini and Gemma call runs on Vertex AI. Pins live in src/baraza/schema/models.py and nowhere else; no version is named here until make verify-models runs green.</text>
 
   <!-- ================================================================ corpus -->
   <text class="lane" x="60" y="112">CORPUS · FOUR NATIVE FORMATS · FULLY SYNTHETIC</text>
@@ -127,7 +127,7 @@
   <rect class="heavy" x="60" y="330" width="1180" height="72" rx="4"/>
   <text class="h2" x="76" y="354">APPEND-ONLY EVENT LOG — Firestore</text>
   <text class="s"  x="76" y="371">create-only writes · security rules reject update and delete at the database level · event IDs are content hashes, so a retried Job appends nothing twice</text>
-  <text class="s"  x="76" y="389">claim.asserted · contradiction.detected · claim.committed · claim.rejected · claim.visibility_set · entity.alias_linked · session.turn · heartbeat</text>
+  <text class="s"  x="76" y="389">claim.asserted · claim.adjudicated · contradiction.detected · claim.committed · claim.rejected · claim.visibility_set · entity.alias_linked · session.turn · heartbeat</text>
 
   <!-- ============================================================= detection -->
   <text class="lane" x="300" y="438">2 · CONTRADICTION DETECTION — ON WRITE</text>
@@ -254,8 +254,8 @@
 
   <rect class="box" x="680" y="1032" width="560" height="68" rx="4"/>
   <text class="h2" x="696" y="1053">baraza-reconcile — Cloud Run Job</text>
-  <text class="s"  x="696" y="1070">re-folds the log · re-detects over claims written since the last run · snapshots the ledger</text>
-  <text class="s"  x="696" y="1086">and diffs it against last night: what was added, what a new document retracted, what moved</text>
+  <text class="s"  x="696" y="1070">re-folds the log · re-detects over claims not yet adjudicated · snapshots the ledger</text>
+  <text class="s"  x="696" y="1086">and diffs it against last night, rebuilt from the log: what was added, what was retired</text>
 
   <path class="arw" d="M 640 1066 H 680"/>
 

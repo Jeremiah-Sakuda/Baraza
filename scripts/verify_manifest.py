@@ -49,9 +49,10 @@ import os
 import re
 import sys
 import zipfile
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 from xml.etree import ElementTree
 
 REPO = Path(__file__).resolve().parent.parent
@@ -131,9 +132,9 @@ _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 _S = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 
 
-def _stdlib_xlsx_cells(path: Path) -> Dict[str, str]:
+def _stdlib_xlsx_cells(path: Path) -> dict[str, str]:
     with zipfile.ZipFile(path) as archive:
-        shared: List[str] = []
+        shared: list[str] = []
         if "xl/sharedStrings.xml" in archive.namelist():
             root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
             for si in root.findall(f"{_S}si"):
@@ -142,7 +143,7 @@ def _stdlib_xlsx_cells(path: Path) -> Dict[str, str]:
         workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
         names = [s.get("name", "") for s in workbook.iter(f"{_S}sheet")]
 
-        cells: Dict[str, str] = {}
+        cells: dict[str, str] = {}
         for position, name in enumerate(names, start=1):
             member = f"xl/worksheets/sheet{position}.xml"
             if member not in archive.namelist():
@@ -162,10 +163,10 @@ def _stdlib_xlsx_cells(path: Path) -> Dict[str, str]:
         return cells
 
 
-def _stdlib_xlsx_rows(path: Path) -> Dict[str, str]:
+def _stdlib_xlsx_rows(path: Path) -> dict[str, str]:
     """Row context per cell, mirroring ``read_xlsx``'s ``[row: ...]`` suffix."""
     cells = _stdlib_xlsx_cells(path)
-    rows: Dict[Tuple[str, str], List[Tuple[int, str]]] = {}
+    rows: dict[tuple[str, str], list[tuple[int, str]]] = {}
     for ref, value in cells.items():
         sheet, _, coordinate = ref.partition("!")
         match = re.match(r"^([A-Z]+)(\d+)$", coordinate)
@@ -175,7 +176,7 @@ def _stdlib_xlsx_rows(path: Path) -> Dict[str, str]:
         for char in match.group(1):
             column = column * 26 + (ord(char) - ord("A") + 1)
         rows.setdefault((sheet, match.group(2)), []).append((column, value))
-    context: Dict[str, str] = {}
+    context: dict[str, str] = {}
     for ref in cells:
         sheet, _, coordinate = ref.partition("!")
         match = re.match(r"^([A-Z]+)(\d+)$", coordinate)
@@ -188,11 +189,11 @@ def _stdlib_xlsx_rows(path: Path) -> Dict[str, str]:
     return context
 
 
-def _stdlib_docx_units(path: Path) -> Dict[str, str]:
+def _stdlib_docx_units(path: Path) -> dict[str, str]:
     with zipfile.ZipFile(path) as archive:
         root = ElementTree.fromstring(archive.read("word/document.xml"))
     body = root.find(f"{_W}body")
-    units: Dict[str, str] = {}
+    units: dict[str, str] = {}
     ordinal = 0
     table_index = 0
     if body is None:
@@ -219,14 +220,14 @@ def _stdlib_docx_units(path: Path) -> Dict[str, str]:
     return units
 
 
-def _stdlib_pdf_pages(path: Path) -> List[str]:
+def _stdlib_pdf_pages(path: Path) -> list[str]:
     """Recover the text layer from uncompressed content streams.
 
     The generator writes streams uncompressed precisely so this works without a
     PDF library; see ``scripts/generate_corpus.py``.
     """
     blob = path.read_bytes().decode("latin-1")
-    pages: List[str] = []
+    pages: list[str] = []
     for stream in re.findall(r"stream\n(.*?)endstream", blob, re.DOTALL):
         shown = re.findall(r"\((.*?)\) Tj", stream, re.DOTALL)
         pages.append(
@@ -242,19 +243,19 @@ def _stdlib_pdf_pages(path: Path) -> List[str]:
 class CorpusView:
     """Everything the plant probes read, loaded once and labelled by path."""
 
-    index: Dict[str, Any]
-    groupme: Dict[str, Any]
-    interview: Dict[str, Any]
-    gold: Optional[Dict[str, Any]]
-    reader_path: Dict[str, str] = field(default_factory=dict)
-    _cells: Dict[str, Dict[str, str]] = field(default_factory=dict)
-    _rows: Dict[str, Dict[str, str]] = field(default_factory=dict)
-    _docx: Dict[str, Dict[str, str]] = field(default_factory=dict)
-    _pdf_units: Dict[str, List[Tuple[str, str, float]]] = field(default_factory=dict)
-    _md: Dict[str, str] = field(default_factory=dict)
+    index: dict[str, Any]
+    groupme: dict[str, Any]
+    interview: dict[str, Any]
+    gold: dict[str, Any] | None
+    reader_path: dict[str, str] = field(default_factory=dict)
+    _cells: dict[str, dict[str, str]] = field(default_factory=dict)
+    _rows: dict[str, dict[str, str]] = field(default_factory=dict)
+    _docx: dict[str, dict[str, str]] = field(default_factory=dict)
+    _pdf_units: dict[str, list[tuple[str, str, float]]] = field(default_factory=dict)
+    _md: dict[str, str] = field(default_factory=dict)
 
     @staticmethod
-    def load() -> "CorpusView":
+    def load() -> CorpusView:
         if not INDEX.exists():
             raise Unavailable(
                 f"{rel(INDEX)} is missing. Run `make corpus` first."
@@ -306,7 +307,7 @@ class CorpusView:
             import openpyxl  # noqa: PLC0415
 
             workbook = openpyxl.load_workbook(path, data_only=True)
-            cells: Dict[str, str] = {}
+            cells: dict[str, str] = {}
             for sheet in workbook.worksheets:
                 for row in sheet.iter_rows():
                     for cell in row:
@@ -325,14 +326,14 @@ class CorpusView:
 
     # -- docx ---------------------------------------------------------------
 
-    def docx(self, source_id: str) -> Dict[str, str]:
+    def docx(self, source_id: str) -> dict[str, str]:
         if source_id not in self._docx:
             path = self.path_of(source_id)
             try:
                 import docx  # noqa: PLC0415
 
                 document = docx.Document(str(path))
-                units: Dict[str, str] = {}
+                units: dict[str, str] = {}
                 ordinal = 0
                 for paragraph in document.paragraphs:
                     text = paragraph.text.strip()
@@ -353,11 +354,11 @@ class CorpusView:
 
     # -- pdf ----------------------------------------------------------------
 
-    def pdf_units(self, source_id: str) -> List[Tuple[str, str, float]]:
+    def pdf_units(self, source_id: str) -> list[tuple[str, str, float]]:
         """``(locator, text, confidence)`` for every unit of a scanned source."""
         if source_id not in self._pdf_units:
             path = self.path_of(source_id)
-            units: List[Tuple[str, str, float]] = []
+            units: list[tuple[str, str, float]] = []
             try:
                 from baraza.ingest.readers import read_source  # noqa: PLC0415
 
@@ -394,14 +395,14 @@ class CorpusView:
 
     # -- groupme ------------------------------------------------------------
 
-    def message(self, locator: str) -> Optional[Dict[str, Any]]:
+    def message(self, locator: str) -> dict[str, Any] | None:
         wanted = locator.removeprefix("msg:")
         for entry in self.groupme["messages"]:
             if str(entry["created_at"]) == wanted:
                 return entry
         return None
 
-    def segment(self, segment_id: str) -> Optional[Dict[str, Any]]:
+    def segment(self, segment_id: str) -> dict[str, Any] | None:
         for entry in self.groupme["segments"]:
             if entry["segment_id"] == segment_id:
                 return entry
@@ -416,12 +417,12 @@ class LogView:
     """The folded event log, if there is one."""
 
     path: Path
-    claims: List[Any]
-    contradictions: List[Any]
-    aliases: Dict[str, str]
+    claims: list[Any]
+    contradictions: list[Any]
+    aliases: dict[str, str]
 
     @staticmethod
-    def load(explicit: Optional[str]) -> "LogView":
+    def load(explicit: str | None) -> LogView:
         from baraza.fold.graph import fold  # noqa: PLC0415
         from baraza.fold.store import JsonlEventStore  # noqa: PLC0415
 
@@ -450,10 +451,10 @@ class LogView:
             "try `make demo-agenda` first."
         )
 
-    def by_source(self, source_id: str) -> List[Any]:
+    def by_source(self, source_id: str) -> list[Any]:
         return [c for c in self.claims if c.anchor.source_id == source_id]
 
-    def anchored_at(self, source_id: str, locator: str) -> List[Any]:
+    def anchored_at(self, source_id: str, locator: str) -> list[Any]:
         return [
             c
             for c in self.claims
@@ -469,7 +470,7 @@ class LogView:
 
         return claim.quote_for(Audience.OWNER) or ""
 
-    def sides(self, contradiction: Any) -> List[Any]:
+    def sides(self, contradiction: Any) -> list[Any]:
         index = {c.claim_id: c for c in self.claims}
         return [index[cid] for cid in contradiction.claim_ids if cid in index]
 
@@ -486,7 +487,7 @@ class Landmine:
     landmine_id: str
     title: str
     plant: Callable[[CorpusView], Result]
-    behaviour: Optional[Callable[[CorpusView, LogView], Result]]
+    behaviour: Callable[[CorpusView, LogView], Result] | None
     delegated_to: str = ""
     """Where the behaviour is verified when it is not verified here. Empty
     unless ``behaviour`` is None; a landmine may not opt out silently."""
@@ -498,7 +499,7 @@ def _contains(haystack: str, needle: str) -> bool:
     ).lower()
 
 
-def _find_unit(view: CorpusView, source_id: str, needle: str) -> Optional[Tuple[str, str, float]]:
+def _find_unit(view: CorpusView, source_id: str, needle: str) -> tuple[str, str, float] | None:
     """Locate planted PDF text by content, never by a fixed ¶ ordinal.
 
     pypdf and pdfplumber disagree about how many units a page of this document
@@ -511,7 +512,7 @@ def _find_unit(view: CorpusView, source_id: str, needle: str) -> Optional[Tuple[
     return None
 
 
-def _normalize_amount(text: str) -> Optional[float]:
+def _normalize_amount(text: str) -> float | None:
     cleaned = re.sub(r"[^0-9.\-]", "", (text or "").replace(",", ""))
     if not cleaned or cleaned in ("-", ".", "-."):
         return None
@@ -521,8 +522,8 @@ def _normalize_amount(text: str) -> Optional[float]:
         return None
 
 
-def build_landmines() -> List[Landmine]:
-    L: List[Landmine] = []
+def build_landmines() -> list[Landmine]:
+    L: list[Landmine] = []
 
     # -- L-01 ---------------------------------------------------------------
     def l01_plant(view: CorpusView) -> Result:
@@ -1132,7 +1133,7 @@ def build_landmines() -> List[Landmine]:
 # ------------------------------------------------------------- manifest sync
 
 
-def manifest_ids() -> List[str]:
+def manifest_ids() -> list[str]:
     if not MANIFEST.exists():
         raise Unavailable(f"{rel(MANIFEST)} is missing")
     return sorted(
@@ -1188,7 +1189,7 @@ def main(argv: Sequence[str]) -> int:
         print(f"cannot run: a corpus artifact is missing ({exc}). Run `make corpus`.")
         return 2
 
-    plant_results: Dict[str, Result] = {}
+    plant_results: dict[str, Result] = {}
     for landmine in landmines:
         try:
             plant_results[landmine.landmine_id] = landmine.plant(view)
@@ -1198,7 +1199,7 @@ def main(argv: Sequence[str]) -> int:
             )
 
     # -- behaviour ----------------------------------------------------------
-    log: Optional[LogView] = None
+    log: LogView | None = None
     log_error = ""
     if not args.plants_only:
         try:
@@ -1208,7 +1209,7 @@ def main(argv: Sequence[str]) -> int:
     else:
         log_error = "--plants-only was passed; the behaviour phase did not run"
 
-    behaviour_results: Dict[str, Result] = {}
+    behaviour_results: dict[str, Result] = {}
     if log is not None:
         for landmine in landmines:
             if landmine.behaviour is None:

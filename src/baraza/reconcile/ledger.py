@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from baraza.fold.graph import GraphState
 from baraza.schema.contradiction import Contradiction, RenderedContradiction
@@ -39,7 +38,7 @@ __all__ = ["LedgerRow", "DisputedLedger", "STAKES_PATTERNS"]
 # Predicate hints that raise the stakes of a disagreement. Ordered, first match
 # wins. These are a judgement about what matters in a succession handover, and
 # they are written here as data so they can be argued with rather than buried.
-STAKES_PATTERNS: List[tuple[str, float, str]] = [
+STAKES_PATTERNS: list[tuple[str, float, str]] = [
     (r"sign|authoriz|approv|access|credential|password|admin", 1.0, "authority"),
     (r"budget|dues|fee|spend|reimburs|invoice|account|money|\$", 0.9, "money"),
     (r"deadline|renew|file|submit|compliance|required|must", 0.8, "obligation"),
@@ -68,7 +67,7 @@ class LedgerRow:
     recency_weight: float
     spread_weight: float
     newest_claim_at: EpochMillis
-    source_ids: List[str] = field(default_factory=list)
+    source_ids: list[str] = field(default_factory=list)
 
     @property
     def contradiction_id(self) -> str:
@@ -84,7 +83,7 @@ class LedgerRow:
             f"spread {self.spread_weight:.2f}"
         )
 
-    def render_lines(self) -> List[str]:
+    def render_lines(self) -> list[str]:
         lines = [
             f"[{self.contradiction_id[:12]}] {self.contradiction.subject_id} "
             f"— {self.contradiction.predicate_hint}",
@@ -110,9 +109,9 @@ class DisputedLedger:
         self,
         audience: Audience,
         *,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         min_score: float = 0.0,
-    ) -> List[LedgerRow]:
+    ) -> list[LedgerRow]:
         """Rank and render open contradictions for one audience.
 
         Resolved and retracted contradictions are absent by construction:
@@ -132,7 +131,7 @@ class DisputedLedger:
         )
         span = max(newest_overall - oldest_overall, 1)
 
-        rows: List[LedgerRow] = []
+        rows: list[LedgerRow] = []
         for contradiction in open_contradictions:
             stakes_weight, stakes_label = _stakes(contradiction.predicate_hint)
             newest = self._newest_claim_at(contradiction)
@@ -183,7 +182,7 @@ class DisputedLedger:
         ]
         return max(instants) if instants else contradiction.detected_at
 
-    def summary(self, audience: Audience) -> Dict[str, object]:
+    def summary(self, audience: Audience) -> dict[str, object]:
         """Counts for the console and the differential comparison.
 
         ``redacted`` is reported separately so the ledger can be honest about
@@ -199,8 +198,8 @@ class DisputedLedger:
         }
 
 
-def _tally(labels) -> Dict[str, int]:
-    counts: Dict[str, int] = {}
+def _tally(labels) -> dict[str, int]:
+    counts: dict[str, int] = {}
     for label in labels:
         counts[label] = counts.get(label, 0) + 1
     return dict(sorted(counts.items(), key=lambda kv: -kv[1]))

@@ -13,8 +13,10 @@ cut. `scripts/compliance.py` fails the build on range notation in a matrix cell.
 **A framework, model or service is named here only if the code uses it.** Not if it
 is planned, not if it is a declared dependency, not if it was almost used. This is
 the rule that pulled an earlier revision's claim about a service the code never
-called, and it is the rule that governs the framework row below — which currently
-does not say what the project intends it to say.
+called, and it is the rule that governed the framework row below through three
+build sessions in which ADK was a declared dependency nothing imported. The row now
+names ADK, because the import now exists — and it still marks the part that is not
+yet true.
 
 ---
 
@@ -46,10 +48,10 @@ BAR-309, BAR-320, BAR-330, BAR-410.
 
 | Rule requirement | How Baraza satisfies it | Requirement IDs | Check it |
 |---|---|---|---|
-| **At least one Google agent-development framework** (recovered) | **Currently unsatisfied in code — see the framework note below.** ADK is declared in `pyproject.toml` and named as the resolved framework in `docs/framework-decision.md`, but no module imports it. Every model call in the tree routes through the GenAI SDK via `src/baraza/llm.py`. Per the rule at the top of this file, this matrix will not claim ADK until an import exists. | BAR-020 | `grep -rn "google.adk" src/` returns nothing today; `grep -rn "google.genai" src/` returns the call sites |
+| **At least one Google agent-development framework** (recovered) | **Satisfied, on two independent bases.** (1) Google ADK: `src/baraza/agents.py` imports `LlmAgent`, `RunConfig`, `InMemoryRunner` and `FunctionTool` from `google.adk` (the import block at lines 118-122), and `build_extractor` / `build_reconciler` / `build_interviewer` construct real `LlmAgent` instances with per-agent tool isolation and transfer disabled. The **extractor is on the live ingestion path**: `baraza.ingest.extract.AgentClaimExtractor` drives it through an ADK `Runner`, and `IngestionPipeline` constructs it whenever the run is not offline (`src/baraza/ingest/pipeline.py`). (2) The Google GenAI SDK is on every model call path in the tree (`src/baraza/llm.py`, three `from google.genai import types` sites). **Scope, stated plainly:** one of the three agents is driven by a `Runner`; the reconciler and interviewer are built and isolation-tested but still reach the model through `llm.py`. The **offline/cassette path is deliberately direct**, so a replayed demo does not exercise ADK — see the framework note below. | BAR-020 | `grep -rn "google\.adk" src/` → 7 hits in `agents.py`; `grep -rn "baraza.agents" src/` → `ingest/extract.py`; `grep -rn "google\.genai" src/` → `llm.py` ×3, `ingest/extract.py` ×1; `PYTHONPATH=src pytest tests/unit/test_agents.py tests/unit/test_agent_extraction.py -q` |
 | **At least one Google Cloud infrastructure service** (recovered) | Cloud Run Jobs for the ingestion Job and the nightly `baraza-reconcile` Job; Cloud Run services for the interview and successor surfaces; Firestore as the append-only claim-event log, session store and entity table; Cloud Scheduler as the nightly trigger. | BAR-021, BAR-410, BAR-411† | `src/baraza/fold/store.py`, `src/baraza/reconcile/job.py`; deployment state in the README's status table |
-| **Google models perform the work** (in-tree inference) | Gemini in two roles: a reasoning role for contradiction adjudication, agenda synthesis, the divergence turn and successor synthesis; a fast role for extraction, alias proposals and interview turns. Gemma runs the ingestion relevance pre-filter. Pins live only in `src/baraza/schema/models.py`. | BAR-303, BAR-320, BAR-330 | `make compliance` fails on a model-ID literal anywhere else; `make verify-models` resolves every pin against live Vertex |
-| **Original work, built for this hackathon** (in-tree inference) | The repository's first commit is dated 2026-08-13 and carries the session ID in its message. Prior work carried in from a sibling project is disclosed rather than absorbed. **Gap:** only session B0 has a build-log entry; the B1 and B2 commits landed without one, so the per-session log is incomplete for two of the four sessions in the history. | No BAR ID — submission-level | `git log --reverse --format='%ad %s'`; `docs/BUILD-LOG.md`; the Disclosures section of `README.md` |
+| **Google models perform the work** (in-tree inference) | Gemini in two roles: a reasoning role for contradiction adjudication, agenda synthesis, the divergence turn and successor synthesis; a fast role for extraction, alias proposals and interview turns. Gemma is **pinned and wired for** the ingestion relevance pre-filter but has never run: unattended ingestion uses the `stub`, and the `gemma` branch calls the ordinary `generate_content` path while the pin declares `surface="vertex-endpoint"` — nothing reads `GemmaFilter.endpoint`, so the first live attempt will most likely fail open on every chunk. That failure is now legible rather than silent (`FilterReport.failed_open`; a degraded pass prints `DEGRADED` and writes `not yet measured`), and the BAR-303 bonus is not claimed. Pins live only in `src/baraza/schema/models.py`. | BAR-303, BAR-320, BAR-330 | `make compliance` fails on a model-ID literal anywhere else; `make verify-models` resolves every pin against live Vertex |
+| **Original work, built for this hackathon** (in-tree inference) | The repository's first commit is dated 2026-08-13 and carries the session ID in its message. Prior work carried in from a sibling project is disclosed rather than absorbed. **Gap, narrowed but not closed:** B0 and B3 have contemporaneous entries. B1, B2 and B4 were committed without one and have since been **backfilled from `git show --stat` and the commit messages, each marked as reconstructed after the fact**. What is permanently gone is the verbatim opening prompt and course corrections for those three sessions; they are recorded as unrecoverable rather than written from memory. So the build log is complete as a record of *what landed* and incomplete as a record of *how each session was driven*, and it says which is which per entry. | No BAR ID — submission-level | `git log --reverse --format='%ad %s'`; `docs/BUILD-LOG.md`; the Disclosures section of `README.md` |
 | **Public repository with an open-source license** (in-tree inference) | Apache-2.0, full text at `LICENSE`, declared in `pyproject.toml`. | BAR-501† | `LICENSE`; `grep license pyproject.toml` |
 | **Project description and README** (in-tree inference) | `README.md` carries the problem, the mechanism with its arithmetic, spin-up instructions, the seven contract targets, the negative decisions required by BAR-501, the disclosures, and an explicit statement of what has and has not been measured. | BAR-501† | `README.md` |
 | **Architecture diagram** (in-tree inference) | `docs/architecture.md` (Mermaid, renders on GitHub) and `docs/architecture.svg` (self-contained, legible in light and dark). Both show the four native formats, the model roles, the append-only log, the fold, on-write detection, the ledger and agenda, the interview and approval path, the visibility boundary, the successor reader and the Scheduler. Neither prints a model ID, because `make verify-models` has not run green. | BAR-505† | `docs/architecture.md`, `docs/architecture.svg` |
@@ -57,14 +59,16 @@ BAR-309, BAR-320, BAR-330, BAR-410.
 | **Publicly reachable hosted instance** (in-tree inference) | Not yet deployed. The hosted instance reads as `Audience.PUBLIC`, which is the least-privileged audience in `src/baraza/schema/visibility.py`, so a logged-out judge sees only claims explicitly published. | BAR-410, BAR-411† | Not yet checkable |
 | **Reproducibility from a clean clone** (in-tree inference) | `make install` then `make demo`, offline, with no credentials: local append-only JSONL event log and recorded model cassettes. `make bootstrap` and `make teardown` provision and remove the deployed path, and `teardown` is safe to run repeatedly. **Not yet met:** `fixtures/cassettes/` holds no recordings, so `make demo` exits 2 and does no work. Recording them is a supervised step that costs live Vertex calls. | BAR-506†, BAR-007 | Reproducibility gate 2026-08-25 in `docs/GATE.md`; the README's status table records every target's observed exit code |
 | **Disclosure of AI assistance** (in-tree inference) | Disclosed in `README.md`: the assistant wrote the majority of the code under the session protocol in `AGENTS.md`, with every session's prompt and outcome logged. Ported prior work and the placeholder finding file are disclosed in the same section. | No BAR ID — submission-level | `README.md`, Disclosures |
-| **Additional Google models beyond the primary one** (in-tree inference) | Gemma as the ingestion relevance pre-filter, with a real interface and a `stub` / `gemma` flag; text embeddings for blocking-key expansion. Both are declared in `src/baraza/schema/models.py` so the claim traces to code rather than to a sentence. The Gemma survival rate is `not yet measured`. | BAR-303 | `src/baraza/ingest/prefilter.py`; `docs/metrics.json` |
+| **Additional Google models beyond the primary one** (in-tree inference) | Gemma as the ingestion relevance pre-filter, with a real interface and a `stub` / `gemma` flag, declared in `src/baraza/schema/models.py` so the claim traces to code rather than to a sentence. **This bonus is not earned and may not be claimed as things stand:** the survival rate is `not yet measured`, and the `gemma` branch reaches the model through `generate_content` while the pin declares `surface="vertex-endpoint"` — `GemmaFilter.endpoint` is assigned and never read, so a live run would fail open on every chunk and Gemma would not have done any work. Earning it needs an endpoint-aware call path plus a green `make verify-models`; forgoing it needs this row deleted. Either is honest; claiming it as-is is not. A text-embedding pin was also listed here; it has been removed, because no module ever embedded anything and the rule at the top of this file forbids claiming a component that does not exist — including in the file that states the rule. | BAR-303 | `src/baraza/ingest/prefilter.py`; `docs/metrics.json`; `grep -rn embed src/` returns nothing |
 
 ---
 
 ## The framework row, in full
 
-This is the row a judge is most likely to test, and it is the row that does not
-currently hold.
+This is the row a judge is most likely to test. It holds. It did not hold for the
+first three build sessions, and the paragraphs below used to say so in detail — that
+history is kept rather than quietly overwritten, because a compliance file that
+edits its own past is worth less than one that shows its work.
 
 **What BAR-020 says.** ADK is the runtime framework for the interviewer, reconciler
 and extractor agents, resolved by evidence rather than re-verified. The
@@ -74,37 +78,82 @@ cannot meet BAR-334's per-turn externalization, within one bounded attempt of no
 than three hours, the **interview service only** drops to direct GenAI SDK calls with
 our own turn loop. The reconciler and extractor remain on ADK regardless.
 
-**What the code does.** Nothing imports ADK. `src/baraza/llm.py` is the single model
-layer for the whole system — extractor, reconciler, interviewer and successor alike —
-and it calls the GenAI SDK directly.
+**What the code does.** `src/baraza/agents.py` is the ADK layer. Its import block
+(lines 118-122) pulls `LlmAgent`, `LlmCallsLimitExceededError` and `RunConfig`
+from `google.adk.agents`, `InMemoryRunner` from `google.adk.runners` and
+`FunctionTool` from `google.adk.tools`; `build_extractor`, `build_reconciler` and
+`build_interviewer`
+each return a real `LlmAgent` — carrying a model pin resolved through
+`schema/models.py`, a role instruction, its own tool list, and
+`disallow_transfer_to_parent` / `disallow_transfer_to_peers` set so that no
+reasoning agent can hand work to the approver. The approver is deliberately *not*
+an `LlmAgent`: promotion is the one operation that must never be a model's
+judgement call, so the surface that performs it has no model.
 
-**Why that is not the fallback.** The fallback covers one surface and requires a
-bounded attempt to have been made and recorded. No attempt has been recorded
-(`docs/framework-decision.md` states the fallback branch has not been taken), and the
-current state covers every surface, not one. So this is not the fallback branch — it
-is a gap between the decision and the code.
+The version resolved in the build environment is `google-adk` 2.6.2.
 
-**What this matrix does about it.** It declines to claim ADK. A dependency line in
-`pyproject.toml` is not a use of a framework, and the rule that a framework is named
-only if the code uses it does not have an exception for the row that most needs one.
+**What is claimed, and what is not.** The requirement is that the project uses a
+Google agent-development framework, and it does. But this file's standing rule is
+that a framework is named only if the code uses it, so the boundary is drawn
+exactly:
 
-**What closes it.** Either the extractor and reconciler agents are built on ADK and
-this row is rewritten to name it, or the bounded attempt is run, fails, is recorded
-in `docs/framework-decision.md` with the measurement that triggered it, and this row
-is rewritten to name what actually shipped. Either way the row and the code change in
-the same commit.
+- **Claimed:** ADK is a real dependency of real code. The agents are constructed,
+  their tool isolation is enforced, and `tests/unit/test_agents.py` asserts
+  `isinstance(fleet.extractor, LlmAgent)` against the genuine ADK class — a test
+  that fails if the import ever silently degrades to a stub.
+- **Also claimed, as of session B5:** one agent is driven by an ADK `Runner` on a
+  real path. `baraza.ingest.extract.AgentClaimExtractor` builds the extractor with
+  `read_chunk` and `propose_claim` bound to the chunk under extraction and to the
+  three validation gates, opens an `InMemoryRunner`, and bounds the loop with
+  `RunConfig(max_llm_calls=MAX_AGENT_TURNS)` and an `asyncio.wait_for` at
+  `AGENT_TIMEOUT_SECONDS`. `IngestionPipeline` constructs it whenever the run is
+  not offline, which is what the deployed ingest Job runs
+  (`deploy/entrypoint-job.sh` invokes `baraza.cli demo-agenda --no-offline`).
+  `grep -rn "baraza.agents" src/` now returns a production hit.
+- **Not claimed:** that *every* model call in production flows through an ADK
+  `Runner`. It does not. The reconciler and interviewer agents are constructed and
+  their tool isolation is enforced, but the reconcile Job and the interview service
+  still reach the model through `src/baraza/llm.py` directly.
+- **Not claimed, and important for anyone watching a recorded demo:** that the
+  **offline** path uses ADK. It deliberately does not. An offline run replays
+  recorded cassettes, and the ADK `Runner` bypasses the cassette client, so
+  `_resolve_agent_extraction` forces the direct path whenever `offline` is true —
+  a replay can never be mis-narrated as a live agent loop. Anything shown from
+  `make demo` is the direct path; only `--no-offline` exercises ADK.
+
+**The second, independent basis.** `google-genai` — the Google GenAI SDK — is on
+every runtime path in the tree (three `from google.genai import types` sites in
+`src/baraza/llm.py`, plus one in `src/baraza/ingest/extract.py`), so the
+framework requirement has two supports rather than one. Per this file's provenance
+rule, note the limit of that argument: the official rules text is not carried in
+this repository, so whether the GenAI SDK counts as an *agent-development*
+framework is an in-tree inference about wording nobody here can quote. The ADK
+basis does not depend on it.
+
+**The fallback was never taken.** BAR-020 pre-commits one deviation — the
+*interview service only* dropping to direct GenAI SDK calls if ADK's streaming path
+misses BAR-330's first-token budget. That branch was never exercised, because the
+bounded attempt it gates was never needed. `docs/framework-decision.md` records
+this.
 
 Frameworks and SDKs declared in `pyproject.toml`: `google-adk`, `google-genai`,
 `fastapi`, `uvicorn`, `pydantic`, `httpx`, `google-cloud-firestore`,
 `google-cloud-storage`, `pypdf`, `pdfplumber`, `openpyxl`, `python-docx`, and the
-OpenTelemetry SDK, API and Cloud Trace exporter. There is no lockfile in the tree;
-`pyproject.toml` is the declaration of record.
+OpenTelemetry SDK, API and Cloud Trace exporter. `requirements.lock` pins the
+exact versions this tree was tested against and `make install` prefers it;
+`pyproject.toml` declares the supported ranges. The lock was resolved on Python
+3.14/macOS, and the deploy images are `python:3.11-slim`, which do **not** install
+from it — that gap is stated in the lockfile's own header and is not closed.
 
-Two of those are declared and **not** used by any code path, and are therefore not
-claimed anywhere in this file: `google-adk`, for the reason above, and
-`google-cloud-storage`. Verify either with `grep -rn "google.adk" src/` and
-`grep -rn "google.cloud.storage\|from google.cloud import storage" src/`, both of
-which currently return nothing.
+One of those is declared and **not** used by any code path, and is therefore not
+claimed anywhere in this file: `google-cloud-storage`. Verify with
+`grep -rn "google.cloud.storage\|from google.cloud import storage" src/`, which
+returns nothing.
+
+`google-adk` was on that list for the first three build sessions and is no longer:
+`grep -rn "google\.adk" src/` returns seven hits in `src/baraza/agents.py` (five
+imports and two docstring references), and `grep -rn "baraza.agents" src/` returns
+`src/baraza/ingest/extract.py`, which is production code rather than a test.
 
 ---
 
@@ -113,11 +162,19 @@ which currently return nothing.
 Each of these was available and each was refused, for the same reason: a claim the
 repository cannot back is worth less than no claim.
 
-- **Antigravity is not claimed.** BAR-020 cites an Aug 8 negative finding rather than
-  dual-listing it. The finding file is currently a placeholder; see the README's
-  Disclosures.
-- **No agent framework other than ADK is named**, and ADK itself is not claimed until
-  it is imported.
+- **Antigravity is not claimed — and the negative finding that used to justify not
+  claiming it has been withdrawn.** BAR-020 cited an Aug 8 verification failure from
+  a sibling project; the source document was never in this repository and the
+  placeholder standing in for it has been deleted. The framework was chosen without a
+  published comparison, and `docs/framework-decision.md` now says so. A claim the
+  repository cannot back is worth less than no claim — that rule applies to negative
+  claims about other people's software too.
+- **No agent framework other than ADK is named.** ADK is now claimed, because it is
+  imported, instantiated, and driven by a `Runner` on the live ingestion path; it was
+  not claimed while it was only a dependency line. What is still *not* claimed is that
+  ADK sits on **every** production call path — the reconciler and interviewer reach
+  the model directly, and the offline replay path is direct by design. See the
+  framework row in full.
 - **No enterprise deployment claim.** Demo claims stay scoped to a single
   organization's synthetic corpus.
 - **No voice or multimodal claim.** Voice was cut unconditionally, so the multimodal
@@ -135,7 +192,8 @@ repository cannot back is worth less than no claim.
 ```bash
 python3 scripts/compliance.py --no-prd   # the four invariant lints, standalone
 make compliance                          # the same, plus the BAR-007 PRD ID audit
-grep -rn "google.adk" src/               # the framework row's evidence, or its absence
+grep -rn "google\.adk" src/              # the framework row's evidence: 7 hits in agents.py
+grep -rn "baraza.agents" src/            # ingest/extract.py — the extractor agent's production caller
 make verify-models                       # resolves every pinned model ID against live Vertex
 ```
 

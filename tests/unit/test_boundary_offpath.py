@@ -28,7 +28,6 @@ from baraza.reconcile.agenda import AgendaGenerator
 from baraza.reconcile.ledger import DisputedLedger
 from baraza.schema.contradiction import Contradiction
 from baraza.schema.visibility import Audience, Visibility
-
 from baraza_testkit import (
     FakeLLMClient,
     asserted,

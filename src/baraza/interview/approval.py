@@ -3,10 +3,19 @@ visibility choice is made.
 
 Three things happen here and nowhere else:
 
-**Promotion.** ``claim.committed`` is written only by this module. The extractor
-cannot write it, the reconciler cannot write it, and in production neither
-service account holds the IAM permission to. A claim reaches ``committed``
-because a human approved it, or it does not reach it at all.
+**Promotion.** ``claim.committed`` is written only by this module — no other
+module in the tree constructs that event type. Neither ``baraza.ingest`` nor
+``baraza.reconcile`` imports this one; the reconcile Job's entrypoint does not
+load it at all. (The deployed ingest Job enters through ``baraza.cli``, which
+imports ``ApprovalFlow`` for the local demo flow, so there the isolation is the
+path taken rather than the module being absent. Said here rather than left for a
+reader to discover.) ``deploy/firestore.rules`` denies the event type on
+``create`` for every caller that rules govern.
+
+Not IAM: Firestore permissions are per-operation and cannot be conditioned on an
+``event_type`` field, so all writers hold the same append role — see
+``deploy/README.md``. A claim reaches ``committed`` because a human approved it,
+or it does not reach it at all.
 
 **The visibility choice.** The approver picks who may read the claim, and the
 choice is recorded as its own event so the boundary decision is auditable
@@ -27,8 +36,7 @@ the retrieval pool, the ledger, and every future agenda, permanently.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Dict, List, Optional
+from enum import StrEnum
 
 from baraza.fold.store import EventStore
 from baraza.schema.claim import Claim
@@ -39,7 +47,7 @@ from baraza.schema.visibility import Audience, Visibility
 __all__ = ["Decision", "ApprovalRequest", "ApprovalResult", "ApprovalFlow"]
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
     DEFER = "defer"
@@ -54,15 +62,15 @@ class ApprovalRequest:
 
     claim: Claim
     decision: Decision
-    visibility: Optional[Visibility] = None
+    visibility: Visibility | None = None
     """``None`` on approve means the claim keeps ``private``. The approver
     declining to choose is a valid outcome and resolves to the tier that leaks
     nothing."""
 
     approver_id: str = "officer"
-    contradiction_id: Optional[str] = None
+    contradiction_id: str | None = None
     note: str = ""
-    edited_text: Optional[str] = None
+    edited_text: str | None = None
     """If the approver corrected the wording, the corrected text. Recorded as a
     superseding claim rather than an edit — the log is append-only, so a
     correction is a new claim citing the same turn, and the original stays
@@ -71,20 +79,20 @@ class ApprovalRequest:
 
 @dataclass(slots=True)
 class ApprovalResult:
-    committed: List[str] = field(default_factory=list)
-    rejected: List[str] = field(default_factory=list)
-    deferred: List[str] = field(default_factory=list)
-    contradictions_resolved: List[str] = field(default_factory=list)
-    visibility_choices: Dict[str, str] = field(default_factory=dict)
+    committed: list[str] = field(default_factory=list)
+    rejected: list[str] = field(default_factory=list)
+    deferred: list[str] = field(default_factory=list)
+    contradictions_resolved: list[str] = field(default_factory=list)
+    visibility_choices: dict[str, str] = field(default_factory=dict)
     events_appended: int = 0
 
-    def describe(self) -> List[str]:
+    def describe(self) -> list[str]:
         lines = [
             f"approval: {len(self.committed)} committed, "
             f"{len(self.rejected)} rejected, {len(self.deferred)} deferred",
         ]
         if self.visibility_choices:
-            tally: Dict[str, int] = {}
+            tally: dict[str, int] = {}
             for choice in self.visibility_choices.values():
                 tally[choice] = tally.get(choice, 0) + 1
             rendered = ", ".join(f"{k}={v}" for k, v in sorted(tally.items()))
@@ -105,10 +113,10 @@ class ApprovalFlow:
 
     def submit(
         self,
-        requests: List[ApprovalRequest],
+        requests: list[ApprovalRequest],
         *,
         occurred_at: EpochMillis,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> ApprovalResult:
         result = ApprovalResult()
 
@@ -193,18 +201,17 @@ class ApprovalFlow:
                 result.visibility_choices[target.claim_id] = chosen.value
 
             # Close the loop.
-            if request.contradiction_id:
-                if self._append(
-                    EventType.CONTRADICTION_RESOLVED,
-                    occurred_at,
-                    {
-                        "contradiction_id": request.contradiction_id,
-                        "session_id": session_id,
-                        "resolving_claim_id": target.claim_id,
-                    },
-                    result,
-                ):
-                    result.contradictions_resolved.append(request.contradiction_id)
+            if request.contradiction_id and self._append(
+                EventType.CONTRADICTION_RESOLVED,
+                occurred_at,
+                {
+                    "contradiction_id": request.contradiction_id,
+                    "session_id": session_id,
+                    "resolving_claim_id": target.claim_id,
+                },
+                result,
+            ):
+                result.contradictions_resolved.append(request.contradiction_id)
 
         return result
 
@@ -212,7 +219,7 @@ class ApprovalFlow:
         self,
         event_type: EventType,
         occurred_at: EpochMillis,
-        payload: Dict[str, object],
+        payload: dict[str, object],
         result: ApprovalResult,
     ) -> bool:
         written = self.store.append(

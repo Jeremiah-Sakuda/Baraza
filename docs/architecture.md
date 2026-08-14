@@ -117,7 +117,14 @@ where a verified one belongs.
 | **Gemini, reasoning role** | Contradiction adjudication, agenda synthesis, the divergence turn, successor-mode synthesis | Every call that must be right more than it must be quick. A wrong adjudication puts a false contradiction in front of a departing officer and spends the scarcest resource in the system — their attention. |
 | **Gemini, fast role** | Claim extraction over corpus chunks, entity alias proposals, the interviewer's ordinary turns and clarifying follow-ups | First-token latency is the binding constraint on the interview path, and extraction is a high-volume, structurally constrained task where the model selects from a closed set rather than composing. |
 | **Gemma** | The ingestion relevance pre-filter, `keep` / `drop` per chunk, before any Gemini call | Most of a chat export is scheduling noise. Filtering it with a small model is the difference between an ingestion that costs dollars and one that costs tens of dollars. Runs behind a `stub` / `gemma` flag; night-one unattended ingestion runs `stub`, disclosed as a stub in its docstring, in `docs/metrics.json`, and in the console output of any run that used it. |
-| **Text embeddings** | Blocking-key expansion in detection | Claims are embedded. The corpus is not. Brute-force top-k in memory — see the arithmetic below. |
+
+There is no embedding model in this table. An earlier revision listed one, for
+"blocking-key expansion in detection"; nothing in the tree ever embedded anything.
+Retrieval is exact-match blocking on subject ∪ object ∪ `predicate_hint` with alias
+edges resolved at query time (`src/baraza/reconcile/detect.py`), which is what the
+corpus's cardinality actually needs. The pin is gone from
+`src/baraza/schema/models.py` and the decision is recorded in the README's negative
+decisions.
 
 ---
 
@@ -286,10 +293,28 @@ counted as organic activity in any accounting, anywhere.
 | Event log, sessions, entities | Firestore | — |
 | All model calls | Vertex AI | — |
 
-Service accounts are per stage. The extraction stage's account **cannot** write a
-`claim.committed` event — not by convention, by IAM. Only the approval path promotes
-a claim, and the promotion is a distinct event from the visibility choice so the
-boundary decision is auditable separately from the approval.
+Service accounts are per stage. The extraction stage **cannot** write a
+`claim.committed` event, and it is worth being exact about what stops it, because
+an earlier revision of this document said "by IAM" and that was wrong. Firestore's
+IAM permissions are per-operation and carry no predicate over document contents, so
+IAM cannot express "may create documents whose `event_type` is `claim.asserted`" —
+`scripts/bootstrap_gcp.sh` binds the same `baraza_log_appender` role to the ingest,
+reconcile and interview accounts, and says so where it does it. What holds this
+boundary is the **code path** (`claim.committed` is constructed only in
+`interview/approval.py`; neither `baraza.ingest` nor `baraza.reconcile` imports it,
+and the reconcile Job's entrypoint never loads it — the ingest Job enters through
+`baraza.cli`, which does import `ApprovalFlow` for the demo flow, so on that one
+container the isolation is the path taken rather than the module being absent),
+**`deploy/firestore.rules`** (which denies the event type on `create` for
+every rules-governed caller, though not for service-account credentials, which
+bypass rules), and **a unit test** that asserts the negative. What IAM does enforce
+is the guarantee that matters most: append-only, create without update or delete,
+for every writer — plus the read-only successor. `deploy/README.md` carries the
+per-row matrix.
+
+Only the approval path promotes a claim, and the promotion is a distinct event from
+the visibility choice so the boundary decision is auditable separately from the
+approval.
 
 A missing permission is a stop condition. It gets reported, not routed around, and
 never fixed by widening a scope or a key.
@@ -303,7 +328,9 @@ implemented. It is not a deployment report.
 
 Observed on 2026-08-13, after a verification pass that ran each of these: every
 module in the file map exists and imports under Python 3.14 with no cloud
-credentials; `tests/unit` and `tests/property` are 154 passed; `make corpus`
+credentials; `tests/unit` and `tests/property` pass in full (`make test` prints the
+count — it is not transcribed here, because a transcribed count is stale on the next
+commit and this document is not a place for numbers nobody re-ran); `make corpus`
 regenerates 13 artifacts and re-reads every one through `baraza.ingest.readers`;
 `make verify-manifest` finds 18 of 18 planted problems; `deploy/` carries the
 Firestore rules and the Cloud Run and Scheduler manifests.
@@ -311,10 +338,16 @@ Firestore rules and the Cloud Run and Scheduler manifests.
 Not yet true: nothing is deployed; `fixtures/cassettes/` holds no recordings, so
 the offline demo refuses to start and **no behaviour has been observed** —
 `verify-manifest` reports 0 of 17 behaviour probes and `verify-anchors` has no
-citations to resolve, both because there is no event log; no module imports ADK;
-`make verify-models` has not run, so no model pin has been resolved against live
-Vertex; and every entry in `docs/metrics.json` reads `not yet measured`.
+citations to resolve, both because there is no event log; no production module
+imports `baraza.agents`, so the ADK fleet is constructed and tested but not yet
+driving a live extraction loop; `make verify-models` has not run, so no model pin
+has been resolved against live Vertex; and every entry in `docs/metrics.json`
+reads `not yet measured`.
+
+ADK itself is no longer a gap: `src/baraza/agents.py` imports
+`google.adk.agents.LlmAgent` and `google.adk.tools.FunctionTool` and builds three
+real agents. What remains is wiring one of them onto the production call path.
 
 The README's status table carries the per-command exit codes, `docs/compliance.md`
-carries the framework gap in full, and `docs/BUILD-LOG.md` is the authority on what
+carries the framework row in full, and `docs/BUILD-LOG.md` is the authority on what
 has landed.

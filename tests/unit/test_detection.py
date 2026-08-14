@@ -25,7 +25,6 @@ import json
 from baraza.reconcile.detect import MAX_RETRIEVED, ContradictionDetector, build_block
 from baraza.schema.claim import Tier
 from baraza.schema.temporal import intervals_overlap, to_epoch_millis
-
 from baraza_testkit import FakeLLMClient, claim
 
 NO_CONTRADICTIONS = json.dumps({"contradictions": []})

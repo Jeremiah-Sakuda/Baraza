@@ -10,7 +10,7 @@ Baraza is succession intelligence. Overnight and unattended, it reads years of a
 
 **Opening:** *Every May, thousands of organizations forget everything.* **Close:** *This September, mine won't.*
 
-`docs/PRD.md` (v1.3 merged) is authoritative. Requirement IDs (`BAR-###`) and their acceptance criteria are the contract.
+`docs/PRD.md` (v1.2 merged — `baraza-prd-v1.2-amendments.md` amends v1.1, and every other document in this repository says v1.2) is authoritative. Requirement IDs (`BAR-###`) and their acceptance criteria are the contract.
 
 ---
 
@@ -23,7 +23,7 @@ Baraza is succession intelligence. Overnight and unattended, it reads years of a
 5. **Time comparisons are epoch, everywhere** (BAR-309). Integer epoch millis, UTC — fold ordering, interval overlap, turn ordering, recency ranking. ISO-8601 strings are serialization only. Sorting or comparing instants as strings is a known defect class in this portfolio (it kept a revoked grant active under mixed UTC offsets) and is prohibited outright.
 6. **Citations are load-bearing.** `quote` is mandatory on every claim; anchors reference only real, registered source locations; a fabricated or unresolvable anchor is a stop condition, not a warning. Successor mode refuses uncited synthesis — the refusal is a feature with its own AC, not an error state to engineer away.
 7. **No real member or person data anywhere** — repo, fixtures, video, hosted instance. No real company or person is ever named as a bad actor in fixtures, tests, comments, or copy. The corpus is synthetic, generated from `fixtures/corpus/BIBLE.md` against `fixtures/MANIFEST.md`.
-8. **Framework is ADK, resolved by evidence** (BAR-020). The only permitted deviation is the pre-committed fallback — interview service to direct GenAI SDK calls — under BAR-020's bounded trigger, recorded in `docs/framework-decision.md`. The compliance matrix never names a framework the lockfile doesn't contain.
+8. **Framework is ADK, resolved by evidence** (BAR-020). The only permitted deviation is the pre-committed fallback — interview service to direct GenAI SDK calls — under BAR-020's bounded trigger, recorded in `docs/framework-decision.md`. The compliance matrix never names a framework the lockfile doesn't contain — `requirements.lock` is that lockfile, generated from the tested resolution and installed by `make install`.
 
 ---
 
@@ -73,7 +73,11 @@ fixtures/
   MANIFEST.md    every planted landmine, with expected behavior
   golden-log.jsonl
 docs/            PRD.md, GATE.md, BUILD-LOG.md, FINDINGS.md, compliance.md, metrics.json,
-                 antigravity/decision.md, framework-decision.md
+                 framework-decision.md, architecture.md, architecture.svg
+                 (`antigravity/decision.md` was listed here through B4. It was a
+                  placeholder carrying an unverifiable negative claim about a
+                  third-party SDK and was deleted in B5; framework-decision.md
+                  now records that ADK was chosen without a published comparison.)
 tests/           unit, emulator, and property tests (fold stability, boundary, temporal)
 ```
 

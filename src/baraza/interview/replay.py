@@ -53,9 +53,10 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Any
 
 from baraza.interview.interviewer import (
     MAX_FOLLOW_UP_DEPTH,
@@ -146,7 +147,7 @@ class Persona:
     chars_per_minute: int
     min_pause_ms: int
     max_pause_ms: int
-    answers: Tuple[CannedAnswer, ...]
+    answers: tuple[CannedAnswer, ...]
     source_path: Path
     fixture_sha256: str
     """Digest of the fixture bytes, stamped into the transcript. Ties a published
@@ -171,7 +172,7 @@ class Persona:
         if not self.answers:
             raise PersonaError(f"{self.source_path}: no canned answers")
 
-        offenders: List[Tuple[int, int]] = []
+        offenders: list[tuple[int, int]] = []
         for index, answer in enumerate(self.answers):
             length = answer.char_count
             terse = length < TERSE_CHAR_THRESHOLD
@@ -216,7 +217,7 @@ class Persona:
         )
 
 
-def available_personas(directory: Path | str = PERSONA_DIR) -> List[str]:
+def available_personas(directory: Path | str = PERSONA_DIR) -> list[str]:
     return sorted(p.stem for p in Path(directory).glob("*.json"))
 
 
@@ -275,7 +276,7 @@ class _FailureWatchingClient(LLMClient):
 
     def __init__(self, inner: LLMClient):
         self.inner = inner
-        self.failures: List[Tuple[str, str]] = []
+        self.failures: list[tuple[str, str]] = []
         self.sources: set[str] = set()
         self.model_ids: set[str] = set()
         self.calls = 0
@@ -311,38 +312,38 @@ class ReplayResult:
     persona: Persona
     session: Session
     adaptation: AdaptationState
-    turns: List[Dict[str, Any]] = field(default_factory=list)
-    agenda_items_covered: List[str] = field(default_factory=list)
+    turns: list[dict[str, Any]] = field(default_factory=list)
+    agenda_items_covered: list[str] = field(default_factory=list)
     answers_consumed: int = 0
     stop_reason: str = ""
     llm_source: str = "unknown"
     """``cassette`` for a recorded replay, ``vertex`` for a live call. A cassette
     replay is a replayed measurement and is never written up as a deployed one."""
 
-    model_ids: List[str] = field(default_factory=list)
+    model_ids: list[str] = field(default_factory=list)
     model_calls: int = 0
     paced: bool = True
     speed: float = 1.0
     audience: str = ""
-    transcript_path: Optional[Path] = None
+    transcript_path: Path | None = None
 
     @property
-    def agent_turns(self) -> List[Dict[str, Any]]:
+    def agent_turns(self) -> list[dict[str, Any]]:
         return [t for t in self.turns if t["role"] == TurnRole.AGENT.value]
 
     @property
-    def follow_up_turns(self) -> List[Dict[str, Any]]:
+    def follow_up_turns(self) -> list[dict[str, Any]]:
         return [t for t in self.agent_turns if t["kind"] == TurnKind.FOLLOW_UP.value]
 
-    def budget_trajectory(self) -> List[int]:
-        seen: List[int] = []
+    def budget_trajectory(self) -> list[int]:
+        seen: list[int] = []
         for turn in self.turns:
             budget = turn["adaptation"]["follow_up_budget"]
             if not seen or seen[-1] != budget:
                 seen.append(budget)
         return seen
 
-    def adaptation_moment_turn_ids(self) -> List[str]:
+    def adaptation_moment_turn_ids(self) -> list[str]:
         """Turns where the budget moved, by turn ID.
 
         BAR-330 AC 3 wants a judge to be able to open the transcript at "turn
@@ -350,8 +351,8 @@ class ReplayResult:
         state; this accessor exists for the console, not for the published
         number.
         """
-        moments: List[str] = []
-        previous: Optional[int] = None
+        moments: list[str] = []
+        previous: int | None = None
         for turn in self.turns:
             budget = turn["adaptation"]["follow_up_budget"]
             if previous is not None and budget != previous:
@@ -361,7 +362,7 @@ class ReplayResult:
 
     # ------------------------------------------------------------ transcript
 
-    def to_transcript(self) -> Dict[str, Any]:
+    def to_transcript(self) -> dict[str, Any]:
         return {
             "schema": TRANSCRIPT_SCHEMA,
             "_note": _TRANSCRIPT_NOTE,
@@ -431,7 +432,7 @@ class ReplayResult:
         self.transcript_path = target
         return target
 
-    def describe(self) -> List[str]:
+    def describe(self) -> list[str]:
         agent = len(self.agent_turns)
         depth_total = sum(t["follow_up_depth"] for t in self.agent_turns)
         lines = [
@@ -477,13 +478,13 @@ class ReplayHarness:
         persona: Persona,
         speed: float = 1.0,
         paced: bool = True,
-        max_items: Optional[int] = None,
+        max_items: int | None = None,
         max_agent_turns: int = 200,
         sleeper: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.time,
-        on_plan: Optional[Callable[[TurnPlan], None]] = None,
-        emit: Optional[Callable[[str], None]] = None,
-        on_answer: Optional[Callable[[str], None]] = None,
+        on_plan: Callable[[TurnPlan], None] | None = None,
+        emit: Callable[[str], None] | None = None,
+        on_answer: Callable[[str], None] | None = None,
     ):
         # The interviewer is rebuilt around a watching client rather than having
         # its client swapped in place, so a caller that kept a reference to the
@@ -504,7 +505,7 @@ class ReplayHarness:
         self.on_plan = on_plan
         self.emit = emit
         self.on_answer = on_answer
-        self._last_instant: Optional[EpochMillis] = None
+        self._last_instant: EpochMillis | None = None
 
     # One agenda item may legitimately absorb its opening question, a full
     # follow-up budget of clarifiers, and a divergence turn. Past that the loop
@@ -555,9 +556,9 @@ class ReplayHarness:
         turn: Turn,
         *,
         adaptation: AdaptationState,
-        adaptation_change: Optional[str] = None,
-        typing_delay_ms: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        adaptation_change: str | None = None,
+        typing_delay_ms: int | None = None,
+    ) -> dict[str, Any]:
         return {
             "turn_id": turn.turn_id,
             "index": turn.index,
@@ -579,9 +580,9 @@ class ReplayHarness:
 
     def _agent_turn(
         self, session: Session, plan: TurnPlan, adaptation: AdaptationState
-    ) -> Tuple[Turn, Dict[str, Any]]:
+    ) -> tuple[Turn, dict[str, Any]]:
         occurred_at = self._now()
-        first_token_ms: Optional[int] = None
+        first_token_ms: int | None = None
 
         if self.on_plan is not None:
             self.on_plan(plan)
@@ -633,7 +634,7 @@ class ReplayHarness:
         answer: CannedAnswer,
         agent_turn: Turn,
         adaptation: AdaptationState,
-    ) -> Tuple[Turn, Dict[str, Any], Optional[str]]:
+    ) -> tuple[Turn, dict[str, Any], str | None]:
         delay_ms = (
             self.persona.typing_delay_ms(answer.text, speed=self.speed)
             if self.paced
@@ -787,7 +788,7 @@ class ReplayHarness:
 
     # ------------------------------------------------------------- agenda nav
 
-    def _next_item(self, current: AgendaItem) -> Optional[AgendaItem]:
+    def _next_item(self, current: AgendaItem) -> AgendaItem | None:
         remaining = [i for i in self.agenda.items if i.item_id > current.item_id]
         return remaining[0] if remaining else None
 

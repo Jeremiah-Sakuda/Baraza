@@ -39,8 +39,9 @@ import json
 import os
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any
 
 from baraza.fold.graph import GraphState, fold
 from baraza.fold.store import EventStore, JsonlEventStore, open_store
@@ -105,7 +106,7 @@ class Console:
     a CI log produces clean text.
     """
 
-    def __init__(self, *, color: Optional[bool] = None, stream=None):
+    def __init__(self, *, color: bool | None = None, stream=None):
         self.stream = stream or sys.stdout
         if color is None:
             color = (
@@ -169,7 +170,7 @@ class Console:
 
 # ----------------------------------------------------------- corpus manifest
 
-def load_corpus_manifest(path: Path, *, include_deferred: bool = False) -> List[SourceSpec]:
+def load_corpus_manifest(path: Path, *, include_deferred: bool = False) -> list[SourceSpec]:
     """Read ``fixtures/corpus/corpus-index.json`` into ingestion specs.
 
     The manifest is read; the directory is never globbed. Two artifacts sitting
@@ -210,7 +211,7 @@ def load_corpus_manifest(path: Path, *, include_deferred: bool = False) -> List[
     if not entries:
         raise PreconditionError(f"{path} declares no sources")
 
-    specs: List[SourceSpec] = []
+    specs: list[SourceSpec] = []
     for entry in entries:
         missing = [k for k in ("path", "source_id", "observed_at") if not entry.get(k)]
         if missing:
@@ -270,13 +271,41 @@ class OnWriteReconciler:
     look more complete than it is.
     """
 
-    def __init__(self, *, client: LLMClient, store: EventStore):
+    def __init__(
+        self,
+        *,
+        client: LLMClient,
+        store: EventStore,
+        run_instant: int | None = None,
+    ):
         self.detector = ContradictionDetector(client)
         self.store = store
-        self.pool: List[Claim] = []
-        self.results: List[DetectionResult] = []
+        self.pool: list[Claim] = []
+        self.results: list[DetectionResult] = []
         self.contradictions_found = 0
         self.events_appended = 0
+        # When this run happened, not when the documents were written.
+        #
+        # This event used to be stamped with ``contradiction.detected_at``, which
+        # ``ContradictionDetector`` sets to ``max(claim.observed_at)`` — the
+        # instant the later of the two *source documents was authored*. The
+        # corpus is dated 2016 onwards, so every contradiction sorted decades
+        # before every nightly heartbeat, and ``reconcile/job.py``'s differential
+        # (which folds the log prefix at the previous heartbeat to rebuild last
+        # night's ledger) would have swept all of them into every baseline: a
+        # differential that is non-``None`` and permanently empty, on the one
+        # surface BAR-323 exists to produce evidence on. The same defect was
+        # fixed in ``job.py``; leaving it here would have kept the two writers of
+        # this event type disagreeing about which clock they use.
+        #
+        # ``Contradiction.detected_at`` in the payload is untouched, so ledger
+        # recency ranking is unchanged. Valid time lives in the payload;
+        # transaction time lives on the event. One instant is shared by every
+        # event this run appends, and it is injectable, so a re-run with the same
+        # instant re-derives identical content-addressed IDs.
+        self.run_instant = (
+            run_instant if run_instant is not None else int(time.time() * 1000)
+        )
 
     def __call__(self, claim: Claim) -> None:
         result = self.detector.detect(claim, self.pool)
@@ -285,7 +314,7 @@ class OnWriteReconciler:
         for contradiction in result.contradictions:
             event = Event.create(
                 event_type=EventType.CONTRADICTION_DETECTED,
-                occurred_at=contradiction.detected_at,
+                occurred_at=self.run_instant,
                 payload={"contradiction": contradiction.to_dict()},
                 actor="reconcile-onwrite",
             )
@@ -305,7 +334,7 @@ class OnWriteReconciler:
     def largest_block(self) -> int:
         return max((r.block_size for r in self.results), default=0)
 
-    def describe(self) -> List[str]:
+    def describe(self) -> list[str]:
         skipped = sum(1 for r in self.results if r.skipped_reason)
         gated_out = sum(
             1 for r in self.results if r.skipped_reason == "no temporal overlap"
@@ -326,7 +355,7 @@ class OnWriteReconciler:
 
 
 def build_client(
-    *, offline: bool, cassette_dir: Optional[Path], delay_ms: int = 0
+    *, offline: bool, cassette_dir: Path | None, delay_ms: int = 0
 ) -> LLMClient:
     """Select the model client, failing early rather than at first call.
 
@@ -375,7 +404,8 @@ def stage_ingest(
     manifest: Path,
     offline: bool,
     include_deferred: bool = False,
-) -> Tuple[IngestionReport, OnWriteReconciler]:
+    agent_extraction: bool | None = None,
+) -> tuple[IngestionReport, OnWriteReconciler]:
     console.stage("ingest", "cold corpus, unattended, detection on-write")
     specs = load_corpus_manifest(manifest, include_deferred=include_deferred)
     console.detail(f"manifest            {manifest}")
@@ -387,7 +417,11 @@ def stage_ingest(
 
     reconciler = OnWriteReconciler(client=client, store=store)
     pipeline = IngestionPipeline(
-        client=client, store=store, on_claim=reconciler, offline=offline
+        client=client,
+        store=store,
+        on_claim=reconciler,
+        offline=offline,
+        agent_extraction=agent_extraction,
     )
     report = pipeline.run(specs)
 
@@ -413,7 +447,7 @@ def stage_agenda(
     audience: Audience,
     size: int,
     ledger_rows_shown: int = 5,
-) -> Tuple[GraphState, Agenda]:
+) -> tuple[GraphState, Agenda]:
     console.stage("ledger + agenda", "questions no human wrote")
 
     state = fold(store.read_all())
@@ -482,7 +516,7 @@ def stage_replay_interview(
     audience: Audience,
     speed: float,
     paced: bool,
-    max_items: Optional[int],
+    max_items: int | None,
     transcript_dir: Path,
 ) -> ReplayResult:
     console.stage("interview", f"--replay, persona {persona_name}, canned answers on a timer")
@@ -544,7 +578,7 @@ def stage_live_interview(
     agenda: Agenda,
     audience: Audience,
     persona_id: str,
-) -> Optional[Session]:
+) -> Session | None:
     """The terminal interview. One human, answering at a keyboard.
 
     Shares the interviewer, the session store, and the externalize-before-solicit
@@ -570,7 +604,7 @@ def stage_live_interview(
         last_instant = max(last_instant + 1, to_epoch_millis(time.time()))
         console.line()
         console.agent(_turn_prefix(plan))
-        first_token_ms: Optional[int] = None
+        first_token_ms: int | None = None
         for chunk, elapsed_ms in interviewer.stream_turn(plan):
             if first_token_ms is None:
                 first_token_ms = elapsed_ms
@@ -678,7 +712,7 @@ def stage_approval(
 
     ledger_before = len(DisputedLedger(fold(store.read_all())).rows(audience))
 
-    requests: List[ApprovalRequest] = []
+    requests: list[ApprovalRequest] = []
     resolved: set[str] = set()
 
     # An approval cannot precede the answer it approves, and wall clock does not
@@ -770,7 +804,7 @@ def stage_successor(
     client: LLMClient,
     store: EventStore,
     question: str,
-    refusal_probe: Optional[str],
+    refusal_probe: str | None,
 ) -> None:
     console.stage("successor mode", "committed ∧ readable_by(successor), or a refusal")
 
@@ -811,7 +845,7 @@ def _resolve_agenda(
     store: EventStore,
     audience: Audience,
     size: int,
-) -> Tuple[GraphState, Agenda]:
+) -> tuple[GraphState, Agenda]:
     state, agenda = stage_agenda(
         console, client=client, store=store, audience=audience, size=size
     )
@@ -1093,7 +1127,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     console = Console(color=False if args.no_color else None)
 

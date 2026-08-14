@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, Optional
+from enum import StrEnum
+from typing import Any
 
 from baraza.schema.temporal import EpochMillis, to_epoch_millis
 from baraza.schema.visibility import Audience, Visibility, readable_by
@@ -27,7 +27,7 @@ from baraza.schema.visibility import Audience, Visibility, readable_by
 __all__ = ["Tier", "Provenance", "Anchor", "Claim", "CitationError"]
 
 
-class Tier(str, Enum):
+class Tier(StrEnum):
     """A claim's standing in the record.
 
     ``REJECTED`` is a tier and it **retracts**: a rejected claim leaves the
@@ -41,7 +41,7 @@ class Tier(str, Enum):
     REJECTED = "rejected"
 
 
-class Provenance(str, Enum):
+class Provenance(StrEnum):
     """Where the claim came from. Extractors may only produce ``CORPUS``."""
 
     CORPUS = "corpus"
@@ -68,7 +68,7 @@ class Anchor:
 
     source_id: str
     locator: str
-    checksum: Optional[str] = None
+    checksum: str | None = None
     """SHA-256 of the source bytes at ingest time. ``make verify-anchors``
     re-resolves every anchor and compares; drift is a failure, not a warning."""
 
@@ -89,19 +89,19 @@ class Claim:
     subject_id: str
     predicate: str
     predicate_hint: str
-    object_id: Optional[str]
-    object_literal: Optional[str]
+    object_id: str | None
+    object_literal: str | None
     _quote_protected: str
     anchor: Anchor
     observed_at: EpochMillis
-    valid_from: Optional[EpochMillis]
-    valid_until: Optional[EpochMillis]
+    valid_from: EpochMillis | None
+    valid_until: EpochMillis | None
     tier: Tier
     visibility: Visibility
     provenance: Provenance
-    author_id: Optional[str] = None
-    session_id: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    author_id: str | None = None
+    session_id: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
     # ---------------------------------------------------------------- factory
 
@@ -114,17 +114,17 @@ class Claim:
         quote: str,
         anchor: Anchor,
         observed_at: Any,
-        object_id: Optional[str] = None,
-        object_literal: Optional[str] = None,
+        object_id: str | None = None,
+        object_literal: str | None = None,
         valid_from: Any = None,
         valid_until: Any = None,
         tier: Tier = Tier.PENDING,
-        visibility: Optional[Visibility] = None,
+        visibility: Visibility | None = None,
         provenance: Provenance = Provenance.CORPUS,
-        author_id: Optional[str] = None,
-        session_id: Optional[str] = None,
-        extra: Optional[Dict[str, Any]] = None,
-    ) -> "Claim":
+        author_id: str | None = None,
+        session_id: str | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> Claim:
         """Build a claim, enforcing every construction-time invariant."""
         if not quote or not quote.strip():
             raise CitationError(
@@ -217,7 +217,7 @@ class Claim:
 
     # ------------------------------------------------------- guarded readers
 
-    def quote_for(self, audience: Audience) -> Optional[str]:
+    def quote_for(self, audience: Audience) -> str | None:
         """The only way to read the quote.
 
         Returns the text if ``audience`` may see it, otherwise ``None``. A
@@ -229,7 +229,7 @@ class Claim:
             return None
         return self._quote_protected
 
-    def object_for(self, audience: Audience) -> Optional[str]:
+    def object_for(self, audience: Audience) -> str | None:
         """The object literal, under the same predicate."""
         if not readable_by(self, audience):
             return None
@@ -266,7 +266,7 @@ class Claim:
 
     # --------------------------------------------------------- serialization
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Firestore/JSON representation.
 
         Instants serialize as integer millis, never as ISO strings — the stored
@@ -297,7 +297,7 @@ class Claim:
         }
 
     @staticmethod
-    def from_dict(payload: Dict[str, Any]) -> "Claim":
+    def from_dict(payload: dict[str, Any]) -> Claim:
         """Rehydrate from storage.
 
         Note the visibility default applies here too: a stored document missing

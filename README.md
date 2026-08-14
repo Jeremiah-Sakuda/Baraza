@@ -44,10 +44,20 @@ specific places the record fights itself — with citations on both sides.
 ### The append-only log, the fold, the graph
 
 There is no mutable graph store. Every write is an event appended to a log —
-`claim.asserted`, `contradiction.detected`, `claim.committed`, `claim.rejected`,
-`claim.visibility_set`, `entity.alias_linked`, `session.turn`, `heartbeat`. Event
-IDs are content hashes, so a Cloud Run Job that dies halfway and is retried appends
-nothing twice.
+`claim.asserted`, `claim.adjudicated`, `contradiction.detected`, `claim.committed`,
+`claim.rejected`, `claim.visibility_set`, `entity.alias_linked`, `session.turn`,
+`heartbeat`. Event IDs are content hashes, so a Cloud Run Job that dies halfway and
+is retried appends nothing twice.
+
+`claim.adjudicated` is the nightly reconciler recording which claims it has already
+examined, and it is worth a sentence because of what it replaced. The job used to
+work out its own backlog by comparing `claim.observed_at` against the previous
+heartbeat — but `observed_at` is the instant the *source document was authored*, not
+the instant the claim was written, and the corpus starts in 2016. Every claim was
+older than every heartbeat, so once one night had run the filter selected the empty
+set on every night after it: the job exited 0, made zero model calls, and found
+nothing, forever. The fix was not a better timestamp. It was to stop inferring and
+let the log carry the fact, which is what the rest of the system already does.
 
 Every rendered graph state is a **fold** over that log (`src/baraza/fold/graph.py`).
 There is no cache that can drift from the log and no code path that mutates a graph
@@ -221,7 +231,7 @@ nothing.
 |---|---|
 | `python3 scripts/compliance.py --no-prd` | **exit 0, green.** All four invariant lints pass. |
 | `make compliance` | **exit 2** — the audit could not run. `docs/PRD.md` is absent, and the amendments file forbids reconstructing it (see Disclosures). Exit 2 is deliberately distinct from exit 1, "found problems", and from exit 0. Because `make gate` runs this first, **the composite gate target is red too.** |
-| `make test` | **154 passed** — `tests/unit/` (eight modules) plus `tests/property/` (the fold-stability permutation test). Needs `make install` first; pytest lives in `.venv`. |
+| `make test` | **exit 0, all green** — `tests/unit/` plus `tests/property/` (the fold-stability permutation test). Needs `make install` first; pytest lives in `.venv`. The count is deliberately not written here: this repository's whole claim is that nothing is typed into a document by hand, and a hand-maintained test count goes stale on the next commit. Run the target for the number. |
 | `make corpus` | **exit 0** — 13 artifacts regenerated from `BIBLE.md`, every one re-read through `baraza.ingest.readers`. Exits 1 if any artifact fails or skips that round trip, so a missing reader dependency cannot pass as green. |
 | `make verify-manifest` | **exit 2** — prints `found 18 of 18 planted problems`, then stops: no event log exists, so 0 of 17 behaviour probes could be observed. Plants present is not the same as plants caught, and the script refuses to conflate them. |
 | `make verify-anchors` | **exit 2** — rebuilds the source registry from the bytes on disk (11 sources resolve) and then reports that there are no citations to verify, because no ingest run has happened. |
@@ -229,7 +239,7 @@ nothing.
 | `make adaptation-metric` | **exit 1** — `fixtures/transcripts/` does not exist, so the scorer has nothing to score and says so instead of printing a zero. Transcripts come from replay runs and are never hand-authored, so this unblocks when the demo does. |
 | `make verify-models` | **exit 3** — could not run: `BARAZA_PROJECT_ID` is unset and is deliberately not defaulted. No pinned model ID has been resolved against live Vertex. |
 | `make test-emulator` | **exit 1** on this machine — no JDK, and the Firestore emulator is a JVM process. The script reports that rather than skipping quietly. The JSONL half of the SIGKILL rig does run without it: `pytest tests/emulator -k jsonl` → **1 passed**. |
-| Agent framework (BAR-020) | **declared, not used.** `google-adk` is in `pyproject.toml`, but no module imports it — every model call routes through the GenAI SDK in `src/baraza/llm.py`. That is not BAR-020's pre-committed fallback, which covers the interview service only and requires a recorded bounded attempt. `docs/compliance.md` therefore declines to claim ADK, and the mandatory-framework row does not currently hold. |
+| Agent framework (BAR-020) | **imported, instantiated, and driven by a `Runner` on the live ingestion path.** `src/baraza/agents.py` imports `LlmAgent`, `RunConfig`, `InMemoryRunner` and `FunctionTool` from `google.adk` (v2.6.2) and builds three real ADK agents with per-agent tool isolation; `tests/unit/test_agents.py` asserts `isinstance` against the genuine ADK class. `baraza.ingest.extract.AgentClaimExtractor` drives the extractor through an ADK `Runner` with `read_chunk` / `propose_claim` bound to the real validation gates, and `IngestionPipeline` selects it on any non-offline run — which is what `deploy/entrypoint-job.sh` invokes. What is *not* true: the reconciler and interviewer agents are built and isolation-tested but still reach the model through `src/baraza/llm.py`; and the **offline replay path is direct by design**, because an ADK `Runner` bypasses the cassette client and a replay must never be mis-narrated as a live agent loop. So `make demo` does not exercise ADK; `--no-offline` does. |
 
 What is built: the schema (claim, event, session, contradiction, visibility, temporal,
 model pins), the fold, the append-only store, the ingestion spine with all four
@@ -244,7 +254,7 @@ model-verification and adaptation-scoring scripts under `scripts/`.
 What is missing is what the table says is missing: the recorded cassettes that make
 the offline demo run — and, downstream of them, every behavioural observation the
 manifest and anchor verifiers exist to make — the generated transcripts, the merged
-PRD, an ADK import, and any deployment at all.
+PRD, an ADK agent on the production call path, and any deployment at all.
 
 A README that told you `make demo` works when it does not is the exact failure this
 project spends a compliance script preventing. The reproducibility gate for the
@@ -279,9 +289,9 @@ with requirement IDs is in **[`docs/compliance.md`](docs/compliance.md)**.
 
 | Service | Where it is used | State |
 |---|---|---|
+| **Agent Development Kit (ADK)** | `src/baraza/agents.py` builds the extractor, reconciler and interviewer as `google.adk.agents.LlmAgent` instances, each holding only the tools its role requires, with peer and parent transfer disabled so no reasoning agent can hand work to the approver. The approver is deliberately **not** an agent and has no model. `src/baraza/ingest/extract.py` drives the extractor through an ADK `Runner` with turn and wall-clock ceilings. | Imported, instantiated and **running the live extraction path** (`google-adk` 2.6.2); asserted by `tests/unit/test_agents.py` and `tests/unit/test_agent_extraction.py`. Reconciler and interviewer are built but still reach the model through `llm.py`; offline replay is direct by design |
 | **Vertex AI** | Every model call in the system, through `src/baraza/llm.py`. Reasoning role: contradiction adjudication, agenda synthesis, the divergence turn, successor synthesis. Fast role: claim extraction over corpus chunks, entity alias proposals, interviewer follow-ups where first-token latency binds. | Implemented. Pins unverified until `make verify-models` runs green, and no response has been recorded yet |
-| **Vertex AI (Gemma)** | The BAR-303 ingestion relevance pre-filter, keep-or-drop per chunk before any Gemini call, behind a `stub` / `gemma` flag. Unattended ingestion runs `stub`, disclosed as a stub in its docstring, in `metrics.json` and in the console output of any run that used it. | Interface final; survival rate `not yet measured` |
-| **Vertex AI (embeddings)** | Claim-level embeddings for blocking-key expansion. Claims are embedded; the corpus is not. | Pinned; not yet exercised |
+| **Vertex AI (Gemma)** | The BAR-303 ingestion relevance pre-filter, keep-or-drop per chunk before any Gemini call, behind a `stub` / `gemma` flag. Unattended ingestion runs `stub`, disclosed as a stub in its docstring, in `metrics.json` and in the console output of any run that used it. | **Interface final; Gemma has never run.** The `gemma` branch calls `generate_content` while the pin declares `surface="vertex-endpoint"`, and `GemmaFilter.endpoint` is assigned and never read — a live run would fail open on every chunk. That is now stated rather than hidden: `FilterReport.failed_open` counts undecided keeps, a degraded pass prints `DEGRADED — the filter never ran` instead of `100.0%`, and `metrics_entry` returns `not yet measured`. The additional-model bonus is **not claimed** |
 | **Firestore** | The append-only claim-event log, sessions and entities. Create-only writes; `deploy/firestore.rules` rejects update and delete at the database level. | Implemented, rules written; not yet deployed |
 | **Cloud Run Jobs** | The ingestion Job and the nightly `baraza-reconcile` Job. Retry-safe because event IDs are content hashes. | Implemented and containerized (`deploy/Dockerfile.job`); not yet deployed |
 | **Cloud Run services** | `src/baraza/interview/service.py` reads as `Audience.OWNER` and is not public. `src/baraza/successor/service.py` is the public surface a logged-out judge visits, and reads only claims that are committed **and** readable by `Audience.PUBLIC`. | Implemented, one image for both (`deploy/service-*.yaml`); not yet deployed |
@@ -301,13 +311,22 @@ write-up.
 Things deliberately not built. Each of these was live, and each was refused for a
 reason that is arithmetic or a stated principle rather than a schedule.
 
-**No vector database.** Baraza embeds *claims*, not the corpus, and does brute-force
-top-k over them in memory. At the design assumption of 3,000 claims, one query is
-3,000 dot products of a few hundred dimensions each — microseconds, and single-digit
-megabytes resident. A managed vector index would add a service, a schema, a sync path
-that can drift from the log, and a new failure mode, in order to avoid three thousand
-multiply-adds. The index is worth it somewhere north of a million vectors. This is
-not that, and pretending otherwise would be infrastructure as decoration.
+**No vector database — and, in the end, no embeddings either.** Retrieval for
+contradiction detection is exact-match blocking: subject entity ∪ object entities ∪
+`predicate_hint`, with alias edges resolved at query time, then a temporal gate, then
+a cap of 20 (`src/baraza/reconcile/detect.py`). Typical block size in this corpus is
+single digits. A managed vector index would add a service, a schema, a sync path that
+can drift from the log, and a new failure mode; an index earns its keep somewhere
+north of a million vectors, and this is a few thousand claims.
+
+The honest part of this entry is the second half. An embedding model *was* pinned in
+`src/baraza/schema/models.py`, for "blocking-key expansion", and three documents
+described it as a shipped component — while `grep -rn embed src/` returned only the
+pin itself. It was never built and nothing called it. The pin and every claim
+resting on it have been removed rather than retrofitted, because a repository whose
+argument is that documented invariants must be mechanically checkable does not get
+to describe a component it did not write. Embedding-based expansion of the blocking
+key remains a reasonable thing to build; it is not in here.
 
 **No real entity matcher.** A student organization has on the order of a hundred
 distinct entities across a decade — officers, roles, accounts, vendors, events. The
@@ -360,7 +379,7 @@ deployed`, or `not yet measured` — an in-process timing is never reported as a
 deployed measurement. `make compliance` fails the build on any entry that breaks that
 shape.
 
-**All 22 entries in `docs/metrics.json` currently read `not yet measured`, and the
+**All 20 entries in `docs/metrics.json` currently read `not yet measured`, and the
 `runs` array is empty.** That includes the corpus counts, the Gemma pre-filter
 survival rate, the entity scorecard, contradiction precision against the planted
 manifest, first-token latency, the adaptation depths per persona, and the Scheduler
@@ -396,18 +415,20 @@ what degraded — are in [`docs/FINDINGS.md`](docs/FINDINGS.md). The design deci
 the invariants and the refusals in this document are the author's; the typing was
 largely not.
 
-**`docs/antigravity/decision.md` is prior work from a sibling project, and the file
-currently in this repository is a PLACEHOLDER.** BAR-020 resolves the agent-framework
-question by *citing* an Aug 8 negative finding — a headless multi-agent boolean
-assertion that failed verification — rather than by re-running that verification. That
-finding was produced in a sibling project by the same author and predates this
-repository. It has deliberately **not** been reconstructed from memory: a remembered
-paraphrase of evidence is not evidence. Until the original is copied in with an
-attribution header, the published justification for the framework choice is weaker
-than it reads. If the original cannot be located, the correct fix is to delete the
-citation and state plainly that ADK was chosen without a published comparison — not
-to write a summary of a document nobody can check. No framework is claimed anywhere
-in this repository that the code does not import.
+**The agent framework was chosen without a published comparison.** BAR-020
+originally resolved the question by *citing* an Aug 8 negative finding from a sibling
+project — a headless multi-agent assertion about another vendor's SDK that failed
+verification. The source document was never copied into this repository, and what
+stood in for it was a placeholder describing the finding from memory. That
+placeholder has been deleted rather than filled in from memory or left standing: a
+remembered paraphrase of evidence is not evidence, and an unverifiable negative claim
+about a named vendor's product is not something this repository will publish just
+because it would make a decision look better justified. So there is no framework
+comparison here. ADK is used, it is genuinely imported and driven
+(`src/baraza/agents.py`, `src/baraza/ingest/extract.py`), and the reason it was
+picked over alternatives is not documented. `docs/framework-decision.md` says the
+same thing at length. No framework is claimed anywhere in this repository that the
+code does not import.
 
 **Several defect-class guards are ported from a sibling project.** They are not
 novel work and are not presented as such. The epoch-normalization rule (BAR-309)

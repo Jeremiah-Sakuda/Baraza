@@ -33,10 +33,11 @@ this property is worth rather than only an assertion that it holds.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Sequence
+from typing import Any
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -49,7 +50,6 @@ from baraza.schema.event import Event, EventType
 from baraza.schema.session import Turn, TurnKind, TurnRole
 from baraza.schema.temporal import to_epoch_millis
 from baraza.schema.visibility import Audience, Visibility, readable_by
-
 from baraza_testkit import anchor, ms
 
 REPO = Path(__file__).resolve().parents[2]
@@ -213,7 +213,7 @@ class Step:
     label: str
     kind: EventType
     occurred_at: int
-    build: Callable[[Serialize], Dict[str, Any]] = lambda ser: {}
+    build: Callable[[Serialize], dict[str, Any]] = lambda ser: {}
     actor: str = "system"
     scheduled: bool = False
 
@@ -269,9 +269,9 @@ STEP_COUNT = len(GOLDEN_LOG)
 
 def materialize(
     offsets: Sequence[int], styles: Sequence[str]
-) -> List[Event]:
+) -> list[Event]:
     """Build the golden log with one chosen offset/spelling per step."""
-    events: List[Event] = []
+    events: list[Event] = []
     for step, offset, style in zip(GOLDEN_LOG, offsets, styles, strict=True):
 
         def ser(instant: int, _o: int = offset, _s: str = style) -> str:

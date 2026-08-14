@@ -24,8 +24,8 @@ import json
 import os
 import threading
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional
 
 from baraza.schema.event import Event, EventType
 
@@ -49,14 +49,14 @@ class EventStore(ABC):
         """
 
     @abstractmethod
-    def read_all(self) -> List[Event]:
+    def read_all(self) -> list[Event]:
         """Every event, unordered. The fold sorts; callers must not assume."""
 
     def append_many(self, events: Iterable[Event]) -> int:
         """Append a batch, returning the number actually written."""
         return sum(1 for event in events if self.append(event))
 
-    def read_by_type(self, *types: EventType) -> List[Event]:
+    def read_by_type(self, *types: EventType) -> list[Event]:
         wanted = set(types)
         return [e for e in self.read_all() if e.event_type in wanted]
 
@@ -88,7 +88,7 @@ class JsonlEventStore(EventStore):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.touch(exist_ok=True)
         self._lock = threading.Lock()
-        self._seen: Optional[set[str]] = None
+        self._seen: set[str] | None = None
 
     def _ensure_index(self) -> set[str]:
         if self._seen is None:
@@ -110,9 +110,9 @@ class JsonlEventStore(EventStore):
             seen.add(event.event_id)
             return True
 
-    def read_all(self) -> List[Event]:
-        events: List[Event] = []
-        with open(self.path, "r", encoding="utf-8") as handle:
+    def read_all(self) -> list[Event]:
+        events: list[Event] = []
+        with open(self.path, encoding="utf-8") as handle:
             for lineno, raw in enumerate(handle, start=1):
                 raw = raw.strip()
                 if not raw:
@@ -131,7 +131,7 @@ class JsonlEventStore(EventStore):
         return events
 
     def _line_count(self) -> int:
-        with open(self.path, "r", encoding="utf-8") as handle:
+        with open(self.path, encoding="utf-8") as handle:
             return sum(1 for _ in handle)
 
     def __iter__(self) -> Iterator[Event]:
@@ -145,7 +145,7 @@ class FirestoreEventStore(EventStore):
     offline demo does, transitively — never requires credentials.
     """
 
-    def __init__(self, collection: str = "events", *, project: Optional[str] = None):
+    def __init__(self, collection: str = "events", *, project: str | None = None):
         self.collection_name = collection
         self._project = project
         self._client = None
@@ -173,13 +173,13 @@ class FirestoreEventStore(EventStore):
         except gexc.AlreadyExists:
             return False
 
-    def read_all(self) -> List[Event]:
+    def read_all(self) -> list[Event]:
         return [
             Event.from_dict(snapshot.to_dict())
             for snapshot in self.client.collection(self.collection_name).stream()
         ]
 
-    def read_since(self, instant_millis: int) -> List[Event]:
+    def read_since(self, instant_millis: int) -> list[Event]:
         """Events at or after an instant.
 
         Queries on the integer field, never on a serialized string — the stored
@@ -195,7 +195,7 @@ class FirestoreEventStore(EventStore):
 
 
 def open_store(
-    *, offline: bool = False, path: Optional[Path | str] = None
+    *, offline: bool = False, path: Path | str | None = None
 ) -> EventStore:
     """Pick a backend.
 

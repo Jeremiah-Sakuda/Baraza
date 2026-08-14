@@ -18,8 +18,9 @@ anywhere in this repository, including in test fixtures.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Union
+from typing import Any
 
 from baraza.llm import LLMClient, LLMResponse
 from baraza.schema.claim import Anchor, Claim, Provenance, Tier
@@ -49,7 +50,7 @@ __all__ = [
 # schema/models.py; a test double must not look like one even by accident.
 _FAKE_MODEL = "fake:no-vertex-call"
 
-Scripted = Union[str, Callable[[str], str]]
+Scripted = str | Callable[[str], str]
 
 
 class UnscriptedCall(AssertionError):
@@ -82,15 +83,15 @@ class FakeLLMClient(LLMClient):
 
     def __init__(
         self,
-        responses: Optional[Mapping[str, Scripted]] = None,
+        responses: Mapping[str, Scripted] | None = None,
         *,
-        default: Optional[str] = None,
-        chunks: Optional[Sequence[str]] = None,
+        default: str | None = None,
+        chunks: Sequence[str] | None = None,
     ):
-        self.responses: Dict[str, Scripted] = dict(responses or {})
+        self.responses: dict[str, Scripted] = dict(responses or {})
         self.default = default
         self.chunks = list(chunks or [])
-        self.calls: List[LLMCall] = []
+        self.calls: list[LLMCall] = []
 
     def generate(
         self,
@@ -150,7 +151,7 @@ class FakeLLMClient(LLMClient):
 
     # ------------------------------------------------------------- assertions
 
-    def calls_for(self, schema_name: str) -> List[LLMCall]:
+    def calls_for(self, schema_name: str) -> list[LLMCall]:
         return [c for c in self.calls if c.schema_name == schema_name]
 
 
@@ -174,17 +175,17 @@ def claim(
     predicate: str = "signing_threshold",
     hint: str = "signing authority",
     quote: str = "The treasurer may sign for amounts up to five hundred.",
-    object_id: Optional[str] = None,
-    object_literal: Optional[str] = "500",
+    object_id: str | None = None,
+    object_literal: str | None = "500",
     observed_at: Any = "2026-04-01T00:00:00Z",
     valid_from: Any = None,
     valid_until: Any = None,
     tier: Tier = Tier.PENDING,
-    visibility: Optional[Visibility] = None,
+    visibility: Visibility | None = None,
     provenance: Provenance = Provenance.CORPUS,
     source_id: str = "src:constitution-scan",
     locator: str = "p.1 ¶1",
-    extra: Optional[Dict[str, Any]] = None,
+    extra: dict[str, Any] | None = None,
 ) -> Claim:
     """A claim with defaults that make the interesting field the only one set."""
     return Claim.create(
@@ -253,7 +254,7 @@ def detected(contradiction: Contradiction, at: Any) -> Event:
 
 
 def resolved(
-    contradiction_id: str, at: Any, *, session_id: Optional[str] = None
+    contradiction_id: str, at: Any, *, session_id: str | None = None
 ) -> Event:
     return Event.create(
         event_type=EventType.CONTRADICTION_RESOLVED,

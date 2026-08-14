@@ -116,13 +116,37 @@ Vertex AI. Highlight only; no motion graphics.
 > claim-event log — every graph is a fold over it. Cloud Scheduler runs it
 > nightly. Gemini on Vertex does the reasoning."
 
-**PRECONDITION — and a live one.** The sentence deliberately does **not** name
-an agent framework. `google-adk` is declared in `pyproject.toml` but **no module
-under `src/` imports it**; the runtime path is `google.genai` via
-`src/baraza/llm.py`. `docs/framework-decision.md` and AGENTS.md both state that
-a framework is named only where the code imports it.
-*If and only if* an ADK import exists on the shipped path by record time, append:
-> "— four agents on ADK, separated by what each is allowed to write."
+**PRECONDITION — now met, with one limit.** The import exists:
+`src/baraza/agents.py` imports `google.adk.agents.LlmAgent` and
+`google.adk.tools.FunctionTool`, and `tests/unit/test_agents.py` asserts the
+built objects are genuinely ADK instances. The framework may therefore be named.
+
+Append this, which is true today:
+> "— the agent fleet is built on Google's ADK, separated by what each agent is
+> allowed to write."
+
+Do **not** say "four agents on ADK." Two reasons, both checkable on camera by a
+judge who opens the file: there are **three** `LlmAgent`s (extractor, reconciler,
+interviewer), and the fourth role — the approver — is deliberately **not** an
+agent and has no model, which is the single most interesting design decision in
+that file. If there is room, that is the better sentence:
+> "Three reasoning agents on ADK. The fourth role, the one that promotes a claim,
+> has no model at all — promotion is never a model's judgement call."
+
+**What may now be said, and the trap in it.** The extractor *is* on the live
+extraction path: `baraza.ingest.extract.AgentClaimExtractor` drives it through an
+ADK `Runner`. But `IngestionPipeline` selects the ADK path only when the run is
+**not offline**, because an ADK `Runner` bypasses the cassette client. So:
+
+- If the take is recorded against **live Vertex** (`--no-offline`), the ingest you
+  are filming is a real ADK agent loop and you may say so.
+- If the take is recorded from **cassettes** (`make demo`), it is the direct
+  `llm.py` path and you must **not** call it an agent loop. The report line the
+  run prints — `extraction path: adk-agent` vs `direct` — is the check; put it on
+  screen rather than asserting it in narration.
+
+Either way the reconciler and interviewer agents are built but not driven, so
+"the whole fleet is executing" is not a sentence this repository can back.
 
 Otherwise say nothing about the framework here and let the Devpost text carry the
 accurate version. Do not read the pinned model IDs aloud in any shot:
@@ -454,7 +478,6 @@ all of them. None may be spoken, captioned, overlaid, or written into a frame.
 - pre-filter survival rate, and which pre-filter mode ran
 - entity resolution precision or recall (the ≥83% scorecard is a **gate
   threshold**, not a result — never state it as an achieved number)
-- claim embedding count, or top-k scan time
 - number of nightly Scheduler runs (read it off the console frame or say nothing)
 
 **Timings — all `not yet measured`, and additionally governed by provenance:**
@@ -466,18 +489,23 @@ all of them. None may be spoken, captioned, overlaid, or written into a frame.
 
 **Assertions that are not yet backed by the code:**
 
-- **"Built on ADK" / "four agents on ADK."** `google-adk` is a declared
-  dependency; nothing under `src/` imports it. Until an import exists on the
-  shipped path, the framework may not be named — in the video, the Devpost text,
-  or the diagram.
+- **"Four agents on ADK."** There are three `LlmAgent`s; the approver is
+  deliberately not an agent and holds no model. "Built on ADK" *is* backed —
+  `src/baraza/agents.py` imports it and builds the fleet — and "the extractor runs
+  on ADK" is backed too, on a live (`--no-offline`) run only. What is **not**
+  backed: the count of four; "the fleet is executing" (the reconciler and
+  interviewer are built, not driven); and any agent-loop narration over a
+  cassette-replayed take, which runs the direct `llm.py` path by design.
 - **Any pinned model ID, spoken or captioned.** `make verify-models` has not run
   green. A pinned literal nobody checked is a plausible value where a verified
   one belongs.
 - **Any claim about the deployed system.** Nothing is deployed. No uptime, no
   region, no scale, no cost.
-- **Antigravity.** Not claimed, not mentioned. The supporting finding is a
-  placeholder in `docs/antigravity/decision.md` and a remembered paraphrase of
-  evidence is not evidence.
+- **Antigravity, or any other framework that was not chosen.** Not claimed, not
+  mentioned, and — this is the part that changed — not criticized either. The
+  Aug 8 finding that used to justify the choice was never in this repository and
+  its placeholder has been deleted. Say ADK is the framework; do not say anything
+  about what it was picked over, because there is nothing on record to back it.
 - **"Kill-survival" / "resumes at the same turn."** The rig is not built; the
   resumed turn index is `not yet measured`. Do not demonstrate or assert it.
 - **Adaptation.** Mean follow-up depth per persona is `not yet measured` and the

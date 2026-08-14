@@ -16,9 +16,10 @@ and it substitutes a placeholder for every unreadable side.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence
+from enum import StrEnum
+from typing import Any
 
 from baraza.schema.claim import Claim
 from baraza.schema.temporal import EpochMillis, to_epoch_millis
@@ -27,7 +28,7 @@ from baraza.schema.visibility import Audience, readable_by
 __all__ = ["ContradictionStatus", "Contradiction", "RenderedContradiction"]
 
 
-class ContradictionStatus(str, Enum):
+class ContradictionStatus(StrEnum):
     OPEN = "open"
     """On the ledger and eligible for the agenda."""
 
@@ -47,7 +48,7 @@ class RenderedContradiction:
     subject_id: str
     predicate_hint: str
     summary: str
-    sides: List[str]
+    sides: list[str]
     fully_readable: bool
     """False when at least one side was redacted. The interviewer refuses to
     build a citation-grounded question from a partially redacted contradiction
@@ -61,7 +62,7 @@ class Contradiction:
     contradiction_id: str
     subject_id: str
     predicate_hint: str
-    claim_ids: List[str]
+    claim_ids: list[str]
     detected_at: EpochMillis
     confidence: float
     rationale: str
@@ -69,9 +70,9 @@ class Contradiction:
     ledger so a human can audit the detector's reasoning rather than trust it."""
 
     status: ContradictionStatus = ContradictionStatus.OPEN
-    resolved_at: Optional[EpochMillis] = None
-    resolving_session_id: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    resolved_at: EpochMillis | None = None
+    resolving_session_id: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
     def create(
@@ -82,8 +83,8 @@ class Contradiction:
         detected_at: Any,
         confidence: float,
         rationale: str,
-        extra: Optional[Dict[str, Any]] = None,
-    ) -> "Contradiction":
+        extra: dict[str, Any] | None = None,
+    ) -> Contradiction:
         ordered = sorted(set(claim_ids))
         if len(ordered) < 2:
             raise ValueError(
@@ -126,7 +127,7 @@ class Contradiction:
         return self.status is ContradictionStatus.OPEN
 
     def render_for(
-        self, claims: Dict[str, Claim], audience: Audience
+        self, claims: dict[str, Claim], audience: Audience
     ) -> RenderedContradiction:
         """Project to text that ``audience`` is permitted to see.
 
@@ -137,7 +138,7 @@ class Contradiction:
         disagreements exist while the boundary stays closed about *what they
         say*.
         """
-        sides: List[str] = []
+        sides: list[str] = []
         fully_readable = True
 
         for claim_id in self.claim_ids:
@@ -172,7 +173,7 @@ class Contradiction:
             fully_readable=fully_readable,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "contradiction_id": self.contradiction_id,
             "subject_id": self.subject_id,
@@ -188,7 +189,7 @@ class Contradiction:
         }
 
     @staticmethod
-    def from_dict(payload: Dict[str, Any]) -> "Contradiction":
+    def from_dict(payload: dict[str, Any]) -> Contradiction:
         return Contradiction(
             contradiction_id=payload["contradiction_id"],
             subject_id=payload["subject_id"],

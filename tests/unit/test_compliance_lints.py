@@ -9,9 +9,20 @@ a real subprocess, and require that it exits 1 and prints a ``file:line`` a
 human can open. Then remove the violation and require green again — because a
 lint that fires on everything is as useless as one that fires on nothing.
 
-The probes are written and deleted inside ``try/finally``. They live under
-``src/`` for a few hundred milliseconds and are named after the process that
-planted them.
+**The probes are planted in a copy of the tree, never in the tree.** They used
+to be written into ``src/baraza/`` and removed in a ``finally``, which is fine
+until the run does not reach the ``finally`` — ``pytest -x``, a Ctrl-C, an OOM
+kill. What that leaves behind is a lint-violating importable module *inside the
+shipped package*, and the next thing anyone runs is ``make compliance``, which
+exits 1 on a tree the author believes is clean. A test that can poison the
+deliverable it verifies is not a good trade for the milliseconds it saves.
+
+So each test mirrors ``src/``, ``scripts/compliance.py`` and ``docs/metrics.json``
+into ``tmp_path`` and runs the real script against the copy. The mirror is a copy
+of the **whole** source tree, not an empty directory, so "green after the probe
+is removed" still means what it says: the audit ran over every real module and
+found nothing. ``TestMetricsLint`` already worked this way; this is that idea
+applied to the probes that needed it more.
 
 Note the shape of this file: the violating text is assembled from fragments at
 runtime rather than written out. This module is itself inside the tree the
@@ -22,7 +33,6 @@ would fail the build it is trying to verify.
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -32,7 +42,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compliance.py"
-PROBE_DIR = REPO / "src" / "baraza"
+SRC = REPO / "src"
+METRICS = REPO / "docs" / "metrics.json"
 
 _HEADER = '"""Planted compliance violation. The test that wrote this removes it."""\n'
 
@@ -67,14 +78,33 @@ def _run(cwd: Path = REPO, script: Path = SCRIPT) -> subprocess.CompletedProcess
 
 
 @pytest.fixture
-def probe_path() -> Path:
-    """A uniquely named probe file, guaranteed removed."""
-    path = PROBE_DIR / f"_compliance_probe_{os.getpid()}.py"
-    try:
-        yield path
-    finally:
-        if path.exists():
-            path.unlink()
+def mirror(tmp_path) -> Path:
+    """A copy of everything the audit reads, rooted in ``tmp_path``.
+
+    ``compliance.py`` resolves its repository root from its own location, so a
+    copy of the script under ``<tmp>/scripts/`` audits ``<tmp>/src/``. That is
+    the whole mechanism: the probes below can only ever affect this copy.
+    """
+    root = tmp_path / "tree"
+    (root / "scripts").mkdir(parents=True)
+    (root / "docs").mkdir(parents=True)
+    shutil.copy(SCRIPT, root / "scripts" / "compliance.py")
+    shutil.copytree(
+        SRC, root / "src", ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+    )
+    if METRICS.exists():
+        shutil.copy(METRICS, root / "docs" / "metrics.json")
+    return root
+
+
+@pytest.fixture
+def probe_path(mirror: Path) -> Path:
+    """Where a planted violation goes: inside the copy, never inside the tree."""
+    return mirror / "src" / "baraza" / "_compliance_probe.py"
+
+
+def _run_mirror(mirror: Path) -> subprocess.CompletedProcess:
+    return _run(cwd=mirror, script=mirror / "scripts" / "compliance.py")
 
 
 class TestBaseline:
@@ -102,23 +132,23 @@ class TestPlantedViolations:
         [BOUNDARY_PROBE, MODEL_PIN_PROBE, TEMPORAL_PROBE],
         ids=["boundary", "model-pin", "temporal"],
     )
-    def test_the_lint_bites_and_names_the_line(self, probe, probe_path):
+    def test_the_lint_bites_and_names_the_line(self, probe, probe_path, mirror):
         source, lineno, rule = probe
-        relative = probe_path.relative_to(REPO)
+        relative = probe_path.relative_to(mirror)
 
         probe_path.write_text(source, encoding="utf-8")
-        planted = _run()
+        planted = _run_mirror(mirror)
 
         assert planted.returncode == 1, planted.stdout + planted.stderr
         assert f"[{rule}]" in planted.stdout
         assert f"{relative}:{lineno}" in planted.stdout
 
         probe_path.unlink()
-        cleaned = _run()
+        cleaned = _run_mirror(mirror)
         assert cleaned.returncode == 0, cleaned.stdout + cleaned.stderr
         assert "green — no findings" in cleaned.stdout
 
-    def test_two_violations_in_one_file_are_both_reported(self, probe_path):
+    def test_two_violations_in_one_file_are_both_reported(self, probe_path, mirror):
         """A lint that stops at the first finding hides the rest of the work."""
         source = (
             _HEADER
@@ -126,15 +156,15 @@ class TestPlantedViolations:
             + "def render(claim):\n"
             + "    return claim." + "_quote" + "_protected\n"
         )
-        relative = probe_path.relative_to(REPO)
+        relative = probe_path.relative_to(mirror)
         probe_path.write_text(source, encoding="utf-8")
 
-        planted = _run()
+        planted = _run_mirror(mirror)
         assert planted.returncode == 1
         assert f"{relative}:2" in planted.stdout
         assert f"{relative}:4" in planted.stdout
 
-    def test_a_commented_out_violation_is_not_a_finding(self, probe_path):
+    def test_a_commented_out_violation_is_not_a_finding(self, probe_path, mirror):
         """The lints skip comment lines on purpose: a module docstring that
         discusses the pinned models must not fail the build. Recorded because
         the fix for an over-broad lint is usually an allowlist, and an allowlist
@@ -142,9 +172,23 @@ class TestPlantedViolations:
         source = _HEADER + '# PINNED = "' + "gem" + 'ini-0.0-planted-probe"\n'
         probe_path.write_text(source, encoding="utf-8")
 
-        assert _run().returncode == 0
+        assert _run_mirror(mirror).returncode == 0
 
-    def test_prose_about_the_models_is_not_a_finding(self, probe_path):
+    def test_the_probe_is_never_written_into_the_real_package(self, probe_path, mirror):
+        """The regression this rework exists for.
+
+        An aborted run used to leave ``src/baraza/_compliance_probe_<pid>.py``
+        inside the shipped package, where the next ``make compliance`` — the
+        deliverable — would exit 1 on a tree nobody had touched. The probe now
+        lives in a copy, and this asserts it.
+        """
+        probe_path.write_text(BOUNDARY_PROBE[0], encoding="utf-8")
+
+        assert probe_path.is_relative_to(mirror)
+        assert list(SRC.rglob("_compliance_probe*.py")) == []
+        assert _run().returncode == 0, "the real tree was affected by a probe"
+
+    def test_prose_about_the_models_is_not_a_finding(self, probe_path, mirror):
         """The first version of the model-pin regex fired on the word 'Gemini'
         opening a docstring. This is that false positive, pinned."""
         source = (
@@ -153,7 +197,7 @@ class TestPlantedViolations:
         )
         probe_path.write_text(source, encoding="utf-8")
 
-        assert _run().returncode == 0
+        assert _run_mirror(mirror).returncode == 0
 
 
 class TestMetricsLint:

@@ -19,8 +19,8 @@ else in the codebase is permitted to compare instants.
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timezone
-from typing import Final, Optional, Union
+from datetime import UTC, date, datetime
+from typing import Final
 
 __all__ = [
     "EpochMillis",
@@ -42,7 +42,7 @@ EpochMillis = int
 MIN_INSTANT: Final[EpochMillis] = -(2**62)
 MAX_INSTANT: Final[EpochMillis] = 2**62
 
-TemporalInput = Union[int, float, str, datetime, date, None]
+TemporalInput = int | float | str | datetime | date | None
 
 
 class TemporalError(ValueError):
@@ -91,7 +91,7 @@ def to_epoch_millis(value: TemporalInput, *, field: str = "instant") -> EpochMil
     if isinstance(value, bool):  # bool is an int subclass; never a timestamp
         raise TemporalError(f"{field}: bool is not a timestamp")
 
-    if isinstance(value, int) or isinstance(value, float):
+    if isinstance(value, (int, float)):
         magnitude = abs(value)
         if magnitude < _EPOCH_SECONDS_CEILING:
             return int(round(value * 1000))
@@ -107,7 +107,7 @@ def to_epoch_millis(value: TemporalInput, *, field: str = "instant") -> EpochMil
 
     if isinstance(value, date):
         return int(
-            datetime(value.year, value.month, value.day, tzinfo=timezone.utc).timestamp()
+            datetime(value.year, value.month, value.day, tzinfo=UTC).timestamp()
             * 1000
         )
 
@@ -117,7 +117,7 @@ def to_epoch_millis(value: TemporalInput, *, field: str = "instant") -> EpochMil
             raise TemporalError(f"{field}: empty string is not an instant")
 
         if _DATE_ONLY.match(raw):
-            parsed = datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+            parsed = datetime.fromisoformat(raw).replace(tzinfo=UTC)
             return int(round(parsed.timestamp() * 1000))
 
         if not _HAS_OFFSET.search(raw):
@@ -160,17 +160,17 @@ def to_iso(instant: EpochMillis) -> str:
     comparison.
     """
     return (
-        datetime.fromtimestamp(instant / 1000, tz=timezone.utc)
+        datetime.fromtimestamp(instant / 1000, tz=UTC)
         .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
     )
 
 
 def intervals_overlap(
-    a_from: Optional[EpochMillis],
-    a_until: Optional[EpochMillis],
-    b_from: Optional[EpochMillis],
-    b_until: Optional[EpochMillis],
+    a_from: EpochMillis | None,
+    a_until: EpochMillis | None,
+    b_from: EpochMillis | None,
+    b_until: EpochMillis | None,
 ) -> bool:
     """Half-open interval overlap on epoch values — the BAR-320 temporal gate.
 

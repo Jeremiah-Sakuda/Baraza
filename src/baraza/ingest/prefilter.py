@@ -34,9 +34,9 @@ from __future__ import annotations
 import os
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import Enum
-from typing import Iterable, List, Optional, Tuple
+from enum import StrEnum
 
 from baraza.ingest.chunking import Chunk
 from baraza.schema import models
@@ -52,7 +52,7 @@ __all__ = [
 ]
 
 
-class FilterMode(str, Enum):
+class FilterMode(StrEnum):
     STUB = "stub"
     GEMMA = "gemma"
 
@@ -63,6 +63,13 @@ class FilterVerdict:
     reason: str
     mode: FilterMode
     confidence: float = 1.0
+    decided: bool = True
+    """False when the chunk was kept without the filter reaching a verdict.
+
+    Explicit rather than inferred from ``confidence == 0.0``, because a genuine
+    low-confidence KEEP and a failure-to-run are different facts and a threshold
+    that conflates them is how the second one disappears.
+    """
 
 
 @dataclass(slots=True)
@@ -72,13 +79,37 @@ class FilterReport:
     mode: FilterMode
     considered: int = 0
     kept: int = 0
+    failed_open: int = 0
+    """Chunks kept because the filter could not reach a verdict, not because it
+    reached ``KEEP``.
+
+    Counted separately because otherwise they are invisible. Failing open is the
+    right behaviour — a filter outage must not silently delete a night's worth of
+    institutional memory — but a pass where *every* call failed produces
+    ``kept 33/33 = 100.0%``, which is byte-identical to a pass where Gemma read
+    every chunk and kept it. That is the shape this project exists to refuse: a
+    number that cannot distinguish "the component ran and agreed" from "the
+    component never ran at all". The BAR-303 bonus is claimed on Gemma having
+    done work, so the count that would falsify it has to be carried next to the
+    rate rather than folded into it.
+    """
 
     @property
     def dropped(self) -> int:
         return self.considered - self.kept
 
     @property
-    def survival_rate(self) -> Optional[float]:
+    def decided(self) -> int:
+        """Chunks the filter actually reached a verdict on."""
+        return self.considered - self.failed_open
+
+    @property
+    def degraded(self) -> bool:
+        """True if any chunk was kept without a verdict."""
+        return self.failed_open > 0
+
+    @property
+    def survival_rate(self) -> float | None:
         if self.considered == 0:
             return None
         return round(self.kept / self.considered, 4)
@@ -93,11 +124,20 @@ class FilterReport:
         rate = self.survival_rate
         if rate is None:
             return f"prefilter[{self.mode.value}]: nothing considered"
-        suffix = (
-            "  (STUB heuristic — NOT the BAR-303 measurement)"
-            if self.mode is FilterMode.STUB
-            else "  (gemma)"
-        )
+        if self.mode is FilterMode.STUB:
+            suffix = "  (STUB heuristic — NOT the BAR-303 measurement)"
+        elif self.failed_open == self.considered:
+            suffix = (
+                f"  (DEGRADED — all {self.failed_open} kept without a verdict; "
+                "the filter never ran. This is NOT a survival rate)"
+            )
+        elif self.degraded:
+            suffix = (
+                f"  (DEGRADED — {self.failed_open} of {self.considered} kept "
+                f"without a verdict; only {self.decided} were decided)"
+            )
+        else:
+            suffix = "  (gemma)"
         return (
             f"prefilter[{self.mode.value}]: kept {self.kept}/{self.considered} "
             f"= {rate:.1%}{suffix}"
@@ -115,6 +155,12 @@ class FilterReport:
             return "not yet measured"
         rate = self.survival_rate
         if rate is None:
+            return "not yet measured"
+        if self.degraded:
+            # A pass where the filter failed open even once did not measure the
+            # filter, and a partially-degraded rate is a blend of two different
+            # quantities wearing one number. `metrics.json` has exactly two legal
+            # forms and there is no third for "sort of measured".
             return "not yet measured"
         return {
             "value": rate,
@@ -137,12 +183,14 @@ class RelevanceFilter(ABC):
     def verdict(self, chunk: Chunk) -> FilterVerdict:
         """Keep or drop one chunk."""
 
-    def run(self, chunks: Iterable[Chunk]) -> Tuple[List[Chunk], FilterReport]:
+    def run(self, chunks: Iterable[Chunk]) -> tuple[list[Chunk], FilterReport]:
         report = FilterReport(mode=self.mode)
-        kept: List[Chunk] = []
+        kept: list[Chunk] = []
         for chunk in chunks:
             report.considered += 1
             decision = self.verdict(chunk)
+            if not decision.decided:
+                report.failed_open += 1
             if decision.keep:
                 report.kept += 1
                 kept.append(chunk)
@@ -256,7 +304,7 @@ class GemmaFilter(RelevanceFilter):
 
     mode = FilterMode.GEMMA
 
-    def __init__(self, client=None, *, endpoint: Optional[str] = None):
+    def __init__(self, client=None, *, endpoint: str | None = None):
         self._client = client
         self.endpoint = endpoint or os.environ.get("BARAZA_GEMMA_ENDPOINT")
 
@@ -282,6 +330,7 @@ class GemmaFilter(RelevanceFilter):
                 reason=f"filter unavailable, failing open: {type(exc).__name__}",
                 mode=self.mode,
                 confidence=0.0,
+                decided=False,
             )
 
         answer = response.text.strip().upper()
@@ -294,10 +343,11 @@ class GemmaFilter(RelevanceFilter):
             reason=f"gemma returned {answer[:20]!r}; failing open",
             mode=self.mode,
             confidence=0.0,
+            decided=False,
         )
 
 
-def open_filter(mode: Optional[str] = None, **kwargs) -> RelevanceFilter:
+def open_filter(mode: str | None = None, **kwargs) -> RelevanceFilter:
     """Select a filter by flag.
 
     Defaults to ``stub``, and the default is the safe one: an unattended run

@@ -179,6 +179,30 @@ def test_agents_cannot_transfer_to_each_other(fleet: BarazaAgents) -> None:
         assert agent.disallow_transfer_to_peers is True
 
 
+def test_tool_declarations_keep_their_parameters(fleet: BarazaAgents) -> None:
+    """The guard must not eat the tool's signature.
+
+    ADK builds a tool's parameter schema from ``inspect.signature`` of whatever
+    it is handed. The guard wrapper is ``*args, **kwargs``, so without
+    ``functools.wraps`` every tool was declared to the model as taking **no
+    arguments** — and a model cannot pass an anchor to a tool whose declaration
+    says it accepts nothing. The agents looked correct in every isolation test
+    while being unable to do their jobs, which is the kind of defect that only
+    shows up the first time one is actually run.
+    """
+    declarations = {
+        tool._get_declaration().name: tool._get_declaration()
+        for tool in fleet.extractor.tools
+    }
+    propose = declarations["propose_claim"]
+    schema = propose.parameters_json_schema or propose.parameters
+    assert schema is not None, "propose_claim was declared with no parameters at all"
+
+    rendered = str(schema)
+    assert "anchor" in rendered
+    assert "quote" in rendered
+
+
 def test_tools_return_structured_refusals_not_exceptions() -> None:
     """A raised exception inside a tool is useless to the model and may leak.
 

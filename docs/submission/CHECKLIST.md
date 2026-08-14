@@ -113,17 +113,25 @@ matters and a paraphrase is not good enough.
 
 ## E. Architecture diagram
 
-- [ ] **(agent → human)** Diagram exists (BAR-505). **None exists in the tree.**
-- [ ] **(agent)** Diagram shows the Google Cloud services by name: Cloud Run Jobs
-      (ingest, reconcile), Cloud Run services (interview, successor), Firestore,
-      Cloud Scheduler, Vertex AI.
-- [ ] **(agent)** Diagram shows the four agents and what each may write — the
-      separation-of-concerns claim is only credible if the diagram shows the
-      write boundaries, not just boxes and arrows.
-- [ ] **(agent)** Diagram displays **no unmeasured number.** Every metric is
-      currently `not yet measured`, so the diagram carries no figures until a
-      measurement run produces them.
-- [ ] **(agent)** Diagram names **no framework the code does not import.**
+- [x] **(agent → human)** Diagram exists (BAR-505). Two of them:
+      `docs/architecture.md` (Mermaid, renders inline on GitHub) and
+      `docs/architecture.svg` (16 KB, self-contained, tracked, legible in light
+      and dark, with a full prose `<desc>` for screen readers). This line used to
+      read "**None exists in the tree**" and had been wrong since B3.
+- [x] **(agent)** Diagram shows the Google Cloud services by name: Cloud Run Jobs
+      (ingestion, `baraza-reconcile`), Cloud Run services (exit interview,
+      successor), Firestore, Cloud Scheduler, Vertex AI.
+- [x] **(agent)** Diagram shows the stages and what each may write, including the
+      line that matters — approval is the only writer of `claim.committed`, and
+      the dashed visibility boundary every reader crosses. It labels lanes rather
+      than agent objects; the per-agent tool matrix lives in
+      `src/baraza/agents.py` and `docs/compliance.md`.
+- [x] **(agent)** Diagram displays **no unmeasured number.** The only figures on
+      it are design constants and arithmetic that follows from them
+      (`MAX_RETRIEVED = 20`; `3000 × 2999 / 2 = 4,498,500`), and the pre-filter
+      rate is printed as `not yet measured`.
+- [x] **(agent)** Diagram names **no framework the code does not import.** It
+      names no framework at all.
 - [ ] **(human-only)** Diagram is embedded in the Devpost gallery and readable at
       the size Devpost renders it. Test at gallery scale, not at full size.
 
@@ -179,9 +187,11 @@ matters and a paraphrase is not good enough.
 - [ ] **(human-only)** Social post URLs added to the submission form.
 - [ ] **(human-only)** Posts are **publicly visible** — a LinkedIn post set to
       connections-only earns nothing.
-- [ ] **(agent → human)** **Additional models** bonus: Gemma is used as the
-      ingestion relevance pre-filter and an embedding model is used for blocking
-      key expansion, both pinned in `src/baraza/schema/models.py`. The claim is
+- [ ] **(agent → human)** **Additional models** bonus: Gemma as the ingestion
+      relevance pre-filter, pinned in `src/baraza/schema/models.py`. This rests
+      on Gemma alone now — the embedding pin that used to be cited alongside it
+      has been deleted, because nothing in the tree embedded anything and a
+      bonus claimed on an unbuilt component is worse than no bonus. The claim is
       only submittable once the pre-filter has actually run in `gemma` mode in a
       supervised session — currently `gemma_prefilter_mode_used` is
       `not yet measured`, so **the bonus is not yet earned.** **[VERIFY-RULES]**
@@ -191,16 +201,29 @@ matters and a paraphrase is not good enough.
 
 ## I. Google Cloud requirements
 
-- [ ] **(agent → human)** **≥1 Google agent framework used.** ⚠ **Currently
-      unmet.** `google-adk` is declared in `pyproject.toml`; **no module under
-      `src/` imports it.** The runtime path is `google.genai` via
-      `src/baraza/llm.py`. Either wire ADK into a shipped path, or state plainly
-      that the runtime is the GenAI SDK and re-check whether that satisfies the
-      requirement. **[VERIFY-RULES]** — this is the highest-risk open item in
-      this file.
-- [ ] **(agent)** `docs/framework-decision.md` updated to record which branch
-      actually shipped, and the compliance matrix updated to match in the same
-      commit.
+- [x] **(agent → human)** **≥1 Google agent framework used.** **Met.**
+      `src/baraza/agents.py` (import block, lines 118-122) imports `LlmAgent`,
+      `RunConfig`, `InMemoryRunner` and `FunctionTool` from `google.adk`;
+      `build_extractor` / `build_reconciler` /
+      `build_interviewer` return real `LlmAgent` instances, and
+      `tests/unit/test_agents.py::test_agents_are_genuinely_adk_agents` asserts
+      `isinstance` against the ADK class. Verify with
+      `grep -rn "google\.adk" src/` → 7 hits. Second, independent basis: the
+      GenAI SDK is on every model call path (three `from google.genai import
+      types` sites in `src/baraza/llm.py`).
+- [x] **(agent)** **Put an ADK agent on the production call path.** Done in B5.
+      `baraza.ingest.extract.AgentClaimExtractor` binds `read_chunk` and
+      `propose_claim` to the chunk and the three validation gates, drives the
+      extractor through an ADK `Runner`, and bounds it with
+      `RunConfig(max_llm_calls=MAX_AGENT_TURNS)` and an `asyncio.wait_for`.
+      `IngestionPipeline` selects it on any non-offline run.
+      `grep -rn "baraza.agents" src/` now returns `ingest/extract.py`.
+      **Two limits to state out loud:** the reconciler and interviewer are still
+      built-but-not-driven, and offline replay is deliberately the direct path,
+      so nothing shown from `make demo` is an ADK loop.
+- [x] **(agent)** `docs/framework-decision.md` updated to record which branch
+      actually shipped (the primary; the fallback trigger was never tested), and
+      the compliance matrix updated to match.
 - [ ] **(human-only)** **≥1 Google Cloud infrastructure service used**, provably:
       Cloud Run, Firestore, Cloud Scheduler. Requires deployment.
 - [ ] **(human-only)** Vertex AI used for all model calls, with logs to prove it.
@@ -236,16 +259,23 @@ file appeared.
 - [ ] **(agent)** `docs/PRD.md` merged, so `make compliance` runs its actual
       BAR-007 audit instead of exiting 2. ~35 requirement IDs currently have no
       acceptance criteria in the tree. `make gate` is red for this reason alone.
-- [ ] **(human-only)** `docs/antigravity/decision.md` is a **placeholder**. Copy
-      the original Aug 8 finding in with an attribution header, or delete the
-      citation from BAR-020 and state that the framework was chosen without a
-      published comparison. Do not summarize a document nobody can check.
+- [x] **(agent)** `docs/antigravity/decision.md` was a **placeholder** carrying a
+      second-hand negative claim about another vendor's SDK. Resolved the way the
+      file itself prescribed for an unlocatable source: deleted, citation removed
+      from the framework decision, and `docs/framework-decision.md` now states
+      plainly that ADK was chosen without a published comparison. Nothing was
+      summarized from memory. If the original Aug 8 finding is ever located, it
+      can be added with an attribution header and the justification upgraded —
+      but the submission does not depend on it.
 - [ ] **(agent)** `fixtures/transcripts/` does not exist; it is written by replay
       runs, so it unblocks when the cassettes land.
 - [ ] **(agent)** `fixtures/golden-log.jsonl` does not exist. `AGENTS.md`'s repo
       layout names it; the verifiers look for it and fall back to
       `out/events.jsonl`.
-- [ ] **(agent)** No module imports ADK — see section I and `docs/compliance.md`.
+- [ ] **(agent)** `baraza.agents` is imported only by `tests/unit/test_agents.py`.
+      ADK **is** imported and the fleet **is** built — the old "no module imports
+      ADK" entry is resolved — but no production caller drives an ADK `Runner`
+      yet. See section I and `docs/compliance.md`.
 - [ ] **(agent)** `docs/BUILD-LOG.md` has no entry for sessions **B1** or **B2**,
       both of which are in the commit history. The session protocol requires the
       entry before the commit; two sessions skipped it, and the prompts are not
@@ -267,9 +297,11 @@ file appeared.
       "could not run" honestly when their prerequisite is absent.
 - [x] `fixtures/` carries `BIBLE.md`, `MANIFEST.md`, the generated corpus, the
       entity gold set and both interview personas.
-- [x] `tests/` — 154 passed across `tests/unit` (8 modules) and `tests/property`.
-      `tests/emulator` holds the SIGKILL rig; its JSONL half passes with no
-      emulator (`pytest tests/emulator -k jsonl`).
+- [x] `tests/` — `tests/unit` and `tests/property` pass in full; `make test`
+      prints the count, which is not transcribed here because a transcribed
+      count is wrong after the next commit. `tests/emulator` holds the SIGKILL
+      rig; its JSONL half passes with no emulator
+      (`pytest tests/emulator -k jsonl`).
 - [x] `deploy/` carries both Dockerfiles, both service manifests, the Scheduler
       manifest, the Firestore rules, `bootstrap_gcp.sh` and `teardown.sh`. Every
       shell script in `scripts/` and `deploy/` passes `bash -n`.

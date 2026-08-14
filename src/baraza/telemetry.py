@@ -27,8 +27,9 @@ trace.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, Optional, Sequence
+from typing import Any
 
 from opentelemetry import trace
 from opentelemetry.trace import Span, Tracer
@@ -60,7 +61,7 @@ def exporter_status() -> str:
     return _status
 
 
-def configure(service_name: str, *, project: Optional[str] = None) -> str:
+def configure(service_name: str, *, project: str | None = None) -> str:
     """Install a tracer provider. Idempotent; safe to call from a lifespan hook.
 
     Returns the resulting status string, which is also what
@@ -157,7 +158,7 @@ def record_audience(active: Span, audience: Any, *, withheld: int = 0) -> None:
     active.set_attribute("baraza.withheld_count", int(withheld))
 
 
-def attributes_for_run(run_id: str, *, scheduled: bool) -> Dict[str, Any]:
+def attributes_for_run(run_id: str, *, scheduled: bool) -> dict[str, Any]:
     """Standard attributes for a job or scheduled run.
 
     ``scheduled`` is carried into the trace for the same reason it is carried

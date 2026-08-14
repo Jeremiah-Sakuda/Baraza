@@ -24,15 +24,15 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, Optional
+from enum import StrEnum
+from typing import Any
 
 from baraza.schema.temporal import EpochMillis, to_epoch_millis
 
 __all__ = ["EventType", "Event", "AppendOnlyViolation"]
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     """Every mutation the system can record.
 
     Adding a member here is a schema change: the fold must learn to handle it,
@@ -51,6 +51,23 @@ class EventType(str, Enum):
     CLAIM_VISIBILITY_SET = "claim.visibility_set"
     """The approver's visibility choice, recorded as its own event so the
     boundary decision is auditable independently of the approval."""
+
+    CLAIM_ADJUDICATED = "claim.adjudicated"
+    """BAR-321. The nightly reconciler examined this claim against the pool.
+
+    This exists so that "which claims has the reconciler already looked at?" is
+    a **fact in the log** rather than something inferred from a timestamp. The
+    inference it replaces was wrong: the job used to select claims whose
+    ``observed_at`` was later than the previous heartbeat, but ``observed_at``
+    is the instant the *document was authored* (``ingest/pipeline.py``), not the
+    instant the claim was written. Minutes from 2016 ingested tonight are older
+    than every heartbeat, so the comparison selected nothing and the nightly
+    reconciler examined zero claims on every night after the first.
+
+    Recording the examination instead of deducing it also makes the job
+    retry-safe for free: the event ID is a content hash over the run's instant
+    and the claim ID, so a retried Job re-derives the same ID and the second
+    append is a no-op rather than a duplicate."""
 
     CONTRADICTION_DETECTED = "contradiction.detected"
     CONTRADICTION_RESOLVED = "contradiction.resolved"
@@ -75,7 +92,7 @@ class AppendOnlyViolation(RuntimeError):
     """Raised when code attempts to mutate or delete a recorded event."""
 
 
-def _canonical(payload: Dict[str, Any]) -> str:
+def _canonical(payload: dict[str, Any]) -> str:
     """Stable JSON for hashing: sorted keys, no incidental whitespace."""
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
 
@@ -87,7 +104,7 @@ class Event:
     event_id: str
     event_type: EventType
     occurred_at: EpochMillis
-    payload: Dict[str, Any] = field(default_factory=dict)
+    payload: dict[str, Any] = field(default_factory=dict)
     actor: str = "system"
     """Who or what appended this. Least-privilege service accounts map here:
     the extractor appends ``claim.asserted`` and nothing else, and cannot write
@@ -105,10 +122,10 @@ class Event:
         *,
         event_type: EventType,
         occurred_at: Any,
-        payload: Optional[Dict[str, Any]] = None,
+        payload: dict[str, Any] | None = None,
         actor: str = "system",
         scheduled: bool = False,
-    ) -> "Event":
+    ) -> Event:
         """Build an event with a deterministic, content-addressed ID."""
         body = dict(payload or {})
         instant = to_epoch_millis(occurred_at, field="occurred_at")
@@ -132,7 +149,7 @@ class Event:
         *,
         event_type: EventType,
         occurred_at: EpochMillis,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         actor: str,
     ) -> str:
         digest = hashlib.sha256(
@@ -156,7 +173,7 @@ class Event:
 
     # --------------------------------------------------------- serialization
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "event_id": self.event_id,
             "event_type": self.event_type.value,
@@ -167,7 +184,7 @@ class Event:
         }
 
     @staticmethod
-    def from_dict(payload: Dict[str, Any]) -> "Event":
+    def from_dict(payload: dict[str, Any]) -> Event:
         return Event(
             event_id=payload["event_id"],
             event_type=EventType(payload["event_type"]),

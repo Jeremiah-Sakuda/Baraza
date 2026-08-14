@@ -29,9 +29,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from baraza.llm import LLMClient
 
@@ -61,8 +61,8 @@ class Entity:
     entity_id: str
     canonical_name: str
     kind: str = "unknown"
-    surface_forms: Set[str] = field(default_factory=set)
-    first_seen_source: Optional[str] = None
+    surface_forms: set[str] = field(default_factory=set)
+    first_seen_source: str | None = None
 
     def normalized(self) -> str:
         return _normalize(self.canonical_name)
@@ -88,7 +88,7 @@ class AliasProposal:
     confidence: float
     needs_human: bool
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "alias_id": self.alias_id,
             "canonical_id": self.canonical_id,
@@ -103,10 +103,10 @@ class EntityTable:
     """The canonical table."""
 
     def __init__(self) -> None:
-        self._entities: Dict[str, Entity] = {}
+        self._entities: dict[str, Entity] = {}
 
     def observe(
-        self, entity_id: str, surface: str, *, source_id: Optional[str] = None
+        self, entity_id: str, surface: str, *, source_id: str | None = None
     ) -> Entity:
         entity = self._entities.get(entity_id)
         if entity is None:
@@ -119,10 +119,10 @@ class EntityTable:
         entity.surface_forms.add(surface.strip())
         return entity
 
-    def get(self, entity_id: str) -> Optional[Entity]:
+    def get(self, entity_id: str) -> Entity | None:
         return self._entities.get(entity_id)
 
-    def all(self) -> List[Entity]:
+    def all(self) -> list[Entity]:
         return sorted(self._entities.values(), key=lambda e: e.entity_id)
 
     def __len__(self) -> int:
@@ -132,13 +132,13 @@ class EntityTable:
 class AliasPass:
     """Proposes ``sameAs`` edges. Never applies them without confirmation."""
 
-    def __init__(self, client: Optional[LLMClient] = None):
+    def __init__(self, client: LLMClient | None = None):
         self.client = client
 
-    def propose(self, table: EntityTable) -> List[AliasProposal]:
+    def propose(self, table: EntityTable) -> list[AliasProposal]:
         entities = table.all()
-        proposals: List[AliasProposal] = []
-        seen: Set[Tuple[str, str]] = set()
+        proposals: list[AliasProposal] = []
+        seen: set[tuple[str, str]] = set()
 
         for i, left in enumerate(entities):
             for right in entities[i + 1 :]:
@@ -153,7 +153,7 @@ class AliasPass:
 
         return proposals
 
-    def _compare(self, left: Entity, right: Entity) -> Optional[AliasProposal]:
+    def _compare(self, left: Entity, right: Entity) -> AliasProposal | None:
         left_norm, right_norm = left.normalized(), right.normalized()
         if not left_norm or not right_norm:
             return None
@@ -241,7 +241,7 @@ class AliasPass:
         return target
 
     @staticmethod
-    def read_confirmed(path: Path | str) -> List[Tuple[str, str]]:
+    def read_confirmed(path: Path | str) -> list[tuple[str, str]]:
         """Load only the confirmed edges. Null stays unapplied."""
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
         return [
@@ -251,7 +251,7 @@ class AliasPass:
         ]
 
 
-def _order(left: Entity, right: Entity) -> Tuple[Entity, Entity]:
+def _order(left: Entity, right: Entity) -> tuple[Entity, Entity]:
     """Pick which id becomes the alias.
 
     The longer canonical name wins as canonical — a fuller form is more likely
@@ -280,24 +280,24 @@ class EntityScorecard:
     false_negative: int = 0
 
     @property
-    def precision(self) -> Optional[float]:
+    def precision(self) -> float | None:
         denominator = self.true_positive + self.false_positive
         return None if denominator == 0 else round(self.true_positive / denominator, 4)
 
     @property
-    def recall(self) -> Optional[float]:
+    def recall(self) -> float | None:
         denominator = self.true_positive + self.false_negative
         return None if denominator == 0 else round(self.true_positive / denominator, 4)
 
     @property
-    def f1(self) -> Optional[float]:
+    def f1(self) -> float | None:
         p, r = self.precision, self.recall
         if not p or not r:
             return None
         return round(2 * p * r / (p + r), 4)
 
     def describe(self) -> str:
-        def fmt(value: Optional[float]) -> str:
+        def fmt(value: float | None) -> str:
             return "not yet measured" if value is None else f"{value:.1%}"
 
         return (
@@ -309,8 +309,8 @@ class EntityScorecard:
 
     @staticmethod
     def score(
-        proposed: Iterable[Tuple[str, str]], gold: Iterable[Tuple[str, str]]
-    ) -> "EntityScorecard":
+        proposed: Iterable[tuple[str, str]], gold: Iterable[tuple[str, str]]
+    ) -> EntityScorecard:
         proposed_set = {tuple(sorted(p)) for p in proposed}
         gold_set = {tuple(sorted(g)) for g in gold}
         return EntityScorecard(

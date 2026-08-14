@@ -41,7 +41,7 @@ import html
 import os
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -94,9 +94,9 @@ class _Runtime:
     """Per-instance handles. Read-only; nothing here can append to the log."""
 
     def __init__(self) -> None:
-        self._store: Optional[EventStore] = None
-        self._client: Optional[LLMClient] = None
-        self._state: Optional[GraphState] = None
+        self._store: EventStore | None = None
+        self._client: LLMClient | None = None
+        self._state: GraphState | None = None
         self._state_at: float = 0.0
 
     @property
@@ -128,7 +128,7 @@ class AskRequest(BaseModel):
 # --------------------------------------------------------------- record shapes
 
 
-def _public_claims(state: GraphState) -> List[Claim]:
+def _public_claims(state: GraphState) -> list[Claim]:
     """Committed AND readable by this audience. The only set this service reads.
 
     ``readable_claims`` applies both axes in the one place they are defined; no
@@ -138,7 +138,7 @@ def _public_claims(state: GraphState) -> List[Claim]:
     return sorted(state.readable_claims(AUDIENCE), key=lambda c: (-c.observed_at, c.claim_id))
 
 
-def _claim_payload(claim: Claim) -> Dict[str, Any]:
+def _claim_payload(claim: Claim) -> dict[str, Any]:
     """Render one published claim.
 
     The quote is read through ``quote_for(audience)``. If the predicate said no
@@ -161,7 +161,7 @@ def _claim_payload(claim: Claim) -> Dict[str, Any]:
     }
 
 
-def _record_summary(state: GraphState) -> Dict[str, Any]:
+def _record_summary(state: GraphState) -> dict[str, Any]:
     """Live counts. Every number here is a query over the folded log.
 
     Nothing on this page is a literal typed into a template. ``withheld`` is the
@@ -370,7 +370,7 @@ def create_app() -> FastAPI:
     )
 
     @application.get("/healthz")
-    def healthz() -> Dict[str, Any]:
+    def healthz() -> dict[str, Any]:
         """Liveness. No I/O — see the interview service for why."""
         return {
             "status": "ok",
@@ -380,7 +380,7 @@ def create_app() -> FastAPI:
         }
 
     @application.get("/readyz")
-    def readyz() -> Dict[str, Any]:
+    def readyz() -> dict[str, Any]:
         try:
             state = _runtime.state()
         except Exception as exc:  # noqa: BLE001
@@ -398,7 +398,7 @@ def create_app() -> FastAPI:
         return HTMLResponse(body)
 
     @application.get("/api/record")
-    def record() -> Dict[str, Any]:
+    def record() -> dict[str, Any]:
         """The published record as JSON. Same set as the page, same predicate."""
         with telemetry.span("successor.record") as active:
             state = _runtime.state()
@@ -417,7 +417,7 @@ def create_app() -> FastAPI:
         }
 
     @application.post("/api/ask")
-    def ask(body: AskRequest) -> Dict[str, Any]:
+    def ask(body: AskRequest) -> dict[str, Any]:
         """Successor-mode question answering, bounded to the published record."""
         with telemetry.span(
             "successor.ask", **{"baraza.question_length": len(body.question)}

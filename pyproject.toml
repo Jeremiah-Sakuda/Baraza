@@ -19,7 +19,12 @@ license = { text = "Apache-2.0" }
 # never taken, docs/framework-decision.md records that and the matrix still says
 # ADK, because that is what the interviewer imports.
 dependencies = [
-  "google-adk>=1.0.0",
+  # Bounded to the tested minor. `>=1.0.0` spanned two major versions of a fast-
+  # moving SDK: this tree resolved 2.6.2 and a clone a day later resolved 2.7.0,
+  # which already deprecates part of the config surface these agents build on.
+  # Judging runs to October; the exact resolution is in requirements.lock and
+  # this bound is what stops an unpinned install from drifting off it.
+  "google-adk>=2.6.2,<2.7",
   "google-genai>=1.0.0",
   "google-cloud-firestore>=2.16",
   "google-cloud-storage>=2.16",

@@ -26,14 +26,13 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Dict, Final, Tuple
+from typing import Final
 
 __all__ = [
     "ModelPin",
     "REASONING",
     "FAST",
     "PREFILTER",
-    "EMBEDDING",
     "ALL_PINNED",
     "resolve",
     "location",
@@ -100,25 +99,23 @@ PREFILTER: Final[ModelPin] = ModelPin(
     surface="vertex-endpoint",
 )
 
-EMBEDDING: Final[ModelPin] = ModelPin(
-    model_id="text-embedding-005",
-    role=(
-        "Claim-level embeddings for blocking-key expansion. Claims are embedded; "
-        "the corpus is not. There is no vector database — brute-force top-k over "
-        "a few thousand claim vectors held in memory, and the arithmetic that "
-        "makes that correct is stated in the README rather than implied."
-    ),
-    env_var="BARAZA_MODEL_EMBEDDING",
-    surface="vertex",
-)
+# There was a fourth pin here — a text-embedding model, for "blocking-key
+# expansion in detection". It was removed rather than kept, and the reason is the
+# rule at the top of docs/compliance.md: a pin is a claim, and this one had no
+# code behind it. `build_block` in reconcile/detect.py retrieves on exact
+# subject ∪ object ∪ predicate_hint with alias edges resolved at query time.
+# Nothing embedded anything, nothing computed a top-k, and no module imported the
+# pin. Publishing it made three documents describe a component that did not
+# exist, which is the defect this module was written to make impossible.
+#
+# Recorded as a negative decision in the README rather than silently dropped.
 
-ALL_PINNED: Final[Tuple[ModelPin, ...]] = (REASONING, FAST, PREFILTER, EMBEDDING)
+ALL_PINNED: Final[tuple[ModelPin, ...]] = (REASONING, FAST, PREFILTER)
 
-_BY_ROLE: Final[Dict[str, ModelPin]] = {
+_BY_ROLE: Final[dict[str, ModelPin]] = {
     "reasoning": REASONING,
     "fast": FAST,
     "prefilter": PREFILTER,
-    "embedding": EMBEDDING,
 }
 
 

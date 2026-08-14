@@ -26,7 +26,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
 
 from baraza.fold.graph import GraphState
 from baraza.reconcile.ledger import DisputedLedger
@@ -46,11 +45,11 @@ class LedgerSnapshot:
     """True when taken by a Cloud Scheduler run. A snapshot taken by hand during
     a demo is never presented as autonomy evidence."""
 
-    rows: Dict[str, Dict[str, object]] = field(default_factory=dict)
+    rows: dict[str, dict[str, object]] = field(default_factory=dict)
     event_count: int = 0
-    source_ids: List[str] = field(default_factory=list)
+    source_ids: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "taken_at": self.taken_at,
             "taken_at_iso": to_iso(self.taken_at),
@@ -70,7 +69,7 @@ class LedgerSnapshot:
         return target
 
     @staticmethod
-    def load(path: Path | str) -> "LedgerSnapshot":
+    def load(path: Path | str) -> LedgerSnapshot:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
         return LedgerSnapshot(
             taken_at=int(payload["taken_at"]),
@@ -120,10 +119,10 @@ class LedgerDiff:
 
     before: LedgerSnapshot
     after: LedgerSnapshot
-    added: List[str] = field(default_factory=list)
-    removed: List[str] = field(default_factory=list)
-    rescored: List[tuple[str, float, float]] = field(default_factory=list)
-    new_sources: List[str] = field(default_factory=list)
+    added: list[str] = field(default_factory=list)
+    removed: list[str] = field(default_factory=list)
+    rescored: list[tuple[str, float, float]] = field(default_factory=list)
+    new_sources: list[str] = field(default_factory=list)
 
     @property
     def nights_apart(self) -> float:
@@ -143,7 +142,7 @@ class LedgerDiff:
             and self.nights_apart >= 0.5
         )
 
-    def describe(self) -> List[str]:
+    def describe(self) -> list[str]:
         lines = [
             f"differential ledger: {self.before.run_id} → {self.after.run_id}",
             f"  elapsed              {self.nights_apart} day(s)",
@@ -186,10 +185,10 @@ def diff_snapshots(
     before: LedgerSnapshot, after: LedgerSnapshot, *, score_epsilon: float = 0.01
 ) -> LedgerDiff:
     """Compare two snapshots."""
-    before_ids: Set[str] = set(before.rows)
-    after_ids: Set[str] = set(after.rows)
+    before_ids: set[str] = set(before.rows)
+    after_ids: set[str] = set(after.rows)
 
-    rescored: List[tuple[str, float, float]] = []
+    rescored: list[tuple[str, float, float]] = []
     for cid in sorted(before_ids & after_ids):
         old = float(before.rows[cid].get("score", 0.0))
         new = float(after.rows[cid].get("score", 0.0))

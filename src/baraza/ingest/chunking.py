@@ -17,8 +17,8 @@ defence.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator, List, Optional
 
 from baraza.ingest.sources import Source, SourceUnit
 from baraza.schema.temporal import EpochMillis
@@ -45,7 +45,7 @@ class Chunk:
 
     chunk_id: str
     source_id: str
-    units: List[SourceUnit]
+    units: list[SourceUnit]
     observed_at: EpochMillis
     """The chunk's instant: the latest unit instant it contains, falling back to
     the source's. Used for temporal gating on the claims it yields."""
@@ -64,14 +64,14 @@ class Chunk:
         return "\n".join(f"[{u.locator}] {u.text}" for u in self.units)
 
     @property
-    def locators(self) -> List[str]:
+    def locators(self) -> list[str]:
         return [u.locator for u in self.units]
 
     @property
     def char_count(self) -> int:
         return sum(len(u.text) for u in self.units)
 
-    def unit(self, locator: str) -> Optional[SourceUnit]:
+    def unit(self, locator: str) -> SourceUnit | None:
         for unit in self.units:
             if unit.locator == locator:
                 return unit
@@ -99,7 +99,7 @@ def chunk_source(
     index = 0
     sequence = 0
     while index < len(units):
-        batch: List[SourceUnit] = []
+        batch: list[SourceUnit] = []
         size = 0
         while index < len(units):
             unit = units[index]

@@ -30,5 +30,13 @@ fixtures/corpus/*.tmp
 out/
 *.log
 !fixtures/**/*.jsonl
+.coverage
+.coverage.*
+
+# Belt and braces. tests/unit/test_compliance_lints.py plants its violations in
+# a copy of the tree under tmp_path, so nothing should ever match this — but an
+# older revision wrote them into src/baraza/, and a leftover probe committed by
+# accident would make `make compliance` exit 1 on a clean clone.
+_compliance_probe*.py
 
 .DS_Store

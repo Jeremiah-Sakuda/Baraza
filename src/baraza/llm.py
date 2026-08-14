@@ -28,6 +28,29 @@ worse than a named gap.
 
 A number derived from a cassette replay is a *replayed* measurement and says so
 wherever it appears. It is never reported as a live deployed measurement.
+
+**What happens at 3am.** The unattended path is a Cloud Run Job with nobody
+watching it, and until this module grew a retry the answer to "one transient 503
+on chunk 40 of 200" was: the exception leaves ``generate``, kills the container,
+Scheduler retries into the same weather, and the night ends up as a hole in the
+execution history that is this project's main evidence of autonomy.
+
+:class:`VertexClient` therefore retries — narrowly, and on purpose:
+
+* Only on **429, 503, 504 and deadline/transport errors**. A 400 or a 403 is a
+  bug or a missing permission, and retrying it burns the attempt deadline to
+  arrive at the same answer more slowly.
+* **Bounded twice**: a maximum number of attempts *and* a wall-clock budget, so
+  the retry can never outlive the Scheduler ``attemptDeadline`` that is supposed
+  to bound the whole run.
+* **Jittered**, because a synchronised retry storm is how a rate limit becomes
+  an outage.
+* Every request also carries an explicit **timeout**; without one a wedged
+  connection hangs until something else gives up.
+
+Streaming retries only until the first token. After that a retry would replay
+text the caller has already seen, and a duplicated half-sentence in an interview
+is worse than an error.
 """
 
 from __future__ import annotations
@@ -35,11 +58,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, TypeVar
 
 from baraza.schema import models
 
@@ -50,11 +75,135 @@ __all__ = [
     "CassetteClient",
     "RecordingClient",
     "CassetteMiss",
+    "RetryPolicy",
+    "is_retryable",
     "open_client",
     "prompt_fingerprint",
 ]
 
 CASSETTE_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures" / "cassettes"
+
+REQUEST_TIMEOUT_SECONDS = 120.0
+"""Per-request ceiling handed to the SDK.
+
+Comfortably above a slow reasoning call and far below Scheduler's 1800s
+attempt deadline (``deploy/scheduler.yaml``), so a wedged connection is the
+client's problem rather than the night's.
+"""
+
+RETRY_STATUS_CODES = frozenset({429, 503, 504})
+"""The only status codes worth trying again.
+
+429 is a rate limit that clears; 503 and 504 are the upstream being briefly
+unavailable. Everything else in the 4xx range is a request that will fail
+identically the second time, and retrying it spends the deadline to learn
+nothing.
+"""
+
+RETRY_ERROR_NAMES = frozenset(
+    {
+        "DeadlineExceeded",
+        "ServiceUnavailable",
+        "ResourceExhausted",
+        "InternalServerError",
+        "ServerError",
+        "TooManyRequests",
+        "ConnectionError",
+        "ConnectError",
+        "ConnectTimeout",
+        "ReadTimeout",
+        "ReadError",
+        "RemoteProtocolError",
+        "TimeoutError",
+        "TimeoutException",
+    }
+)
+"""Transport and gRPC failures that carry no HTTP status.
+
+Matched by type name rather than by class, because importing every exception
+type google-genai, httpx and grpc might raise would make this module import
+half the SDK at load time — which is the thing the lazy client exists to avoid.
+The names are checked against the exception's own class and its bases.
+"""
+
+T = TypeVar("T")
+
+
+def _status_of(exc: BaseException) -> int | None:
+    """Best-effort HTTP status for an SDK exception."""
+    for attribute in ("code", "status_code"):
+        value = getattr(exc, attribute, None)
+        if isinstance(value, int):
+            return value
+    response = getattr(exc, "response", None)
+    value = getattr(response, "status_code", None)
+    return value if isinstance(value, int) else None
+
+
+def is_retryable(exc: BaseException) -> bool:
+    """Whether this failure is worth another attempt.
+
+    Fails **closed**: an exception this function does not recognise is not
+    retried. A retry loop that guesses will happily hammer a permission error
+    until the attempt deadline expires, and then report a timeout for what was
+    really a missing IAM binding.
+    """
+    status = _status_of(exc)
+    if status is not None:
+        return status in RETRY_STATUS_CODES
+    names = {cls.__name__ for cls in type(exc).__mro__}
+    return bool(names & RETRY_ERROR_NAMES)
+
+
+@dataclass(frozen=True, slots=True)
+class RetryPolicy:
+    """Bounded, jittered backoff. Both bounds are real.
+
+    ``max_attempts`` bounds the count; ``budget_seconds`` bounds the clock. The
+    second one is the one that matters at 3am: without it, a long backoff
+    sequence against a sustained outage can outlive the Job's own deadline and
+    turn a degraded night into a killed one.
+    """
+
+    max_attempts: int = 4
+    base_seconds: float = 1.0
+    max_delay_seconds: float = 30.0
+    budget_seconds: float = 120.0
+
+    def delay_for(self, attempt: int, *, jitter: float) -> float:
+        """Exponential backoff with full jitter. ``attempt`` is 1-based."""
+        ceiling = min(self.base_seconds * (2 ** (attempt - 1)), self.max_delay_seconds)
+        return ceiling * jitter
+
+    def run(
+        self,
+        operation: Callable[[], T],
+        *,
+        describe: str,
+        sleep: Callable[[float], None] = time.sleep,
+        jitter: Callable[[], float] = random.random,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> T:
+        """Call ``operation``, retrying only what :func:`is_retryable` allows."""
+        started = clock()
+        last: BaseException
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                return operation()
+            except Exception as exc:  # noqa: BLE001 - re-raised unless retryable
+                last = exc
+                if not is_retryable(exc):
+                    raise
+                if attempt == self.max_attempts:
+                    break
+                delay = self.delay_for(attempt, jitter=jitter())
+                if clock() - started + delay > self.budget_seconds:
+                    break
+                sleep(delay)
+        raise RuntimeError(
+            f"{describe} failed after {attempt} attempt(s) within "
+            f"{self.budget_seconds:g}s: {type(last).__name__}: {last}"
+        ) from last
 
 
 class CassetteMiss(RuntimeError):
@@ -92,10 +241,10 @@ class LLMResponse:
     never be written up as a deployed measurement."""
 
     latency_ms: int
-    first_token_ms: Optional[int] = None
-    input_tokens: Optional[int] = None
-    output_tokens: Optional[int] = None
-    recorded_at: Optional[str] = None
+    first_token_ms: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    recorded_at: str | None = None
 
     def json(self) -> Any:
         """Parse the response as JSON, tolerating a fenced code block."""
@@ -145,20 +294,39 @@ class VertexClient(LLMClient):
     credentials can still import this module and run the offline demo.
     """
 
-    def __init__(self, *, project: Optional[str] = None, location: Optional[str] = None):
+    def __init__(
+        self,
+        *,
+        project: str | None = None,
+        location: str | None = None,
+        retry: RetryPolicy | None = None,
+        timeout_seconds: float = REQUEST_TIMEOUT_SECONDS,
+        sleep: Callable[[float], None] = time.sleep,
+    ):
         self._project = project
         self._location = location
         self._client = None
+        self.retry = retry or RetryPolicy()
+        self.timeout_seconds = timeout_seconds
+        self._sleep = sleep
+        """Injectable so a test can exercise the backoff without waiting it out.
+        Production never passes it."""
 
     @property
     def client(self):
         if self._client is None:
             from google import genai
+            from google.genai import types
 
             self._client = genai.Client(
                 vertexai=True,
                 project=self._project or models.project_id(),
                 location=self._location or models.location(),
+                # Milliseconds, per the SDK. An unbounded request is how a
+                # wedged connection holds a Cloud Run execution open all night.
+                http_options=types.HttpOptions(
+                    timeout=int(self.timeout_seconds * 1000)
+                ),
             )
         return self._client
 
@@ -182,10 +350,16 @@ class VertexClient(LLMClient):
             response_mime_type="application/json" if schema_name else None,
         )
         started = time.perf_counter()
-        result = self.client.models.generate_content(
-            model=model_id, contents=prompt, config=config
+        result = self.retry.run(
+            lambda: self.client.models.generate_content(
+                model=model_id, contents=prompt, config=config
+            ),
+            describe=f"generate({role})",
+            sleep=self._sleep,
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
+        # The elapsed figure spans any retries, deliberately: it is what the
+        # caller waited, not what the successful attempt took.
 
         usage = getattr(result, "usage_metadata", None)
         return LLMResponse(
@@ -215,9 +389,31 @@ class VertexClient(LLMClient):
             max_output_tokens=max_output_tokens,
             system_instruction=system or None,
         )
-        for chunk in self.client.models.generate_content_stream(
-            model=model_id, contents=prompt, config=config
-        ):
+
+        def _open() -> tuple[Iterator[Any], Any]:
+            """Establish the stream and pull the first chunk.
+
+            The HTTP call happens on the first ``next``, so opening and reading
+            once is what actually proves the stream is alive — and it is the
+            last moment a retry is safe.
+            """
+            iterator = iter(
+                self.client.models.generate_content_stream(
+                    model=model_id, contents=prompt, config=config
+                )
+            )
+            return iterator, next(iterator, None)
+
+        iterator, first = self.retry.run(
+            _open, describe=f"stream({role})", sleep=self._sleep
+        )
+
+        if first is not None and first.text:
+            yield first.text
+        # No retry past this line. The caller has seen tokens; a second attempt
+        # would replay them, and a duplicated half-sentence mid-interview is
+        # worse than a visible failure.
+        for chunk in iterator:
             if chunk.text:
                 yield chunk.text
 
@@ -233,7 +429,7 @@ class _Cassette:
     text: str
     recorded_at: str
     run_id: str
-    chunks: List[str] = field(default_factory=list)
+    chunks: list[str] = field(default_factory=list)
     """Token chunks as they actually arrived, so a replayed stream reproduces
     the real chunk boundaries rather than an invented word-by-word split."""
 
@@ -251,12 +447,12 @@ class CassetteClient(LLMClient):
         """Optional artificial pacing for the replay demo, so a recorded stream
         reads at human speed. Any latency figure measured under a nonzero delay
         is disclosed as paced and is never published as a performance number."""
-        self._index: Optional[Dict[str, _Cassette]] = None
+        self._index: dict[str, _Cassette] | None = None
 
-    def _load(self) -> Dict[str, _Cassette]:
+    def _load(self) -> dict[str, _Cassette]:
         if self._index is not None:
             return self._index
-        index: Dict[str, _Cassette] = {}
+        index: dict[str, _Cassette] = {}
         if self.directory.exists():
             for path in sorted(self.directory.glob("*.json")):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -345,7 +541,7 @@ class RecordingClient(LLMClient):
         self.directory = Path(directory)
         self.run_id = run_id
         self.recorded_at = recorded_at
-        self._entries: Dict[str, Dict[str, Any]] = {}
+        self._entries: dict[str, dict[str, Any]] = {}
 
     def generate(self, **kwargs: Any) -> LLMResponse:
         response = self.inner.generate(**kwargs)
@@ -364,7 +560,7 @@ class RecordingClient(LLMClient):
         return response
 
     def stream(self, **kwargs: Any) -> Iterator[str]:
-        chunks: List[str] = []
+        chunks: list[str] = []
         for chunk in self.inner.stream(**kwargs):
             chunks.append(chunk)
             yield chunk
@@ -402,7 +598,7 @@ class RecordingClient(LLMClient):
         return path
 
 
-def open_client(*, offline: Optional[bool] = None, delay_ms: int = 0) -> LLMClient:
+def open_client(*, offline: bool | None = None, delay_ms: int = 0) -> LLMClient:
     """Select a client.
 
     ``offline`` defaults to the ``BARAZA_OFFLINE`` environment variable. The

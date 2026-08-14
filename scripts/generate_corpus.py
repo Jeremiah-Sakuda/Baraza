@@ -51,9 +51,10 @@ import shutil
 import sys
 import tempfile
 import zipfile
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
@@ -66,7 +67,7 @@ BIBLE = CORPUS / "BIBLE.md"
 # Every zip entry in every generated OOXML package carries this instant. 1980-01-01
 # is the earliest a DOS timestamp can express, so it is the unambiguous "no time
 # recorded here" value rather than a plausible-looking one.
-ZIP_EPOCH: Tuple[int, int, int, int, int, int] = (1980, 1, 1, 0, 0, 0)
+ZIP_EPOCH: tuple[int, int, int, int, int, int] = (1980, 1, 1, 0, 0, 0)
 
 
 class BibleError(ValueError):
@@ -86,8 +87,8 @@ class Block:
     """One fenced data block from the BIBLE."""
 
     kind: str
-    attrs: Dict[str, str]
-    lines: List[str]
+    attrs: dict[str, str]
+    lines: list[str]
     start_line: int
 
 
@@ -95,13 +96,13 @@ _FENCE = re.compile(r"^```(corpus\.[a-z]+)\s*(.*)$")
 _ATTR_KEY = re.compile(r"(?:^|\s)([a-z_]+)=")
 
 
-def parse_attrs(text: str) -> Dict[str, str]:
+def parse_attrs(text: str) -> dict[str, str]:
     """Parse ``key=value`` attributes where values may contain spaces.
 
     Values run to the start of the next ``key=`` token, which is why offsets
     (``offset=-05:00``) and free-text notes coexist on one line without quoting.
     """
-    attrs: Dict[str, str] = {}
+    attrs: dict[str, str] = {}
     matches = list(_ATTR_KEY.finditer(text))
     for i, match in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
@@ -109,9 +110,9 @@ def parse_attrs(text: str) -> Dict[str, str]:
     return attrs
 
 
-def parse_bible(path: Path) -> List[Block]:
-    blocks: List[Block] = []
-    current: Optional[Block] = None
+def parse_bible(path: Path) -> list[Block]:
+    blocks: list[Block] = []
+    current: Block | None = None
     for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if current is None:
             match = _FENCE.match(raw)
@@ -136,10 +137,10 @@ def parse_bible(path: Path) -> List[Block]:
     return blocks
 
 
-def table_rows(block: Block) -> List[Dict[str, str]]:
+def table_rows(block: Block) -> list[dict[str, str]]:
     """Read a pipe-delimited block whose first non-comment line is the header."""
-    rows: List[Dict[str, str]] = []
-    header: Optional[List[str]] = None
+    rows: list[dict[str, str]] = []
+    header: list[str] | None = None
     for line in block.lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -162,7 +163,7 @@ def table_rows(block: Block) -> List[Dict[str, str]]:
 # ------------------------------------------------------ deterministic packaging
 
 
-def write_zip(path: Path, parts: Sequence[Tuple[str, bytes]]) -> None:
+def write_zip(path: Path, parts: Sequence[tuple[str, bytes]]) -> None:
     """Write an OOXML package whose bytes depend only on ``parts``.
 
     ``ZipInfo`` is constructed explicitly for every entry: the default
@@ -215,10 +216,10 @@ def _column_index(letters: str) -> int:
 @dataclass(slots=True)
 class Sheet:
     name: str
-    cells: Dict[str, Any] = field(default_factory=dict)
+    cells: dict[str, Any] = field(default_factory=dict)
 
 
-def parse_xlsx_block(block: Block) -> List[Sheet]:
+def parse_xlsx_block(block: Block) -> list[Sheet]:
     """``@sheet <name>`` opens a sheet; ``<ref> | <value>`` assigns a cell.
 
     A leading apostrophe forces the value to text, exactly as it does in a
@@ -227,8 +228,8 @@ def parse_xlsx_block(block: Block) -> List[Sheet]:
     that reads three different values out of them invents a contradiction
     (landmine L-14).
     """
-    sheets: List[Sheet] = []
-    current: Optional[Sheet] = None
+    sheets: list[Sheet] = []
+    current: Sheet | None = None
     for line in block.lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -257,9 +258,9 @@ def parse_xlsx_block(block: Block) -> List[Sheet]:
     return sheets
 
 
-def build_xlsx(sheets: Sequence[Sheet]) -> List[Tuple[str, bytes]]:
-    shared: List[str] = []
-    shared_index: Dict[str, int] = {}
+def build_xlsx(sheets: Sequence[Sheet]) -> list[tuple[str, bytes]]:
+    shared: list[str] = []
+    shared_index: dict[str, int] = {}
 
     def intern(text: str) -> int:
         if text not in shared_index:
@@ -267,9 +268,9 @@ def build_xlsx(sheets: Sequence[Sheet]) -> List[Tuple[str, bytes]]:
             shared.append(text)
         return shared_index[text]
 
-    sheet_parts: List[Tuple[str, bytes]] = []
+    sheet_parts: list[tuple[str, bytes]] = []
     for position, sheet in enumerate(sheets, start=1):
-        by_row: Dict[int, List[Tuple[int, str, Any]]] = {}
+        by_row: dict[int, list[tuple[int, str, Any]]] = {}
         for ref, value in sheet.cells.items():
             match = _CELL_REF.match(ref)
             assert match is not None  # parse_xlsx_block validated the shape
@@ -278,9 +279,9 @@ def build_xlsx(sheets: Sequence[Sheet]) -> List[Tuple[str, bytes]]:
                 (_column_index(letters), ref, value)
             )
 
-        rows_xml: List[str] = []
+        rows_xml: list[str] = []
         for row_number in sorted(by_row):
-            cells_xml: List[str] = []
+            cells_xml: list[str] = []
             for _, ref, value in sorted(by_row[row_number]):
                 if isinstance(value, bool):  # never a spreadsheet value here
                     raise BibleError(f"{ref}: bool is not a cell value")
@@ -397,10 +398,10 @@ def build_xlsx(sheets: Sequence[Sheet]) -> List[Tuple[str, bytes]]:
 _NS_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 
-def parse_docx_block(block: Block) -> List[Tuple[str, Any]]:
+def parse_docx_block(block: Block) -> list[tuple[str, Any]]:
     """``@h`` heading, ``@p`` paragraph, ``@table`` + ``@row a | b | c``."""
-    items: List[Tuple[str, Any]] = []
-    table: Optional[List[List[str]]] = None
+    items: list[tuple[str, Any]] = []
+    table: list[list[str]] | None = None
     for line in block.lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -424,8 +425,8 @@ def parse_docx_block(block: Block) -> List[Tuple[str, Any]]:
     return items
 
 
-def build_docx(items: Sequence[Tuple[str, Any]]) -> List[Tuple[str, bytes]]:
-    body: List[str] = []
+def build_docx(items: Sequence[tuple[str, Any]]) -> list[tuple[str, bytes]]:
+    body: list[str] = []
     for kind, payload in items:
         if kind in ("h", "p"):
             style = (
@@ -436,7 +437,7 @@ def build_docx(items: Sequence[Tuple[str, Any]]) -> List[Tuple[str, bytes]]:
                 f"{esc(str(payload))}</w:t></w:r></w:p>"
             )
         elif kind == "table":
-            rows: List[List[str]] = payload
+            rows: list[list[str]] = payload
             width = max((len(r) for r in rows), default=1)
             grid = "".join('<w:gridCol w:w="1800"/>' for _ in range(width))
             row_xml = []
@@ -512,9 +513,9 @@ def build_docx(items: Sequence[Tuple[str, Any]]) -> List[Tuple[str, bytes]]:
 # ----------------------------------------------------------------------- PDF
 
 
-def parse_pdf_block(block: Block) -> List[List[Tuple[str, str]]]:
+def parse_pdf_block(block: Block) -> list[list[tuple[str, str]]]:
     """``@page`` starts a page; ``@blank`` a blank line; ``@center`` centres."""
-    pages: List[List[Tuple[str, str]]] = []
+    pages: list[list[tuple[str, str]]] = []
     for line in block.lines:
         stripped = line.rstrip()
         if stripped.strip() == "@page":
@@ -536,7 +537,7 @@ def _pdf_escape(text: str) -> str:
 
 
 def build_pdf(
-    pages: Sequence[Sequence[Tuple[str, str]]],
+    pages: Sequence[Sequence[tuple[str, str]]],
     *,
     font_size: float = 10.5,
     leading: float = 14.5,
@@ -559,7 +560,7 @@ def build_pdf(
     manifest probes locate planted text by content across a source's units, so
     they hold under either reader.
     """
-    objects: Dict[int, bytes] = {}
+    objects: dict[int, bytes] = {}
     count = len(pages)
     page_ids = [4 + i * 2 for i in range(count)]
     content_ids = [5 + i * 2 for i in range(count)]
@@ -605,7 +606,7 @@ def build_pdf(
         )
 
     out = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-    offsets: Dict[int, int] = {}
+    offsets: dict[int, int] = {}
     for number in sorted(objects):
         offsets[number] = len(out)
         out += f"{number} 0 obj\n".encode("latin-1") + objects[number] + b"\nendobj\n"
@@ -627,7 +628,7 @@ def build_pdf(
 # ------------------------------------------------------------------- GroupMe
 
 
-def parse_groupme_block(block: Block) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def parse_groupme_block(block: Block) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Segments and messages.
 
     Timestamps in the BIBLE are ISO-8601 **with an explicit offset**; the export
@@ -636,9 +637,9 @@ def parse_groupme_block(block: Block) -> Tuple[List[Dict[str, Any]], List[Dict[s
     exactly the shape of the L-01 trap: the sortable-looking string and the
     actual instant are in different places.
     """
-    segments: List[Dict[str, Any]] = []
-    messages: List[Dict[str, Any]] = []
-    current: Optional[Dict[str, Any]] = None
+    segments: list[dict[str, Any]] = []
+    messages: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
 
     for line in block.lines:
         stripped = line.strip()
@@ -692,7 +693,7 @@ def parse_groupme_block(block: Block) -> Tuple[List[Dict[str, Any]], List[Dict[s
             }
         )
 
-    seen: Dict[Any, str] = {}
+    seen: dict[Any, str] = {}
     for message in messages:
         key = message["created_at"]
         if key in seen:
@@ -711,8 +712,8 @@ def parse_groupme_block(block: Block) -> Tuple[List[Dict[str, Any]], List[Dict[s
 # ----------------------------------------------------------------- interviews
 
 
-def parse_interview_block(block: Block) -> List[Dict[str, str]]:
-    turns: List[Dict[str, str]] = []
+def parse_interview_block(block: Block) -> list[dict[str, str]]:
+    turns: list[dict[str, str]] = []
     for line in block.lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -739,10 +740,10 @@ class Written:
         return hashlib.sha256(self.payload).hexdigest()
 
 
-def generate(root: Path) -> List[Written]:
+def generate(root: Path) -> list[Written]:
     """Emit every artifact into ``root``. Pure function of BIBLE.md."""
     blocks = parse_bible(BIBLE)
-    by_kind: Dict[str, List[Block]] = {}
+    by_kind: dict[str, list[Block]] = {}
     for block in blocks:
         by_kind.setdefault(block.kind, []).append(block)
 
@@ -770,7 +771,7 @@ def generate(root: Path) -> List[Written]:
                 f"table does not list. Known ids: {sorted(path_by_id)}"
             ) from exc
 
-    written: List[Written] = []
+    written: list[Written] = []
 
     def emit(path: Path, payload: bytes, kind: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -853,8 +854,8 @@ def generate(root: Path) -> List[Written]:
 
     # -- The index ----------------------------------------------------------
     by_relative = {w.relative: w for w in written}
-    night1: List[Dict[str, Any]] = []
-    deferred: List[Dict[str, Any]] = []
+    night1: list[dict[str, Any]] = []
+    deferred: list[dict[str, Any]] = []
     for row in source_rows:
         record = {
             "source_id": row["id"],
@@ -923,7 +924,7 @@ def generate(root: Path) -> List[Written]:
 # ------------------------------------------------------------------ reporting
 
 
-def ocr_confidence_report(root: Path) -> List[str]:
+def ocr_confidence_report(root: Path) -> list[str]:
     """Report the measured legibility proxy for the degraded constitution page.
 
     Measured here rather than asserted in the manifest: the manifest states a
@@ -957,7 +958,7 @@ def ocr_confidence_report(root: Path) -> List[str]:
     return lines
 
 
-def roundtrip_check(root: Path) -> Tuple[List[str], int]:
+def roundtrip_check(root: Path) -> tuple[list[str], int]:
     """Re-read every emitted artifact through the project's own readers.
 
     A generator that emits a file no reader can open is worse than one that
@@ -972,7 +973,7 @@ def roundtrip_check(root: Path) -> Tuple[List[str], int]:
     summary — a green target that verified less than it claimed, which is the
     exact failure the Makefile header names.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     unverified = 0
     index = json.loads((root / "corpus-index.json").read_text(encoding="utf-8"))
     try:
@@ -1010,7 +1011,7 @@ def roundtrip_check(root: Path) -> Tuple[List[str], int]:
 
 def check_determinism() -> int:
     """Generate twice into scratch directories and compare every byte."""
-    hashes: List[Dict[str, str]] = []
+    hashes: list[dict[str, str]] = []
     for _ in range(2):
         scratch = Path(tempfile.mkdtemp(prefix="baraza-corpus-"))
         try:

@@ -35,8 +35,8 @@ audience. Those are two different operations on purpose.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Sequence, Set
 
 from baraza.llm import LLMClient
 from baraza.schema.claim import Claim
@@ -121,9 +121,9 @@ class DetectionResult:
     block_size: int = 0
     after_temporal_gate: int = 0
     submitted: int = 0
-    contradictions: List[Contradiction] = field(default_factory=list)
+    contradictions: list[Contradiction] = field(default_factory=list)
     model_calls: int = 0
-    skipped_reason: Optional[str] = None
+    skipped_reason: str | None = None
 
     def describe(self) -> str:
         if self.skipped_reason:
@@ -144,8 +144,8 @@ def build_block(
     new_claim: Claim,
     pool: Iterable[Claim],
     *,
-    aliases: Optional[Dict[str, str]] = None,
-) -> List[Claim]:
+    aliases: dict[str, str] | None = None,
+) -> list[Claim]:
     """Retrieve candidates sharing the new claim's blocking key.
 
     Blocking is on subject ∪ object entities ∪ ``predicate_hint``, with alias
@@ -156,10 +156,10 @@ def build_block(
     """
     alias_map = aliases or {}
 
-    def canonical(entity_id: Optional[str]) -> Optional[str]:
+    def canonical(entity_id: str | None) -> str | None:
         if entity_id is None:
             return None
-        seen: Set[str] = set()
+        seen: set[str] = set()
         current = entity_id
         while current in alias_map and current not in seen:
             seen.add(current)
@@ -171,7 +171,7 @@ def build_block(
     }
     target_hint = new_claim.predicate_hint.strip().lower()
 
-    block: List[Claim] = []
+    block: list[Claim] = []
     for candidate in pool:
         if candidate.claim_id == new_claim.claim_id:
             continue
@@ -205,7 +205,7 @@ class ContradictionDetector:
         new_claim: Claim,
         pool: Sequence[Claim],
         *,
-        aliases: Optional[Dict[str, str]] = None,
+        aliases: dict[str, str] | None = None,
     ) -> DetectionResult:
         result = DetectionResult(claim_id=new_claim.claim_id)
 

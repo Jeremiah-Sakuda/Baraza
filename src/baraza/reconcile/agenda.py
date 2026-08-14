@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from baraza.fold.graph import GraphState
 from baraza.llm import LLMClient
@@ -75,10 +74,10 @@ class AgendaItem:
     score: float
     stakes_label: str
     fully_readable: bool
-    cited_claim_ids: List[str] = field(default_factory=list)
-    source_ids: List[str] = field(default_factory=list)
+    cited_claim_ids: list[str] = field(default_factory=list)
+    source_ids: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "item_id": self.item_id,
             "contradiction_id": self.contradiction_id,
@@ -98,13 +97,13 @@ class AgendaItem:
 class Agenda:
     """A generated interview agenda."""
 
-    items: List[AgendaItem] = field(default_factory=list)
-    generated_at: Optional[EpochMillis] = None
+    items: list[AgendaItem] = field(default_factory=list)
+    generated_at: EpochMillis | None = None
     audience: Audience = Audience.OWNER
     ledger_open_total: int = 0
     retired_since_last: int = 0
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "generated_at": self.generated_at,
             "audience": self.audience.value,
@@ -120,7 +119,7 @@ class Agenda:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
 
-    def describe(self) -> List[str]:
+    def describe(self) -> list[str]:
         lines = [
             f"agenda: {len(self.items)} item(s) from {self.ledger_open_total} "
             f"open disagreement(s)",
@@ -151,7 +150,7 @@ class AgendaGenerator:
         *,
         audience: Audience = Audience.OWNER,
         size: int = DEFAULT_AGENDA_SIZE,
-        generated_at: Optional[EpochMillis] = None,
+        generated_at: EpochMillis | None = None,
     ) -> Agenda:
         ledger = DisputedLedger(state)
         rows = ledger.rows(audience)

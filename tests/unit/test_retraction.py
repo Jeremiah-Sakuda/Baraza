@@ -27,7 +27,6 @@ from baraza.schema.claim import Tier
 from baraza.schema.contradiction import Contradiction
 from baraza.schema.event import EventType
 from baraza.schema.visibility import Audience, Visibility
-
 from baraza_testkit import (
     FakeLLMClient,
     asserted,

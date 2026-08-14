@@ -281,9 +281,10 @@ all-pairs is millions of comparisons, which at one model call per comparison is
 not a system, it is a bill. So a new claim retrieves only claims sharing a
 blocking key (subject ∪ objects ∪ predicate hint), gates that block on epoch
 interval overlap, caps the survivors at 20, and makes one bounded call. One call
-per claim written, not per pair. There is no vector database — claims are
-embedded, the corpus is not, and brute-force top-k over a few thousand in-memory
-vectors at this cardinality is not worth infrastructure.
+per claim written, not per pair. There is no vector database and no embedding
+step: at this cardinality, exact-match blocking on subject, object and relation
+finds the candidates, and typical block size in this corpus is single digits. An
+index earns its keep somewhere north of a million vectors.
 
 The output is a ranked ledger of what the records disagree about, and an interview
 agenda no human wrote. The agent then interviews the departing officer from that
@@ -326,10 +327,17 @@ Stating this because a post that only lists what worked is not a technical post.
   and until it has run green, no document in the repository — including this one
   — states which model version shipped. A pinned literal nobody checked is a
   plausible value where a verified one belongs.
-- The **agent-framework claim is not yet backed by an import.** The framework is
-  a declared dependency; no module imports it, and the runtime path today is the
-  GenAI SDK on Vertex. The repository's own rule is that a framework is named
-  only where the code uses it, so until that changes, it is not named.
+- The **agent framework is on the hot path for one of three agents.**
+  `src/baraza/agents.py` builds three real ADK agents and a test asserts they are
+  genuinely ADK instances. The extractor is now driven for real:
+  `baraza.ingest.extract.AgentClaimExtractor` gives it `read_chunk` and
+  `propose_claim` as tools bound to the actual validation gates, runs it through
+  an ADK `Runner`, and bounds it with a turn ceiling and a wall-clock timeout that
+  both surface as named rejections instead of silence. What is still *not* true:
+  the reconciler and interviewer are constructed and tool-isolated but reach the
+  model directly, and the offline replay path is deliberately direct, because an
+  ADK `Runner` bypasses the cassette client and I would rather lose the demo
+  footage than record something I would have to describe carefully.
 - **Nothing is deployed** as of writing, so there is no Scheduler execution
   history, and the autonomy evidence I care most about — a diff between two
   ledger snapshots from two genuinely different nights, with a document landing

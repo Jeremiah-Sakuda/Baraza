@@ -106,6 +106,13 @@ Every line below is the output of a command run in this session, on macOS 24.6
 under CPython **3.14.5** — not the 3.11 floor `pyproject.toml` declares, which
 is itself a finding: the floor has never been exercised.
 
+> These are **B3's** numbers and are left as recorded rather than edited forward;
+> a findings file that quietly updates its own observations is not a findings
+> file. Later sessions added tests and closed some of the gaps below. For the
+> current figures, run the commands — `make test`, `make verify-manifest`. Where
+> a bullet's claim has since stopped being true, it carries a dated update
+> underneath it rather than a rewrite.
+
 | Command | Result |
 |---|---|
 | `import` every module under `src/baraza/` | 38 of 38, no credentials needed |
@@ -117,7 +124,7 @@ is itself a finding: the floor has never been exercised.
 | `make verify-manifest` | exit 2 — `found 18 of 18 planted problems`, 0 of 17 behaviours |
 | `make verify-anchors` | exit 2 — 11 sources registered, 0 citations to resolve |
 | `make demo` / `demo-agenda` / `demo-interview` | exit 2, no cassettes |
-| `make adaptation-metric` | exit 1, no transcripts |
+| `make adaptation-metric` | exit 2, no transcripts |
 | `make verify-models` | exit 3, `BARAZA_PROJECT_ID` unset |
 | `make test-emulator` | exit 1, no JDK on this machine |
 | `ruff check src scripts tests` | 706 findings, all `UP`/`I`/`SIM` |
@@ -220,29 +227,53 @@ scaffolding around a loop that has not yet turned once.
   `replay` and `service`, `successor/service`, `cli`, `telemetry`,
   `reconcile/differential` and `reconcile/job` are referenced by zero test
   files. They are exercised only through the demo path, which cannot run. The
-  154 passing tests cover the schema, the fold, detection, the ledger, the
+  passing tests cover the schema, the fold, detection, the ledger, the
   agenda, approval, retraction, the boundary off the demo path and temporal
-  normalization — the invariants, which is the right priority, but "154 passed"
-  should not be read as coverage of the product.
+  normalization — the invariants, which is the right priority, but a green
+  suite should not be read as coverage of the product.
+
+  **Update, 2026-08-13 (post-B4):** partially closed, and the cost of the gap
+  was demonstrated rather than argued. `reconcile/job` now has
+  `tests/unit/test_job.py`, written because *two* defects were found in that
+  untested module — a work-pool filter that selected the empty set on every
+  night after the first, and a differential that read last night's ledger from a
+  container-local directory Cloud Run wipes between executions. Both were in the
+  flagship autonomous path; either alone would have made the nightly job report
+  success while doing nothing observable. One test over that module would have
+  caught the first. The remaining modules in this list are still untested.
 - **`docs/BUILD-LOG.md` has no entry for B1 or B2.** Both are in the commit
   history (`bc46324`, `cc89d72`); the session protocol requires the entry
   *before* the commit. Two of four sessions skipped it, and a verbatim opening
   prompt is not recoverable after the fact — so that record is permanently
   incomplete rather than merely late. `docs/compliance.md`'s originality row
   cited that log as evidence and has been amended to name the gap.
+
+  **Update, 2026-08-13 (post-B4):** B4 skipped it too — three of five sessions,
+  and the one that skipped it is the one that closed the mandatory
+  agent-framework requirement. All three are now backfilled from
+  `git show --stat` and their commit messages, each carrying a banner marking it
+  as reconstructed after the fact, with the prompt and course corrections
+  recorded as **not recoverable** rather than written from memory. The
+  distinction the compliance row now draws is the right one: the log is complete
+  on what landed and permanently incomplete on how the sessions were driven.
 - **25 paths are untracked.** Everything B3's predecessors wrote outside
   `src/` — `tests/`, `fixtures/`, `deploy/`, `scripts/` bar `compliance.py`,
   `README.md`, `LICENSE` — is in the working tree and not in any commit. The
   three commits that exist contain `src/` only.
 
-### Escalated rather than resolved: the Antigravity file
+### Escalated at B3, resolved post-B4: the framework-decision citation
 
-`docs/antigravity/decision.md` states, second-hand and explicitly marked as
-such, that a named vendor's SDK failed a headless multi-agent assertion during
-verification on Aug 8. The source document is not in the repository. This sits
-against two rules at once — `AGENTS.md` §7 and BAR-020 require the finding
-present *verbatim* as the basis of the framework decision, while the standing
-prohibition is on carrying an unverifiable negative claim about a real entity.
+`docs/antigravity/decision.md` carried a **negative verification result about a
+third party's SDK, restated from memory**, as the published basis of BAR-020's
+framework choice. The source document was not in the repository. The substance of
+that assertion is deliberately not repeated here, and has been removed from every
+document that carried it — restating an unverifiable claim about someone else's
+software in the file that flags it as a problem is still publishing it.
+
+The finding sits against two rules at once — `AGENTS.md` §7 and BAR-020 require
+the finding present *verbatim* as the basis of the framework decision, while the
+standing prohibition is on carrying an unverifiable negative claim about a real
+entity.
 
 The file already argues for its own resolution: locate the original and attach
 an attribution header, or delete the citation from BAR-020 and state plainly
@@ -250,3 +281,168 @@ that ADK was chosen without a published comparison. Neither is a change a
 verification pass should make unilaterally, so it was left exactly as found and
 is raised here. It is the only item in the tree where two of the project's own
 rules point in opposite directions.
+
+**Resolved, 2026-08-13 (post-B4): the second branch.** The original was not
+recoverable from inside this repository, so the citation was deleted and
+`docs/framework-decision.md` now says ADK was chosen without a published
+comparison. Of the two rules in conflict, the one that gave way is the one whose
+cost falls on this project — a weaker published justification — rather than the
+one whose cost falls on a third party, which is an unverifiable negative claim
+about their software in a submission judged by them. That ordering is the
+finding worth keeping: when a repository's own rules disagree, the tie breaks
+against the party who did not agree to the rules.
+
+`AGENTS.md` §7 still names the file among the by-hand artifacts. It was left
+unedited on purpose — a build session that rewrites the protocol governing it to
+match its own output has stopped being governed by it. That line is now stale
+and is the human's call to reconcile.
+
+---
+
+# Session B5 — 2026-08-13 (verification pass)
+
+Every figure below was produced by running the command named next to it in this
+tree on 2026-08-13. Nothing here is carried over from an implementer's report.
+
+| Command | Result |
+|---|---|
+| `pytest tests/unit tests/property -q` | **229 passed** |
+| `pytest tests/unit tests/property tests/integration -q` (`make test`) | **239 passed** |
+| `coverage run --source=src/baraza -m pytest ...` | **63%** total, up from 36% at B4 |
+| `scripts/compliance.py --no-prd` | exit 0, four lints green |
+| `scripts/compliance.py` | **exit 2** — `docs/PRD.md` absent, unchanged |
+| `ruff check .` / `make lint` | **0 findings**, down from 721 |
+| `make corpus` | exit 0, 13 artifacts, 11 sources round-tripped |
+| `make verify-manifest` | **exit 2** — 18 of 18 plants present, 0 of 17 behaviours |
+| `make verify-anchors` | **exit 2** — no event log to resolve citations against |
+| `make demo` / `demo-agenda` / `demo-interview` | **exit 2**, `fixtures/cassettes/` does not exist |
+| `git log --oneline` | 5 commits, B0–B4. **B5's work is uncommitted** |
+
+Coverage by the modules that matter, because the aggregate hides the point: the
+autonomy path was at **0%** at B4 and is the reason both of this session's
+structural defects survived to be found. It is now `reconcile/job.py` 85%,
+`ingest/extract.py` 91%, `ingest/pipeline.py` 90%, `reconcile/detect.py` 99%,
+`agents.py` 96%. Still at **0%**: `interview/service.py` (224 stmts),
+`successor/service.py` (125), `telemetry.py` (54) — the entire HTTP surface,
+including the service a judge would be handed a URL to.
+
+## Findings
+
+**A timestamp field with two meanings will be read with the wrong one, twice.**
+Both structural defects this session fixed, and a third found while fixing them,
+are the same mistake: a *valid-time* instant used where *transaction time* was
+meant. `claim.observed_at` is when the document was authored; it was compared
+against a heartbeat, so the nightly job selected nothing forever.
+`Contradiction.detected_at` is `max(claim.observed_at)`, inheriting the same
+semantics; it was stamped on the event, so every contradiction sorted before
+every heartbeat and would have fallen into every differential baseline. The
+corpus's 2016 start date is what makes all three fatal rather than merely
+imprecise — a repository whose fixtures were dated last week would have shipped
+this and seen it fail only in production. The general lesson is not "be careful
+with time": it is that a field carrying an instant should carry which clock in
+its name, and that the fix in both cases was to stop inferring and start
+recording. `claim.adjudicated` is now a fact in the log; nothing has to guess.
+
+**A test suite that passes while the thing it tests cannot work.**
+`agents.py`'s `_guard` wrapped every tool in `*args, **kwargs` without
+`functools.wraps`. ADK builds its tool declarations from `inspect.signature`, so
+every tool reached the model declared as taking no parameters — the extractor
+could not have received an anchor. Every isolation test passed throughout,
+because they asserted over the *tool name set*, which the shim preserved
+perfectly. The tests were checking the property the wrapper was written to
+provide and not the property the framework needed. The repair that generalises is
+the one applied: the isolation check now also asks a **capability** question —
+a tool defined in a module that so much as references the promotion event type is
+refused whatever it is called — so it is no longer satisfiable by naming.
+
+**Concurrent agents against one tree fail in a specific, predictable way: they
+leave the *documentation* inconsistent, not the code.** Three implementers ran
+against this tree at once. The merged code was green on the first run; nothing
+had to be untangled. What broke was every statement one agent wrote about
+another agent's file. Eight sites still said the ADK fleet has no production
+caller after the session that gave it one. Every line-number citation added in
+the documentation pass was stale by the end of the session, including in the
+compliance matrix's framework row — the single cell a Stage 1 judge is most
+likely to test, pointing at the wrong lines in the file it cites. Two conclusions
+worth keeping: **cite by symbol, not by line**, because a line number is a claim
+about a file's current state that nothing re-checks; and a fan-out needs a
+verification pass that greps for statements about *other* agents' work, because
+that class of error is invisible to the test suite by construction.
+
+**Deleting a claim is cheaper than defending it, and the cost is asymmetric.**
+Three claims were removed this session rather than implemented: text embeddings
+(documented as shipped, `grep` found only the model pin), the Antigravity
+negative finding (a placeholder carrying an unverifiable claim about a
+third-party SDK into a hackathon run by that SDK's vendor), and every hand-typed
+test count. None of the three cost anything to remove and each was a standing
+liability. The embeddings row is the sharpest instance: it violated the rule
+stated at the top of the file that carried it.
+
+**What the ADK work does and does not buy, stated so it cannot be overclaimed
+later.** The extractor is genuinely driven by an ADK `Runner`, with tools bound
+to the real validation gates and both cutoffs enforced, and `IngestionPipeline`
+selects it on any non-offline run — which is what `deploy/entrypoint-job.sh`
+invokes. The reconciler and interviewer are constructed and tool-isolated but
+still reach the model through `llm.py`. And the offline path is direct **by
+design**: an ADK `Runner` bypasses the cassette client, so routing replays
+through it would make a recording indistinguishable from a live agent loop in the
+console. The consequence is worth stating in advance of the recording session:
+nothing filmed from `make demo` is an agent loop, and the run's own
+`extraction path: adk-agent | direct` report line is the only honest way to show
+which one is executing.
+
+## Still open after B5
+
+- `docs/PRD.md` absent; ~35 BAR IDs have no acceptance criteria; `make compliance`
+  exits 2. Internal contract gap, not a hackathon requirement.
+- `baraza-prd-v1.2-amendments.md` cites the deleted `docs/antigravity/decision.md`
+  in three places. It is a received requirements artifact and was left untouched.
+- `AGENTS.md` §7's by-hand-artifacts list still names that file. The repository
+  layout in the same document was corrected, since it is descriptive rather than
+  normative; §7 is normative and remains the human's call.
+- The Dockerfiles do not install from `requirements.lock`. It was resolved on
+  Python 3.14/macOS; the images are `python:3.11-slim`. Closing this needs a
+  Docker build, which is why it is stated in the lockfile header rather than
+  pinned blind.
+- `tests/emulator` collect cleanly but cannot run here — no JDK.
+- The two FastAPI services are at 0% coverage. The interview service is the
+  surface a judge is handed a URL to.
+
+## Addendum — the Gemma bonus is not claimable as things stand (2026-08-13)
+
+Worth separating from the list above because it is the one item where the
+temptation to overclaim is worth real money (+0.2 Stage 3) and the failure would
+be invisible.
+
+`GemmaFilter.verdict` reaches the model through `self.client.generate(role=
+"prefilter", ...)`, which resolves to `generate_content`. The pre-filter pin
+declares `surface="vertex-endpoint"` — a self-deployed Model Garden endpoint,
+which is not addressed that way — and `GemmaFilter.endpoint` is assigned from
+`BARAZA_GEMMA_ENDPOINT` in `__init__` and then read by nothing. So setting
+`BARAZA_PREFILTER=gemma` most likely raises on every chunk.
+
+The filter fails open by design, and that design is right: an outage must not
+silently delete a night's institutional memory. But the *reporting* was wrong.
+`FilterReport` counted only `kept` and `considered`, so a pass in which every
+call failed printed `prefilter[gemma]: kept 33/33 = 100.0%  (gemma)` — the same
+bytes a pass where Gemma read everything and kept it would print. A number that
+cannot distinguish "the component ran and agreed" from "the component never ran"
+is the exact defect the metrics-provenance rule exists to prevent, and it sat
+directly under the claim the bonus is paid for.
+
+Fixed by counting the thing that falsifies the claim rather than only the thing
+that supports it: `FilterVerdict.decided` (explicit, not inferred from
+`confidence == 0.0` — a genuine low-confidence KEEP and a failure to run are
+different facts), `FilterReport.failed_open` / `decided` / `degraded`, a
+`describe()` that prints `DEGRADED — the filter never ran. This is NOT a survival
+rate`, and a `metrics_entry` that returns `not yet measured` for any pass with a
+single fail-open. Five tests in `tests/unit/test_prefilter_degradation.py`,
+including one asserting the guard does not swallow a clean measurement.
+
+**The endpoint branch itself was deliberately not written.** It cannot be verified
+without a live endpoint, and an unverified call path shipped to claim a bonus is
+the same category of thing as the embeddings row that was deleted this session.
+The choice is now a clean one for a human: implement the endpoint-aware call and
+prove it with `make verify-models`, or delete the Gemma row from the README and
+`compliance.md` and forgo the 0.2. Both documents now say which of those has
+happened, which is neither.

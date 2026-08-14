@@ -25,7 +25,6 @@ count is honest, the content is not disclosed.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 from baraza.fold.graph import GraphState
 from baraza.llm import LLMClient
@@ -58,7 +57,7 @@ class LibrarianAnswer:
 
     text: str
     refused: bool
-    citations: List[Citation] = field(default_factory=list)
+    citations: list[Citation] = field(default_factory=list)
     considered: int = 0
     readable: int = 0
     withheld: int = 0
@@ -72,7 +71,7 @@ class LibrarianAnswer:
 
     refusal_reason: str = ""
 
-    def render(self) -> List[str]:
+    def render(self) -> list[str]:
         lines = [self.text]
         if self.citations:
             lines.append("")
@@ -130,7 +129,7 @@ class Librarian:
         self.audience = audience
         self.max_claims = max_claims
 
-    def retrieve(self, question: str) -> tuple[List[Claim], int]:
+    def retrieve(self, question: str) -> tuple[list[Claim], int]:
         """Committed claims relevant to the question, plus a withheld count.
 
         Relevance is keyword overlap over subject and predicate hint. There is
@@ -146,7 +145,7 @@ class Librarian:
             if len(token) > 3
         }
 
-        scored: List[tuple[float, Claim]] = []
+        scored: list[tuple[float, Claim]] = []
         withheld = 0
 
         for claim in self.state.committed_claims():
@@ -230,7 +229,7 @@ class Librarian:
         # a prompt instruction: the model is asked to cite, and then the citation
         # is verified against what was actually retrievable and readable.
         by_id = {c.claim_id: c for c in candidates}
-        citations: List[Citation] = []
+        citations: list[Citation] = []
         for claim_id in cited_ids:
             claim = by_id.get(claim_id)
             if claim is None:

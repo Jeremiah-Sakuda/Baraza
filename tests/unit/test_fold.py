@@ -20,7 +20,7 @@ only ever narrow access, never widen it.
 from __future__ import annotations
 
 import json
-from enum import Enum
+from enum import StrEnum
 
 import pytest
 
@@ -29,7 +29,6 @@ from baraza.fold.store import JsonlEventStore
 from baraza.schema.claim import Tier
 from baraza.schema.event import Event
 from baraza.schema.visibility import Visibility
-
 from baraza_testkit import (
     asserted,
     claim,
@@ -43,7 +42,7 @@ from baraza_testkit import (
 T0 = ms("2026-04-01T00:00:00Z")
 
 
-class _FutureEventType(str, Enum):
+class _FutureEventType(StrEnum):
     """An event type a later schema change added and forgot to teach the fold."""
 
     CLAIM_ANNOTATED = "claim.annotated"

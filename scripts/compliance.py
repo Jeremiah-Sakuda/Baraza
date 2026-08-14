@@ -34,9 +34,9 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 REPO = Path(__file__).resolve().parent.parent
 PRD = REPO / "docs" / "PRD.md"
@@ -111,11 +111,11 @@ def _rel(path: Path) -> str:
         return str(path)
 
 
-def _split_sections(text: str) -> Dict[str, str]:
+def _split_sections(text: str) -> dict[str, str]:
     """Split the PRD on top-level ``## <n>.`` headings, keyed by section number."""
-    sections: Dict[str, str] = {}
+    sections: dict[str, str] = {}
     current = "0"
-    buffer: List[str] = []
+    buffer: list[str] = []
     heading = re.compile(r"^#{1,3}\s+§?\s*(\d+)(?:\.\d+)*\.?\s", re.MULTILINE)
 
     for line in text.splitlines(keepends=True):
@@ -130,14 +130,14 @@ def _split_sections(text: str) -> Dict[str, str]:
     return sections
 
 
-def _defined_ids(section_four: str) -> Dict[str, int]:
+def _defined_ids(section_four: str) -> dict[str, int]:
     """IDs *defined* in §4 — an ID at the head of a requirement heading or bold run.
 
     A definition looks like ``### BAR-309 (new, Phase 2) — Temporal normalization``
     or ``**BAR-309** — ...``. A bare mention inside prose is a reference, not a
     definition; conflating the two is what lets an orphan hide.
     """
-    defined: Dict[str, int] = {}
+    defined: dict[str, int] = {}
     definition = re.compile(
         r"^(?:#{2,4}\s*|\*\*\s*|\|\s*)?BAR-(\d{3})\b",
     )
@@ -148,15 +148,15 @@ def _defined_ids(section_four: str) -> Dict[str, int]:
     return defined
 
 
-def _referenced_ids(text: str, *, exclude: str = "") -> Set[str]:
+def _referenced_ids(text: str, *, exclude: str = "") -> set[str]:
     """Every ID mentioned outside the definition section."""
     body = text.replace(exclude, "") if exclude else text
     return {f"BAR-{m.group(1)}" for m in BAR_ID.finditer(body)}
 
 
-def _matrix_rows(section_two: str) -> List[Tuple[int, str]]:
+def _matrix_rows(section_two: str) -> list[tuple[int, str]]:
     """Markdown table rows in §2, with line numbers."""
-    rows: List[Tuple[int, str]] = []
+    rows: list[tuple[int, str]] = []
     for lineno, line in enumerate(section_two.splitlines(), start=1):
         stripped = line.strip()
         if stripped.startswith("|") and stripped.endswith("|"):
@@ -169,7 +169,7 @@ def _matrix_rows(section_two: str) -> List[Tuple[int, str]]:
 # -------------------------------------------------------------- the PRD audit
 
 
-def audit_prd() -> Tuple[List[Finding], Optional[str]]:
+def audit_prd() -> tuple[list[Finding], str | None]:
     """BAR-007 proper. Returns findings and an optional fatal message."""
     if not PRD.exists():
         return [], (
@@ -185,7 +185,7 @@ def audit_prd() -> Tuple[List[Finding], Optional[str]]:
     section_four = sections.get("4", "")
     section_two = sections.get("2", "")
 
-    findings: List[Finding] = []
+    findings: list[Finding] = []
 
     if not section_four.strip():
         findings.append(
@@ -253,9 +253,9 @@ def audit_prd() -> Tuple[List[Finding], Optional[str]]:
 # ---------------------------------------------------------- invariant lints
 
 
-def lint_visibility_boundary() -> List[Finding]:
+def lint_visibility_boundary() -> list[Finding]:
     """The quote must be unreachable outside the schema package."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     for path in _iter_source_files(REPO, (".py",)):
         if path.is_relative_to(SCHEMA_DIR) or path.name == "compliance.py":
             continue
@@ -275,9 +275,9 @@ def lint_visibility_boundary() -> List[Finding]:
     return findings
 
 
-def lint_model_pins() -> List[Finding]:
+def lint_model_pins() -> list[Finding]:
     """Model IDs live in exactly one module."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     for path in _iter_source_files(REPO, (".py",)):
         if path == MODELS_MODULE or path.name == "compliance.py":
             continue
@@ -301,9 +301,9 @@ def lint_model_pins() -> List[Finding]:
     return findings
 
 
-def lint_temporal() -> List[Finding]:
+def lint_temporal() -> list[Finding]:
     """BAR-309: no instant is ever compared as a string."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     for path in _iter_source_files(SRC, (".py",)):
         if path.is_relative_to(SCHEMA_DIR) and path.name == "temporal.py":
             continue
@@ -326,9 +326,9 @@ def lint_temporal() -> List[Finding]:
     return findings
 
 
-def lint_metrics() -> List[Finding]:
+def lint_metrics() -> list[Finding]:
     """Every published number carries provenance, or says it has none."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     if not METRICS.exists():
         return [
             Finding(
@@ -409,8 +409,8 @@ def main(argv: Sequence[str]) -> int:
     print("BAR-007 compliance audit")
     print("=" * 72)
 
-    all_findings: List[Finding] = []
-    fatal: Optional[str] = None
+    all_findings: list[Finding] = []
+    fatal: str | None = None
 
     if strict_prd:
         prd_findings, fatal = audit_prd()

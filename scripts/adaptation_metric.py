@@ -44,9 +44,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 EXPECTED_SCHEMA = "baraza.transcript.v1"
 AGENT_ROLE = "agent"
@@ -94,21 +95,21 @@ class Score:
     divergence_turns: int = 0
     agenda_turns: int = 0
     agenda_items: int = 0
-    budget_trajectory: List[int] = field(default_factory=list)
-    moments: List[Moment] = field(default_factory=list)
+    budget_trajectory: list[int] = field(default_factory=list)
+    moments: list[Moment] = field(default_factory=list)
     llm_source: str = "unknown"
     paced: bool = True
     stop_reason: str = ""
-    problems: List[str] = field(default_factory=list)
+    problems: list[str] = field(default_factory=list)
 
     @property
-    def mean_follow_up_depth(self) -> Optional[float]:
+    def mean_follow_up_depth(self) -> float | None:
         if self.agent_turns == 0:
             return None
         return self.depth_total / self.agent_turns
 
     @property
-    def first_moment(self) -> Optional[Moment]:
+    def first_moment(self) -> Moment | None:
         return self.moments[0] if self.moments else None
 
 
@@ -116,10 +117,10 @@ def _fail(message: str) -> None:
     print(f"  ! {message}", file=sys.stderr)
 
 
-def load_transcripts(directory: Path) -> List[Tuple[Path, Dict[str, Any]]]:
+def load_transcripts(directory: Path) -> list[tuple[Path, dict[str, Any]]]:
     if not directory.exists():
         return []
-    loaded: List[Tuple[Path, Dict[str, Any]]] = []
+    loaded: list[tuple[Path, dict[str, Any]]] = []
     for path in sorted(directory.glob("*.json")):
         try:
             loaded.append((path, json.loads(path.read_text(encoding="utf-8"))))
@@ -128,7 +129,7 @@ def load_transcripts(directory: Path) -> List[Tuple[Path, Dict[str, Any]]]:
     return loaded
 
 
-def score_transcript(path: Path, payload: Dict[str, Any]) -> Score:
+def score_transcript(path: Path, payload: dict[str, Any]) -> Score:
     persona = payload.get("persona") or {}
     run = payload.get("run") or {}
 
@@ -162,8 +163,8 @@ def score_transcript(path: Path, payload: Dict[str, Any]) -> Score:
         score.problems.append(f"turns are not orderable on occurred_at/index: {exc}")
         return score
 
-    items: List[str] = []
-    previous_budget: Optional[int] = None
+    items: list[str] = []
+    previous_budget: int | None = None
 
     for turn in ordered:
         adaptation = turn.get("adaptation") or {}
@@ -220,8 +221,8 @@ def score_transcript(path: Path, payload: Dict[str, Any]) -> Score:
 # ------------------------------------------------------------------ printing
 
 
-def render(scores: Sequence[Score]) -> List[str]:
-    lines: List[str] = []
+def render(scores: Sequence[Score]) -> list[str]:
+    lines: list[str] = []
     for score in scores:
         lines.append("")
         header = f"{score.persona_id}"
@@ -273,7 +274,7 @@ def render(scores: Sequence[Score]) -> List[str]:
     return lines
 
 
-def render_comparison(scores: Sequence[Score]) -> List[str]:
+def render_comparison(scores: Sequence[Score]) -> list[str]:
     """The claim the metric exists to support, or its absence.
 
     BAR-330 says a terse answerer earns more clarifiers and an expansive one
@@ -305,7 +306,7 @@ def render_comparison(scores: Sequence[Score]) -> List[str]:
     ]
 
 
-def to_json(scores: Sequence[Score]) -> Dict[str, Any]:
+def to_json(scores: Sequence[Score]) -> dict[str, Any]:
     return {
         "definition": (
             "mean follow-up depth = mean(turn.follow_up_depth) over turns with "

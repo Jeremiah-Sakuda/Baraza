@@ -14,8 +14,8 @@ graph — the test that would have caught the ported defect class.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Sequence, Set
 
 from baraza.schema.claim import Claim, Tier
 from baraza.schema.contradiction import Contradiction, ContradictionStatus
@@ -42,18 +42,27 @@ class GraphState:
     Built only by :func:`fold`. Treat as read-only; mutate the log instead.
     """
 
-    claims: Dict[str, Claim] = field(default_factory=dict)
-    contradictions: Dict[str, Contradiction] = field(default_factory=dict)
-    aliases: Dict[str, str] = field(default_factory=dict)
+    claims: dict[str, Claim] = field(default_factory=dict)
+    contradictions: dict[str, Contradiction] = field(default_factory=dict)
+    aliases: dict[str, str] = field(default_factory=dict)
     """``alias_entity_id -> canonical_entity_id``. Non-destructive: identity
     resolves at query time via :meth:`resolve_entity`, and the original ID stays
     in every claim that used it."""
 
-    heartbeats: List[EpochMillis] = field(default_factory=list)
+    heartbeats: list[EpochMillis] = field(default_factory=list)
     """BAR-021 nightly stub runs, kept separate from anything that could be
     reported as organic activity."""
 
-    last_event_at: Optional[EpochMillis] = None
+    adjudicated_claim_ids: set[str] = field(default_factory=set)
+    """Claims the nightly reconciler has already examined (BAR-321).
+
+    Folded from ``claim.adjudicated`` events rather than inferred from a
+    timestamp comparison. The reconciler's work pool is
+    ``retrievable_claims() - adjudicated_claim_ids``, which is a set difference
+    over recorded facts and therefore cannot go quietly empty the way a
+    ``observed_at > last_heartbeat`` filter could."""
+
+    last_event_at: EpochMillis | None = None
     event_count: int = 0
 
     # ------------------------------------------------------------- accessors
@@ -64,14 +73,14 @@ class GraphState:
         Cycle-safe: a malformed alias chain returns the last ID reached rather
         than looping. There are no destructive merges anywhere in the system.
         """
-        seen: Set[str] = set()
+        seen: set[str] = set()
         current = entity_id
         while current in self.aliases and current not in seen:
             seen.add(current)
             current = self.aliases[current]
         return current
 
-    def retrievable_claims(self) -> List[Claim]:
+    def retrievable_claims(self) -> list[Claim]:
         """Claims still in the retrieval pool — i.e. not retracted.
 
         Visibility is *not* applied here; that is the caller's audience
@@ -80,20 +89,20 @@ class GraphState:
         """
         return [c for c in self.claims.values() if c.in_retrieval_pool]
 
-    def committed_claims(self) -> List[Claim]:
+    def committed_claims(self) -> list[Claim]:
         return [c for c in self.claims.values() if c.tier is Tier.COMMITTED]
 
-    def readable_claims(self, audience: Audience) -> List[Claim]:
+    def readable_claims(self, audience: Audience) -> list[Claim]:
         """The successor-mode view: committed **and** readable, nothing else."""
         return filter_readable(self.committed_claims(), audience)
 
-    def open_contradictions(self) -> List[Contradiction]:
+    def open_contradictions(self) -> list[Contradiction]:
         """Ledger contents: open only, and only where both sides survive.
 
         A contradiction whose claim was rejected is retracted here rather than
         lingering as a question about a claim that no longer exists.
         """
-        live: List[Contradiction] = []
+        live: list[Contradiction] = []
         for contradiction in self.contradictions.values():
             if not contradiction.is_open:
                 continue
@@ -125,6 +134,7 @@ class GraphState:
             ),
             "aliases": dict(sorted(self.aliases.items())),
             "heartbeats": sorted(self.heartbeats),
+            "adjudicated": sorted(self.adjudicated_claim_ids),
         }
         return hashlib.sha256(
             json.dumps(body, sort_keys=True, separators=(",", ":"), default=str).encode()
@@ -184,6 +194,14 @@ def _apply(state: GraphState, event: Event) -> None:
             # loosens. This can only ever narrow access.
             visibility = Visibility.PRIVATE
         state.claims[claim_id] = _replace_claim(existing, visibility=visibility)
+        return
+
+    if kind is EventType.CLAIM_ADJUDICATED:
+        # Idempotent by construction: a set. A retried Job that re-appends the
+        # same adjudication changes nothing, and a claim examined on two
+        # different nights is still examined exactly once as far as the fold is
+        # concerned.
+        state.adjudicated_claim_ids.add(payload["claim_id"])
         return
 
     if kind is EventType.CONTRADICTION_DETECTED:
@@ -246,8 +264,8 @@ def _retier(state: GraphState, claim_id: str, tier: Tier) -> None:
 def _replace_claim(
     claim: Claim,
     *,
-    tier: Optional[Tier] = None,
-    visibility: Optional[Visibility] = None,
+    tier: Tier | None = None,
+    visibility: Visibility | None = None,
 ) -> Claim:
     """Rebuild a frozen claim with one field changed.
 

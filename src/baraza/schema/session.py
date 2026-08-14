@@ -19,22 +19,23 @@ lost, which is the correct direction to fail.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence
+from enum import StrEnum
+from typing import Any
 
 from baraza.schema.temporal import EpochMillis, to_epoch_millis
 
 __all__ = ["TurnRole", "SessionStatus", "Turn", "Session", "TurnKind"]
 
 
-class TurnRole(str, Enum):
+class TurnRole(StrEnum):
     AGENT = "agent"
     OFFICER = "officer"
     """The departing officer being interviewed."""
 
 
-class TurnKind(str, Enum):
+class TurnKind(StrEnum):
     """What the agent was doing on this turn.
 
     ``FOLLOW_UP`` is the adaptation signal: BAR-330's metric is mean follow-up
@@ -57,7 +58,7 @@ class TurnKind(str, Enum):
     ANSWER = "answer"
 
 
-class SessionStatus(str, Enum):
+class SessionStatus(StrEnum):
     OPEN = "open"
     COMPLETED = "completed"
     ABANDONED = "abandoned"
@@ -78,9 +79,9 @@ class Turn:
     kind: TurnKind
     text: str
     occurred_at: EpochMillis
-    agenda_item_id: Optional[str] = None
-    contradiction_id: Optional[str] = None
-    cited_claim_ids: List[str] = field(default_factory=list)
+    agenda_item_id: str | None = None
+    contradiction_id: str | None = None
+    cited_claim_ids: list[str] = field(default_factory=list)
     """Claims quoted into this turn. Empty on an agent turn is a defect: the
     interviewer refuses to ask a citation-grounded question it cannot cite."""
 
@@ -88,13 +89,13 @@ class Turn:
     """0 for an agenda question, n for the nth consecutive clarifier. The
     adaptation metric is the mean of this over agent turns, per persona."""
 
-    latency_ms: Optional[int] = None
-    first_token_ms: Optional[int] = None
+    latency_ms: int | None = None
+    first_token_ms: int | None = None
     """Measured in-process on the replay path. Any number derived from this
     field carries that provenance wherever it is displayed — an in-process
     timing is never reported as a deployed measurement."""
 
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
     def create(
@@ -105,14 +106,14 @@ class Turn:
         kind: TurnKind,
         text: str,
         occurred_at: Any,
-        agenda_item_id: Optional[str] = None,
-        contradiction_id: Optional[str] = None,
-        cited_claim_ids: Optional[Sequence[str]] = None,
+        agenda_item_id: str | None = None,
+        contradiction_id: str | None = None,
+        cited_claim_ids: Sequence[str] | None = None,
         follow_up_depth: int = 0,
-        latency_ms: Optional[int] = None,
-        first_token_ms: Optional[int] = None,
-        extra: Optional[Dict[str, Any]] = None,
-    ) -> "Turn":
+        latency_ms: int | None = None,
+        first_token_ms: int | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> Turn:
         return Turn(
             turn_id=f"t-{index}",
             session_id=session_id,
@@ -130,7 +131,7 @@ class Turn:
             extra=dict(extra or {}),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "turn_id": self.turn_id,
             "session_id": self.session_id,
@@ -149,7 +150,7 @@ class Turn:
         }
 
     @staticmethod
-    def from_dict(payload: Dict[str, Any]) -> "Turn":
+    def from_dict(payload: dict[str, Any]) -> Turn:
         return Turn(
             turn_id=payload["turn_id"],
             session_id=payload["session_id"],
@@ -185,14 +186,14 @@ class Session:
 
     opened_at: EpochMillis
     status: SessionStatus = SessionStatus.OPEN
-    turns: List[Turn] = field(default_factory=list)
-    closed_at: Optional[EpochMillis] = None
+    turns: list[Turn] = field(default_factory=list)
+    closed_at: EpochMillis | None = None
     resumed_count: int = 0
     """Incremented each time the session is recovered after a kill. Surfaced in
     the kill-test output so the demo can show a real resume rather than assert
     one."""
 
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
     def deterministic_id(*, persona_id: str, opened_at: EpochMillis) -> str:
@@ -203,7 +204,7 @@ class Session:
     def next_index(self) -> int:
         return len(self.turns)
 
-    def agent_turns(self) -> List[Turn]:
+    def agent_turns(self) -> list[Turn]:
         return [t for t in self.turns if t.role is TurnRole.AGENT]
 
     def mean_follow_up_depth(self) -> float:
@@ -222,7 +223,7 @@ class Session:
             return 0.0
         return sum(t.follow_up_depth for t in agent_turns) / len(agent_turns)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "session_id": self.session_id,
             "persona_id": self.persona_id,
@@ -235,7 +236,7 @@ class Session:
         }
 
     @staticmethod
-    def from_dict(payload: Dict[str, Any]) -> "Session":
+    def from_dict(payload: dict[str, Any]) -> Session:
         return Session(
             session_id=payload["session_id"],
             persona_id=payload["persona_id"],

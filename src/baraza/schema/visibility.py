@@ -29,9 +29,10 @@ audience.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import Enum
-from typing import TYPE_CHECKING, Iterable, List, Optional, Protocol, TypeVar
+from enum import StrEnum
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 if TYPE_CHECKING:  # pragma: no cover
     from baraza.schema.claim import Claim
@@ -47,7 +48,7 @@ __all__ = [
 ]
 
 
-class Visibility(str, Enum):
+class Visibility(StrEnum):
     """How widely a claim may be rendered. Ordered least- to most-permissive."""
 
     PRIVATE = "private"
@@ -63,7 +64,7 @@ class Visibility(str, Enum):
     """Anyone, including a logged-out judge on the hosted instance."""
 
 
-class Audience(str, Enum):
+class Audience(StrEnum):
     """Who is asking. Never inferred — always passed explicitly."""
 
     OWNER = "owner"
@@ -103,7 +104,7 @@ class _HasVisibility(Protocol):
     visibility: Visibility
 
 
-def readable_by(claim: "_HasVisibility", audience: Audience) -> bool:
+def readable_by(claim: _HasVisibility, audience: Audience) -> bool:
     """The predicate. The only one.
 
     Returns ``True`` iff ``audience`` may see the claim's rendered text.
@@ -139,7 +140,7 @@ def readable_by(claim: "_HasVisibility", audience: Audience) -> bool:
 T = TypeVar("T", bound=_HasVisibility)
 
 
-def filter_readable(claims: Iterable[T], audience: Audience) -> List[T]:
+def filter_readable(claims: Iterable[T], audience: Audience) -> list[T]:
     """Project a claim collection down to what ``audience`` may read.
 
     Every list that reaches a rendering surface passes through here.
@@ -161,8 +162,8 @@ class RedactedClaim:
     claim_id: str
     subject_id: str
     predicate_hint: str
-    valid_from: Optional[int]
-    valid_until: Optional[int]
+    valid_from: int | None
+    valid_until: int | None
     readable: bool = False
 
     def render(self) -> str:
@@ -173,7 +174,7 @@ class RedactedClaim:
         )
 
 
-def redacted_for(claim: "Claim", audience: Audience) -> RedactedClaim:
+def redacted_for(claim: Claim, audience: Audience) -> RedactedClaim:
     """Counting-safe projection of a claim for a given audience.
 
     ``readable`` records whether the full claim *would* have been legible, so a

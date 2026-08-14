@@ -35,8 +35,10 @@ make test                # unit + property
 | Consecutive FY terms do not overlap | `tests/unit/test_temporal.py` |
 
 **Status:** green as of session B0, re-verified 2026-08-13 (B3): `readable_by`
-returns exactly one definition, and `pytest tests/unit tests/property` is
-**154 passed**. The PRD audit is still blocked — see below.
+returns exactly one definition, and `pytest tests/unit tests/property` is green
+in full. (This gate asserts *all green*, not a count. The count changes with
+every session; the property does not, and a gate that tracked the count would
+have to be re-edited to stay true.) The PRD audit is still blocked — see below.
 
 > ⚠️ **The BAR-007 PRD audit cannot run.** `docs/PRD.md` is absent, and the
 > amendments file §6 forbids reconstructing the unrecovered v1.1 sections from
@@ -108,7 +110,7 @@ Neither row can go green until the cassettes exist.
 | Unreadable claim can be counted but never quoted | `tests/unit/test_boundary_offpath.py` |
 
 **Status 2026-08-13 (B3): green as unit properties.** All four rows are covered
-by tests inside the 154 that pass. Every one is an in-process assertion over
+by tests inside the passing suite. Every one is an in-process assertion over
 constructed claims; none has yet been observed over a real ingest, because G1 is
 red. Landmine **L-15** (the BAR-323 differential across two nights) is marked
 `delegated` by `make verify-manifest` and cannot be closed here at all — it needs

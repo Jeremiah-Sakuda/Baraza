@@ -22,8 +22,8 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
 
 from baraza.ingest.sources import (
     Source,
@@ -200,7 +200,7 @@ def read_pdf(path: Path, *, source_id: str, observed_at) -> Source:
         notes="scanned; per-unit confidence recorded, low-confidence units flagged",
     )
 
-    pages: List[str] = []
+    pages: list[str] = []
     try:
         pdfplumber = _require("pdfplumber", "pdfplumber", "pdf")
         with pdfplumber.open(str(path)) as document:
@@ -252,7 +252,7 @@ def read_md(path: Path, *, source_id: str, observed_at) -> Source:
         notes="line-range locators are 1-based and inclusive",
     )
 
-    block: List[str] = []
+    block: list[str] = []
     start = 1
     for lineno, line in enumerate(lines, start=1):
         if line.strip():
@@ -274,7 +274,7 @@ def read_md(path: Path, *, source_id: str, observed_at) -> Source:
     return source
 
 
-READERS: Dict[SourceFormat, Callable[..., Source]] = {
+READERS: dict[SourceFormat, Callable[..., Source]] = {
     SourceFormat.GROUPME: read_groupme,
     SourceFormat.XLSX: read_xlsx,
     SourceFormat.DOCX: read_docx,
@@ -282,7 +282,7 @@ READERS: Dict[SourceFormat, Callable[..., Source]] = {
     SourceFormat.MD: read_md,
 }
 
-_SUFFIX_HINT: Dict[str, SourceFormat] = {
+_SUFFIX_HINT: dict[str, SourceFormat] = {
     ".json": SourceFormat.GROUPME,
     ".xlsx": SourceFormat.XLSX,
     ".docx": SourceFormat.DOCX,
@@ -295,8 +295,8 @@ _SUFFIX_HINT: Dict[str, SourceFormat] = {
 def read_source(
     path: Path | str,
     *,
-    source_id: Optional[str] = None,
-    fmt: Optional[SourceFormat] = None,
+    source_id: str | None = None,
+    fmt: SourceFormat | None = None,
     observed_at,
 ) -> Source:
     """Dispatch to the right reader.

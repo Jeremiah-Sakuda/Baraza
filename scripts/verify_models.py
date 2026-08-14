@@ -32,9 +32,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Sequence
 
 # The Makefile exports PYTHONPATH=src; this keeps a direct `python3
 # scripts/verify_models.py` working too, so the instruction in models.py's
@@ -150,7 +150,7 @@ def main(argv: Sequence[str]) -> int:
     print(f"  location  {location}")
     print()
 
-    outcomes: List[Outcome] = []
+    outcomes: list[Outcome] = []
     for pin in models.ALL_PINNED:
         model_id = pin.resolved()
         try:

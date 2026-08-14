@@ -26,8 +26,6 @@ re-solicits turn n. It is a real kill of a real process, not a simulated one.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from baraza.fold.store import EventStore
 from baraza.schema.event import Event, EventType
 from baraza.schema.session import Session, SessionStatus, Turn, TurnKind, TurnRole
@@ -100,7 +98,7 @@ class SessionStore:
 
     # ------------------------------------------------------------------- read
 
-    def load(self, session_id: str) -> Optional[Session]:
+    def load(self, session_id: str) -> Session | None:
         """Rebuild a session by folding its own events.
 
         Turns are ordered by ``(occurred_at, turn index)`` — epoch millis, never
@@ -108,9 +106,9 @@ class SessionStore:
         or were written by processes in different regions still replays in the
         order they happened.
         """
-        opened: Optional[Event] = None
-        turns: Dict[str, Turn] = {}
-        closed: Optional[Event] = None
+        opened: Event | None = None
+        turns: dict[str, Turn] = {}
+        closed: Event | None = None
 
         for event in self.store.read_all():
             payload = event.payload
@@ -143,7 +141,7 @@ class SessionStore:
         )
         return session
 
-    def resume(self, session_id: str) -> Optional[Session]:
+    def resume(self, session_id: str) -> Session | None:
         """Load a session for continuation, recording that a resume happened.
 
         ``resumed_count`` is surfaced in the kill-test output so the demo shows
@@ -155,7 +153,7 @@ class SessionStore:
         session.resumed_count += 1
         return session
 
-    def next_unanswered(self, session: Session) -> Optional[Turn]:
+    def next_unanswered(self, session: Session) -> Turn | None:
         """The agent turn awaiting an answer, if any.
 
         This is what makes recovery correct: a question that was durably written
@@ -172,7 +170,7 @@ class SessionStore:
                 return None if following else turn
         return None
 
-    def list_sessions(self) -> List[str]:
+    def list_sessions(self) -> list[str]:
         return sorted(
             {
                 event.payload["session_id"]

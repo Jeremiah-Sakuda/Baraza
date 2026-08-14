@@ -60,15 +60,37 @@ adaptation-metric: ## BAR-330: standalone scorer over fixtures/transcripts/
 # Not part of the seven. Listed separately so the contract stays legible.
 
 .PHONY: install
-install: ## Create the venv and install the package with dev extras
+install: ## Create the venv and install from requirements.lock (ranges if absent)
+	@$(PY) -m venv $(VENV)
+	@$(BIN)/pip install --quiet --upgrade pip
+    # The lock first, then the package itself without its dependency resolution,
+    # so a clone in October gets the versions this tree was tested against
+    # rather than whatever PyPI has that morning. `make install-latest`
+    # deliberately takes the other path.
+	@if [ -f requirements.lock ]; then \
+		$(BIN)/pip install --quiet -r requirements.lock && \
+		$(BIN)/pip install --quiet --no-deps -e . ; \
+	else \
+		echo "no requirements.lock; resolving from pyproject ranges" && \
+		$(BIN)/pip install --quiet -e '.[dev]' ; \
+	fi
+	@echo "installed. activate with: source $(VENV)/bin/activate"
+
+.PHONY: install-latest
+install-latest: ## Resolve from pyproject ranges, ignoring the lock. For refreshing it.
 	@$(PY) -m venv $(VENV)
 	@$(BIN)/pip install --quiet --upgrade pip
 	@$(BIN)/pip install --quiet -e '.[dev]'
-	@echo "installed. activate with: source $(VENV)/bin/activate"
+	@echo "resolved from ranges. Run 'make gate', then regenerate the lock:"
+	@echo "    $(BIN)/pip freeze --exclude-editable"
 
 .PHONY: test
-test: ## Unit + property tests (no cloud, no emulator)
-	@$(BIN)/pytest tests/unit tests/property -q
+test: ## Unit + property + integration tests (no cloud, no emulator, no credentials)
+	@$(BIN)/pytest tests/unit tests/property tests/integration -q
+
+.PHONY: lint
+lint: ## ruff, with the rules this project selected for itself
+	@$(BIN)/ruff check .
 
 .PHONY: test-emulator
 test-emulator: ## Tests requiring the Firestore emulator, incl. the kill-survival rig
@@ -94,8 +116,9 @@ teardown: ## Remove everything bootstrap created. Safe to run repeatedly. Needs 
 	@scripts/teardown.sh $(CONFIRM)
 
 .PHONY: gate
-gate: ## The mechanical phase gate: compliance + tests + named ACs
+gate: ## The mechanical phase gate: compliance + lint + tests + named ACs
 	@$(MAKE) --no-print-directory compliance
+	@$(MAKE) --no-print-directory lint
 	@$(MAKE) --no-print-directory test
 	@$(MAKE) --no-print-directory verify-anchors
 	@$(MAKE) --no-print-directory verify-manifest
@@ -108,5 +131,5 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "supporting:"
-	@grep -E '^(install|test|test-emulator|test-all|verify-models|corpus|bootstrap|teardown|gate|help):.*?## .*$$' $(MAKEFILE_LIST) \
+	@grep -E '^(install|install-latest|test|lint|test-emulator|test-all|verify-models|corpus|bootstrap|teardown|gate|help):.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'

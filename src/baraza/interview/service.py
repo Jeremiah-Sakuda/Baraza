@@ -33,7 +33,7 @@ from __future__ import annotations
 import os
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -94,12 +94,12 @@ class _Runtime:
     """
 
     def __init__(self) -> None:
-        self._store: Optional[EventStore] = None
-        self._client: Optional[LLMClient] = None
-        self._state: Optional[GraphState] = None
+        self._store: EventStore | None = None
+        self._client: LLMClient | None = None
+        self._state: GraphState | None = None
         self._state_at: float = 0.0
-        self._agendas: Dict[str, Agenda] = {}
-        self._adaptation: Dict[str, AdaptationState] = {}
+        self._agendas: dict[str, Agenda] = {}
+        self._adaptation: dict[str, AdaptationState] = {}
 
     @property
     def store(self) -> EventStore:
@@ -167,26 +167,26 @@ class ApprovalItem(BaseModel):
     # Absent means the claim keeps `private`. An approver declining to choose is
     # a valid outcome and resolves to the tier that leaks nothing — the default
     # is never "whatever the client sent".
-    visibility: Optional[str] = Field(default=None, pattern="^(private|successor|org|public)$")
-    contradiction_id: Optional[str] = None
-    edited_text: Optional[str] = Field(default=None, max_length=8000)
+    visibility: str | None = Field(default=None, pattern="^(private|successor|org|public)$")
+    contradiction_id: str | None = None
+    edited_text: str | None = Field(default=None, max_length=8000)
     note: str = ""
 
 
 class ApprovalBatch(BaseModel):
     approver_id: str = Field(default="officer", max_length=64)
-    items: List[ApprovalItem]
+    items: list[ApprovalItem]
 
 
 # --------------------------------------------------------------- serialization
 
 
-def _turn_payload(turn: Turn) -> Dict[str, Any]:
+def _turn_payload(turn: Turn) -> dict[str, Any]:
     return turn.to_dict()
 
 
-def _plan_payload(plan: TurnPlan) -> Dict[str, Any]:
-    body: Dict[str, Any] = {
+def _plan_payload(plan: TurnPlan) -> dict[str, Any]:
+    body: dict[str, Any] = {
         "kind": plan.kind.value,
         "text": plan.text,
         "agenda_item_id": plan.agenda_item_id,
@@ -210,7 +210,7 @@ def _plan_payload(plan: TurnPlan) -> Dict[str, Any]:
     return body
 
 
-def _current_item(agenda: Agenda, session: Session) -> Optional[AgendaItem]:
+def _current_item(agenda: Agenda, session: Session) -> AgendaItem | None:
     """The agenda item the last agent turn was working on."""
     for turn in reversed(session.turns):
         if turn.role is TurnRole.AGENT and turn.agenda_item_id:
@@ -273,7 +273,7 @@ def create_app() -> FastAPI:
     )
 
     @application.get("/healthz")
-    def healthz() -> Dict[str, Any]:
+    def healthz() -> dict[str, Any]:
         """Liveness. Deliberately does no I/O.
 
         A health check that queries Firestore turns a transient database blip
@@ -288,7 +288,7 @@ def create_app() -> FastAPI:
         }
 
     @application.get("/readyz")
-    def readyz() -> Dict[str, Any]:
+    def readyz() -> dict[str, Any]:
         """Store reachability, on demand. Not wired to a probe — see /healthz."""
         try:
             events = len(_runtime.store.read_all())
@@ -297,7 +297,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "events": events}
 
     @application.post("/sessions", status_code=201)
-    def open_session(body: OpenSessionRequest) -> Dict[str, Any]:
+    def open_session(body: OpenSessionRequest) -> dict[str, Any]:
         opened_at = now_millis()
         with telemetry.span(
             "interview.open_session", **{"baraza.persona_id": body.persona_id}
@@ -340,14 +340,14 @@ def create_app() -> FastAPI:
         }
 
     @application.get("/sessions/{session_id}")
-    def get_session(session_id: str) -> Dict[str, Any]:
+    def get_session(session_id: str) -> dict[str, Any]:
         session = SessionStore(_runtime.store).load(session_id)
         if session is None:
             raise HTTPException(status_code=404, detail="no such session")
         return session.to_dict()
 
     @application.post("/sessions/{session_id}/answers")
-    def answer(session_id: str, body: AnswerRequest) -> Dict[str, Any]:
+    def answer(session_id: str, body: AnswerRequest) -> dict[str, Any]:
         """Record an answer and plan the next agent turn.
 
         The order is load-bearing: the officer's turn is appended first, then
@@ -442,7 +442,7 @@ def create_app() -> FastAPI:
         }
 
     @application.post("/sessions/{session_id}/claims")
-    def mint_claims(session_id: str) -> Dict[str, Any]:
+    def mint_claims(session_id: str) -> dict[str, Any]:
         """Turn this session's answers into pending claims for approval.
 
         Tier is ``pending`` and visibility is ``private``; only the approval
@@ -461,7 +461,7 @@ def create_app() -> FastAPI:
             _runtime.client, _runtime.state(), audience=SERVICE_AUDIENCE
         )
 
-        minted: List[Dict[str, Any]] = []
+        minted: list[dict[str, Any]] = []
         with telemetry.span("interview.mint_claims", **{"baraza.session_id": session_id}):
             for turn in session.turns:
                 if turn.role is not TurnRole.OFFICER:
@@ -493,7 +493,7 @@ def create_app() -> FastAPI:
         return {"session_id": session_id, "claims": minted}
 
     @application.post("/sessions/{session_id}/approvals")
-    def approve(session_id: str, body: ApprovalBatch) -> Dict[str, Any]:
+    def approve(session_id: str, body: ApprovalBatch) -> dict[str, Any]:
         """The promotion path. The only one.
 
         Claims are re-read from the folded log rather than accepted from the
@@ -503,9 +503,9 @@ def create_app() -> FastAPI:
         state = _runtime.state(force=True)
         occurred_at = now_millis()
 
-        requests: List[ApprovalRequest] = []
+        requests: list[ApprovalRequest] = []
         for entry in body.items:
-            claim: Optional[Claim] = state.claims.get(entry.claim_id)
+            claim: Claim | None = state.claims.get(entry.claim_id)
             if claim is None:
                 raise HTTPException(
                     status_code=404, detail=f"no such claim: {entry.claim_id}"
@@ -552,7 +552,7 @@ def create_app() -> FastAPI:
         }
 
     @application.post("/sessions/{session_id}/close")
-    def close_session(session_id: str) -> Dict[str, Any]:
+    def close_session(session_id: str) -> dict[str, Any]:
         sessions = SessionStore(_runtime.store)
         session = sessions.load(session_id)
         if session is None:

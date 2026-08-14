@@ -36,7 +36,6 @@ from baraza.schema.contradiction import Contradiction, ContradictionStatus
 from baraza.schema.event import EventType
 from baraza.schema.session import TurnKind, TurnRole
 from baraza.schema.visibility import Audience, Visibility
-
 from baraza_testkit import (
     FakeLLMClient,
     asserted,

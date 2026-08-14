@@ -44,10 +44,7 @@
     "scheduler_nightly_runs_completed": "not yet measured",
     "scheduler_stub_to_real_replacement_date": "not yet measured",
 
-    "kill_survival_resumed_turn_index": "not yet measured",
-
-    "claim_embedding_count": "not yet measured",
-    "topk_bruteforce_scan_ms": "not yet measured"
+    "kill_survival_resumed_turn_index": "not yet measured"
   },
 
   "runs": []
