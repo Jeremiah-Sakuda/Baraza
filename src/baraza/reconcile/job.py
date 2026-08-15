@@ -40,8 +40,11 @@ date is identifiable in it.
     here — there is no cache that can drift from the log, because there is no
     cache.
 
-Every event this Job appends is marked ``scheduled=True``. A scheduled run is
-never counted as organic activity, in any accounting, anywhere.
+Every event this Job appends carries ``scheduled``, resolved from
+``BARAZA_RUN_TRIGGER`` by :func:`resolve_scheduled` — true only when Cloud
+Scheduler started the execution. A scheduled run is never counted as organic
+activity, and a manual run is never counted as a scheduled one; the second half
+of that sentence is the half that keeps the nightly-run count honest.
 """
 
 from __future__ import annotations
@@ -153,8 +156,36 @@ def _heartbeat_instant(run_id: str) -> int:
     )
 
 
-def run_stub(store: EventStore, *, run_id: str) -> JobResult:
+def resolve_scheduled(trigger: str | None = None) -> bool:
+    """Whether this execution was started by Cloud Scheduler.
+
+    Read from ``BARAZA_RUN_TRIGGER``, which ``deploy/entrypoint-job.sh`` sets to
+    ``cloud-scheduler`` only when the Scheduler invoked the Job, and which
+    defaults to ``manual`` otherwise.
+
+    This exists because the flag used to be hardcoded ``True`` on every append,
+    including runs a human started by hand. The rule this project keeps stating
+    — a scheduled job is never counted as organic activity — has an inverse that
+    matters more here: a **manual** run recorded as scheduled inflates the very
+    number BAR-410 puts on camera. The first live deployment produced exactly
+    that: a `gcloud run jobs execute` wrote `scheduled=True` while the container
+    log two lines above it read `baraza trigger : manual`.
+
+    Anything other than ``cloud-scheduler`` counts as manual. Defaulting the
+    other way would make an unset variable silently inflate the count, which is
+    the failure this function exists to prevent.
+    """
+    import os
+
+    resolved = (trigger or os.environ.get("BARAZA_RUN_TRIGGER", "manual")).strip().lower()
+    return resolved == "cloud-scheduler"
+
+
+def run_stub(
+    store: EventStore, *, run_id: str, scheduled: bool | None = None
+) -> JobResult:
     """Append a heartbeat and exit. The BAR-021 placeholder."""
+    scheduled = resolve_scheduled() if scheduled is None else scheduled
     result = JobResult(run_id=run_id, mode="stub")
     event = Event.create(
         event_type=EventType.HEARTBEAT,
@@ -167,9 +198,10 @@ def run_stub(store: EventStore, *, run_id: str) -> JobResult:
                 "Replaced in place by the real reconciler; the replacement date "
                 "is identifiable in the Scheduler execution history."
             ),
+            "trigger": "cloud-scheduler" if scheduled else "manual",
         },
         actor="reconcile-job",
-        scheduled=True,
+        scheduled=scheduled,
     )
     if store.append(event):
         result.events_appended = 1
@@ -183,10 +215,12 @@ def run_real(
     client=None,
     audience: Audience = Audience.OWNER,
     snapshot_dir: Path = SNAPSHOT_DIR,
+    scheduled: bool | None = None,
 ) -> JobResult:
     """Re-fold, detect over new claims, snapshot, diff against last night."""
     from baraza.llm import open_client
 
+    scheduled = resolve_scheduled() if scheduled is None else scheduled
     result = JobResult(run_id=run_id, mode="real")
     client = client or open_client()
 
@@ -254,7 +288,7 @@ def run_real(
                 occurred_at=adjudicated_at,
                 payload={"contradiction": contradiction.to_dict()},
                 actor="reconcile-job",
-                scheduled=True,
+                scheduled=scheduled,
             )
             if store.append(event):
                 result.events_appended += 1
@@ -270,7 +304,7 @@ def run_real(
             occurred_at=adjudicated_at,
             payload={"claim_id": claim.claim_id, "run_id": run_id},
             actor="reconcile-job",
-            scheduled=True,
+            scheduled=scheduled,
         )
         if store.append(adjudication):
             result.events_appended += 1
@@ -281,14 +315,14 @@ def run_real(
         occurred_at=_heartbeat_instant(run_id),
         payload={"run_id": run_id, "mode": "real"},
         actor="reconcile-job",
-        scheduled=True,
+        scheduled=scheduled,
     )
     if store.append(heartbeat):
         result.events_appended += 1
 
     # Snapshot after appending, so the snapshot reflects tonight's findings.
     state = fold(store.read_all())
-    tonight = snapshot(state, run_id=run_id, scheduled=True, audience=audience)
+    tonight = snapshot(state, run_id=run_id, scheduled=scheduled, audience=audience)
     snapshot_dir.mkdir(parents=True, exist_ok=True)
     result.snapshot_path = tonight.save(snapshot_dir / f"{run_id}.json")
 

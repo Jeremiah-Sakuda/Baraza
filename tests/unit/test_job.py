@@ -38,7 +38,7 @@ import json
 
 from baraza.fold.graph import fold
 from baraza.fold.store import JsonlEventStore
-from baraza.reconcile.job import run_real, run_stub
+from baraza.reconcile.job import resolve_scheduled, run_real, run_stub
 from baraza.schema.event import EventType
 from baraza_testkit import FakeLLMClient, asserted, claim, ms
 
@@ -211,7 +211,12 @@ class TestAdjudicationIsRecordedNotInferred:
         assert result.claims_adjudicated == 1
 
     def test_the_adjudication_is_labelled_as_a_scheduled_run(self, tmp_path):
-        """A scheduled append is never counted as organic activity, anywhere."""
+        """A scheduled append is never counted as organic activity, anywhere.
+
+        ``scheduled`` is passed explicitly. It used to be hardcoded True inside
+        the job, so this test passed no matter how the run was started — which
+        is exactly why the defect it now guards against went unnoticed.
+        """
         store = _store(tmp_path)
         store.append(asserted(_archival_claim()))
         run_real(
@@ -219,6 +224,7 @@ class TestAdjudicationIsRecordedNotInferred:
             run_id=NIGHT_ONE,
             client=_client(),
             snapshot_dir=tmp_path / "snapshots",
+            scheduled=True,
         )
 
         adjudications = [
@@ -554,12 +560,14 @@ class TestTheDifferentialIsRebuiltFromTheLog:
             run_id=NIGHT_ONE,
             client=_client(),
             snapshot_dir=tmp_path / "container-one",
+            scheduled=True,
         )
         second = run_real(
             store,
             run_id=NIGHT_TWO,
             client=_client(),
             snapshot_dir=tmp_path / "container-two",
+            scheduled=True,
         )
 
         text = "\n".join(second.diff_lines)
@@ -619,3 +627,79 @@ class TestReporting:
         text = "\n".join(result.describe())
         assert "claims examined        1" in text
         assert "adjudications recorded 1" in text
+
+
+class TestAManualRunIsNeverCountedAsAScheduledOne:
+    """The inverse of the rule this project keeps stating.
+
+    "A scheduled job is never counted as organic activity" was enforced. Its
+    inverse was not, and the flag sat hardcoded ``True`` on every append the Job
+    made. The first live deployment produced the proof: a
+    ``gcloud run jobs execute`` wrote ``scheduled=True`` into Firestore while
+    the container log two lines above read ``baraza trigger : manual``.
+
+    That direction is the one that costs something. BAR-410 puts a nightly-run
+    count on camera, and a handful of manual test executions labelled scheduled
+    inflates it silently — the number stays plausible, which is precisely why
+    nobody would have questioned it.
+    """
+
+    def test_trigger_resolution(self, monkeypatch):
+        monkeypatch.setenv("BARAZA_RUN_TRIGGER", "cloud-scheduler")
+        assert resolve_scheduled() is True
+
+        monkeypatch.setenv("BARAZA_RUN_TRIGGER", "manual")
+        assert resolve_scheduled() is False
+
+    def test_an_unset_trigger_resolves_to_manual(self, monkeypatch):
+        """Defaulting the other way would let a missing variable inflate the count."""
+        monkeypatch.delenv("BARAZA_RUN_TRIGGER", raising=False)
+        assert resolve_scheduled() is False
+
+    def test_an_unrecognised_trigger_resolves_to_manual(self, monkeypatch):
+        """Anything that is not Cloud Scheduler is manual. Fails toward under-counting."""
+        for value in ("", "cron", "github-actions", "scheduler", "true"):
+            monkeypatch.setenv("BARAZA_RUN_TRIGGER", value)
+            assert resolve_scheduled() is False, f"{value!r} was counted as scheduled"
+
+    def test_a_manual_stub_run_writes_an_unscheduled_heartbeat(self, tmp_path, monkeypatch):
+        """The exact defect, reproduced against the real code path."""
+        monkeypatch.setenv("BARAZA_RUN_TRIGGER", "manual")
+        store = _store(tmp_path)
+        run_stub(store, run_id=NIGHT_ONE)
+
+        heartbeats = [
+            e for e in store.read_all() if e.event_type is EventType.HEARTBEAT
+        ]
+        assert len(heartbeats) == 1
+        assert heartbeats[0].scheduled is False
+        assert heartbeats[0].payload["trigger"] == "manual"
+
+    def test_a_scheduled_stub_run_writes_a_scheduled_heartbeat(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BARAZA_RUN_TRIGGER", "cloud-scheduler")
+        store = _store(tmp_path)
+        run_stub(store, run_id=NIGHT_ONE)
+
+        heartbeats = [
+            e for e in store.read_all() if e.event_type is EventType.HEARTBEAT
+        ]
+        assert heartbeats[0].scheduled is True
+        assert heartbeats[0].payload["trigger"] == "cloud-scheduler"
+
+    def test_the_nightly_count_excludes_manual_runs(self, tmp_path, monkeypatch):
+        """What BAR-410 actually puts on camera.
+
+        Three executions, two of them scheduled. ``count_scheduled`` must say
+        two. Under the old hardcoded flag it said three.
+        """
+        store = _store(tmp_path)
+
+        monkeypatch.setenv("BARAZA_RUN_TRIGGER", "cloud-scheduler")
+        run_stub(store, run_id="nightly-1780000000000")
+        run_stub(store, run_id="nightly-1780086400000")
+
+        monkeypatch.setenv("BARAZA_RUN_TRIGGER", "manual")
+        run_stub(store, run_id="manual-1780172800000")
+
+        assert len([e for e in store.read_all() if e.event_type is EventType.HEARTBEAT]) == 3
+        assert store.count_scheduled() == 2
