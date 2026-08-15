@@ -228,6 +228,7 @@ TOKEN="$(gcloud auth print-access-token 2>/dev/null || true)"
 ADD_FB="$(curl -s -o /dev/null -w '%{http_code}' \
   -X POST "https://firebase.googleapis.com/v1beta1/projects/${PROJECT}:addFirebase" \
   -H "Authorization: Bearer ${TOKEN}" \
+  -H "x-goog-user-project: ${PROJECT}" \
   -H 'Content-Type: application/json' \
   -d '{}' || true)"
 case "$ADD_FB" in
@@ -248,6 +249,7 @@ PY
 RULESET_RESPONSE="$(curl -s \
   -X POST "https://firebaserules.googleapis.com/v1/projects/${PROJECT}/rulesets" \
   -H "Authorization: Bearer ${TOKEN}" \
+  -H "x-goog-user-project: ${PROJECT}" \
   -H 'Content-Type: application/json' \
   -d "$RULES_PAYLOAD" || true)"
 
@@ -284,6 +286,7 @@ PY
 RELEASE_CODE="$(curl -s -o /tmp/baraza-release.json -w '%{http_code}' \
   -X PATCH "https://firebaserules.googleapis.com/v1/projects/${PROJECT}/releases/cloud.firestore" \
   -H "Authorization: Bearer ${TOKEN}" \
+  -H "x-goog-user-project: ${PROJECT}" \
   -H 'Content-Type: application/json' \
   -d "{\"release\": ${RELEASE_BODY}}" || true)"
 
@@ -291,6 +294,7 @@ if [ "$RELEASE_CODE" != "200" ]; then
   RELEASE_CODE="$(curl -s -o /tmp/baraza-release.json -w '%{http_code}' \
     -X POST "https://firebaserules.googleapis.com/v1/projects/${PROJECT}/releases" \
     -H "Authorization: Bearer ${TOKEN}" \
+    -H "x-goog-user-project: ${PROJECT}" \
     -H 'Content-Type: application/json' \
     -d "$RELEASE_BODY" || true)"
 fi

@@ -42,14 +42,28 @@ Then replace the literal `<repo-url>` placeholder in `README.md`.
 A secret scan over the full history and working tree came back clean, so there
 is nothing blocking a public push.
 
-### H2 · Tell me which GCP project
+### H2 · GCP project — ✅ DONE
 
-You chose "a different existing project" but the session ended before you named
-it. I have created **nothing** in your cloud account. Your 22 projects include
-`asili-61171` (billing disabled), `agora-a29b9`, `akili-9d5fe`, `hodi-2026`,
-`kifani`, `kijiji-26356`, and others.
+`baraza-2026` created and active. Nine APIs enabled: run, firestore, aiplatform,
+cloudscheduler, artifactregistry, cloudbuild, iam, logging, cloudtrace.
 
-Billing account selected: **Deployment Billing** (`015ACB-BA3DCD-D7BD7F`).
+Two things worth knowing about how this landed:
+
+- **`hodi-2026` was inspected and rejected.** It turned out to hold six live
+  Cloud Run services, ten service accounts, and five Firestore databases. The
+  rules require the video to show the Cloud Run dashboard and the Scheduler
+  execution history as proof of Google Cloud deployment, and in a shared project
+  those two frames show another system's fleet alongside Baraza's. A dedicated
+  project makes both frames unambiguous and lets teardown delete cleanly.
+- **Billing linked to `My Billing Account` (`015D5D-94704F-956BF9`), not
+  Deployment Billing.** Deployment Billing returned `Cloud billing quota
+  exceeded` — it already carries five projects and Google caps how many a single
+  account can fund. This is a hard platform limit, not a preference. To move it
+  later, free a slot on Deployment Billing and re-link:
+
+  ```bash
+  gcloud billing projects link baraza-2026 --billing-account=015ACB-BA3DCD-D7BD7F
+  ```
 
 ### H3 · Application Default Credentials
 
