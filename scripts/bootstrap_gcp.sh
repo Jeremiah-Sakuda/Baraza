@@ -412,13 +412,46 @@ upsert_role "$ROLE_READER" "Baraza log reader" \
 
 say "IAM bindings"
 
+# IAM is eventually consistent, and a fresh-project bootstrap always races it:
+# the service account is created, the very next command binds a role to it, and
+# IAM answers "does not exist" for an identity it acknowledged milliseconds
+# earlier. Observed on the first live run against a new project — every
+# create_sa reported ok, then the first bind failed INVALID_ARGUMENT.
+#
+# Retrying is the correct handling and not a widened scope: the binding, the
+# role and the member are all unchanged, and the only thing being tolerated is
+# propagation delay. A binding that still fails after the window is a real
+# failure and still stops the run.
+await_sa() {
+  local member="$1" attempt=0
+  until gcloud iam service-accounts describe "$member" --project="$PROJECT" \
+          >/dev/null 2>&1; do
+    attempt=$((attempt + 1))
+    if [ "$attempt" -ge 12 ]; then
+      stop "service account propagation" \
+        "${member} was created but is still not visible to IAM after 60s."
+    fi
+    sleep 5
+  done
+}
+
 bind() {
-  local member="$1" role="$2"
-  run "binding ${role} -> ${member}" gcloud projects add-iam-policy-binding "$PROJECT" \
-    --member="serviceAccount:${member}" \
-    --role="$role" \
-    --condition=None \
-    --quiet
+  local member="$1" role="$2" attempt=0 out=""
+  await_sa "$member"
+  # Even after describe() succeeds, the policy API can lag a few seconds more.
+  until out="$(gcloud projects add-iam-policy-binding "$PROJECT" \
+                 --member="serviceAccount:${member}" \
+                 --role="$role" \
+                 --condition=None \
+                 --quiet 2>&1)"; do
+    attempt=$((attempt + 1))
+    if [ "$attempt" -ge 6 ]; then
+      stop "binding ${role} -> ${member}" "$out"
+    fi
+    info "  binding not yet accepted (attempt ${attempt}); IAM still propagating"
+    sleep 5
+  done
+  ok "binding ${role} -> ${member}"
 }
 
 for sa in "$EMAIL_INGEST" "$EMAIL_RECONCILE" "$EMAIL_INTERVIEW"; do
