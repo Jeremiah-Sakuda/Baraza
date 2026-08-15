@@ -63,6 +63,7 @@ section "1. The deployed ruleset is the file in this repository"
 
 LIVE_RULES="$(curl -s \
   -H "Authorization: Bearer ${TOKEN}" \
+  -H "x-goog-user-project: ${PROJECT}" \
   "https://firebaserules.googleapis.com/v1/projects/${PROJECT}/releases/cloud.firestore" \
   | python3 -c 'import json,sys; print(json.load(sys.stdin).get("rulesetName",""))' 2>/dev/null || true)"
 
@@ -71,6 +72,7 @@ if [ -z "$LIVE_RULES" ]; then
 else
   DEPLOYED_SOURCE="$(curl -s \
     -H "Authorization: Bearer ${TOKEN}" \
+    -H "x-goog-user-project: ${PROJECT}" \
     "https://firebaserules.googleapis.com/v1/${LIVE_RULES}" \
     | python3 -c '
 import json, sys
@@ -79,15 +81,27 @@ files = payload.get("source", {}).get("files", [])
 sys.stdout.write(files[0]["content"] if files else "")
 ' 2>/dev/null || true)"
 
+  # Trailing newlines are normalized on both sides before comparing, and this
+  # is a correctness fix rather than a loosened check. Bash command
+  # substitution strips trailing newlines when capturing, so DEPLOYED_SOURCE
+  # can never carry the final newline the rules file ends with — the comparison
+  # reported a one-byte difference on every run, against a ruleset that was in
+  # fact identical. A check that cries wolf on a true claim is worse than no
+  # check, because the first person to see it explains it away and stops
+  # reading the output.
+  #
+  # Nothing else is normalized: whitespace inside the file, ordering, and every
+  # rule body still have to match byte for byte.
   if [ -z "$DEPLOYED_SOURCE" ]; then
     fail "release ${LIVE_RULES} exists but its source could not be read"
-  elif printf '%s' "$DEPLOYED_SOURCE" | diff -q - "$RULES_FILE" >/dev/null 2>&1; then
-    pass "deployed ruleset is byte-identical to ${RULES_FILE}"
+  elif printf '%s\n' "$DEPLOYED_SOURCE" | diff -q - <(sed -e '$a\' "$RULES_FILE") >/dev/null 2>&1; then
+    pass "deployed ruleset matches ${RULES_FILE} (trailing newline normalized)"
     note "${LIVE_RULES}"
   else
     fail "deployed ruleset DIFFERS from ${RULES_FILE}"
     note "the file below is what the repository claims is deployed:"
-    printf '%s' "$DEPLOYED_SOURCE" | diff - "$RULES_FILE" | head -40 | sed 's/^/           /'
+    printf '%s\n' "$DEPLOYED_SOURCE" | diff - <(sed -e '$a\' "$RULES_FILE") \
+      | head -40 | sed 's/^/           /'
   fi
 fi
 
