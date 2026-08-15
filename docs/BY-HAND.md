@@ -84,21 +84,44 @@ business hours. Apply now even if you think you won't need it.
 
 <https://forms.gle/riGhgDSHkHeMx8Ca6>
 
-### H5 · Bootstrap and deploy the BAR-021 stub Scheduler **tonight**
+### H5 · Bootstrap — ✅ DONE, with one gap (see `STOPPED-DEPLOY.md`)
 
-This is the one item no amount of later effort can recover. BAR-410 wants ≥10
-nightly reconcile runs visible in the execution history by recording day, and
-that history only accumulates in real time. Starting tonight yields ~13 nights.
-Starting Aug 20 yields ~6. Nothing warns you when it expires.
+`make bootstrap` ran green against `baraza-2026`. Deployed and verified:
+
+- Firestore native DB with **append-only rules deployed and verified live** —
+  `scripts/verify_append_only.sh` returns passed 3, skipped 2, failed 0
+- Artifact Registry, both container images
+- Four least-privilege service accounts, two custom IAM roles
+- Two Cloud Run Jobs, two Cloud Run services
+- **`https://baraza-successor-tlaymplktq-uc.a.run.app` returns HTTP 200 logged
+  out** — this is the hosted URL for the Devpost submission
+- The interview service is deliberately private (reach it with
+  `gcloud run services proxy baraza-interview --region=us-central1 --project=baraza-2026`)
+- The Job runs and its heartbeat reaches Firestore — proven twice, exit 0
+
+**The gap: Cloud Scheduler cannot yet invoke the Job** (403). The Job itself
+runs fine; only the trigger is blocked. Full diagnosis, everything ruled out,
+and the decision now waiting on you are in `STOPPED-DEPLOY.md`.
+
+**Check this first thing tomorrow** — the Scheduler is ENABLED at 03:17 UTC and
+today's IAM grants may simply have needed longer to propagate than the retry
+window allowed:
 
 ```bash
-export BARAZA_PROJECT_ID=<the project you pick in H2>
-make bootstrap
+gcloud scheduler jobs describe baraza-reconcile-nightly --location=us-central1 --project=baraza-2026 --format='value(status.code)'
 ```
 
-Budget for several failures on the first run. `deploy/README.md` concedes
-plainly that no `gcloud` command in that script has touched a live API and the
-IAM permission strings are unverified.
+Empty means it worked. `7` means it did not, and `STOPPED-DEPLOY.md` has the
+next step.
+
+### H5b · Rebuild the job image
+
+The deployed image predates the trigger fix and still records manual runs as
+scheduled. Rebuild before quoting any nightly-run count:
+
+```bash
+BARAZA_PROJECT_ID=baraza-2026 make bootstrap
+```
 
 ### H6 · Set a billing budget alert while you are in the console
 
