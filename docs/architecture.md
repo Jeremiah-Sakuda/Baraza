@@ -335,7 +335,7 @@ regenerates 13 artifacts and re-reads every one through `baraza.ingest.readers`;
 `make verify-manifest` finds 18 of 18 planted problems; `deploy/` carries the
 Firestore rules and the Cloud Run and Scheduler manifests.
 
-Not yet true: nothing is deployed; `fixtures/cassettes/` holds no recordings, so
+Not yet true: the Scheduler trigger has not produced a verified scheduled execution; `fixtures/cassettes/` holds no recordings, so
 the offline demo refuses to start and **no behaviour has been observed** —
 `verify-manifest` reports 0 of 17 behaviour probes and `verify-anchors` has no
 citations to resolve, both because there is no event log; no production module

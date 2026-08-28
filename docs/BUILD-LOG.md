@@ -509,3 +509,36 @@ failure modes that produces both occurred.
   indistinguishable from a live agent loop in the console output. Chose to lose
   the ability to demo ADK from cassettes rather than gain a recording that has to
   be described carefully.
+
+## 2026-08-28 — session B6 (judge-readiness repairs)
+
+**Opening prompt (verbatim):**
+
+> Okay, your task is now to turn these action items into fixes that you make on the code repository, and push to main when done
+
+**Course corrections (verbatim, if any):**
+
+- "Keep the ADK"
+
+**Outcome:** Restored `docs/PRD.md` as the ADK-aligned v1.2 contract, so
+`make compliance` now runs the BAR-007 PRD audit instead of returning exit 2.
+Added read-only `/ledger` and `/agenda` views to the public successor service.
+They fold the event log and render only through `Audience.PUBLIC`; the agenda
+preview deliberately refuses to derive public prompts from partly redacted
+disputes. New tests assert that private testimony is absent from both surfaces.
+Updated the README, compliance matrix, deployment manifest, and architecture
+status to distinguish deployed components from the still-failing Scheduler
+trigger. Verification: `make compliance`, `make lint`, and `make test` all
+green; the suite reported 246 passed, 1 skipped. The cassettes, live model
+verification, Scheduler repair, recording, and clean-machine replay remain
+external prerequisites and were not represented as complete.
+
+**Key decisions (exactly 2–3, or "No forks this session"):**
+
+- **ADK-aligned PRD over the supplied Antigravity-primary wording**, because the
+  repository's binding protocol and implementation already require ADK and the
+  user explicitly selected it.
+- **Static, boundary-safe public agenda preview over model generation on GET**,
+  because a public GET that calls Vertex is non-deterministic, creates an
+  unbounded cost surface, and could accidentally turn redacted evidence into a
+  prompt.

@@ -446,3 +446,19 @@ The choice is now a clean one for a human: implement the endpoint-aware call and
 prove it with `make verify-models`, or delete the Gemma row from the README and
 `compliance.md` and forgo the 0.2. Both documents now say which of those has
 happened, which is neither.
+
+## Judge-readiness repair findings — 2026-08-28
+
+**A public read surface must not become a second rendering implementation.** The
+new `/ledger` and `/agenda` pages use `DisputedLedger(...).rows(Audience.PUBLIC)`
+rather than reconstructing claims from the fold. That keeps private text behind
+the same `Contradiction.render_for` projection used everywhere else. The public
+agenda is intentionally a deterministic preview: calling Gemini from a public
+GET would turn a static judge page into an unbounded billing path and a new
+non-deterministic disclosure surface.
+
+**A green contract audit is not a green demo.** Restoring the ADK-aligned PRD
+unblocked `make compliance`, but it does not manufacture cassettes, a live Vertex
+run, or a successful Scheduler invocation. The repair updates the submission
+documents to preserve that distinction rather than letting the new green target
+be mistaken for product proof.

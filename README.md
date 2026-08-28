@@ -171,7 +171,7 @@ Full detail, with a rendered diagram: **[`docs/architecture.md`](docs/architectu
 ### Offline, no credentials, no GCP project
 
 ```bash
-git clone <repo-url> baraza
+git clone https://github.com/Jeremiah-Sakuda/Baraza.git baraza
 cd baraza
 make install     # creates .venv, installs the package with dev extras
 make demo        # ingest -> agenda -> replay interview -> successor query
@@ -218,7 +218,7 @@ architecture diagram: the pins live in `src/baraza/schema/models.py` and nowhere
 else, and `make compliance` fails the build on a model-ID literal written anywhere
 else in the tree.
 
-### Status — every target run and observed, 2026-08-13
+### Status — every target run and observed, 2026-08-28
 
 **Nothing below is inferred.** Each row is the exit code and message produced by
 running that command against this working tree. The build proceeds in overnight
@@ -230,8 +230,8 @@ nothing.
 | Command | Observed |
 |---|---|
 | `python3 scripts/compliance.py --no-prd` | **exit 0, green.** All four invariant lints pass. |
-| `make compliance` | **exit 2** — the audit could not run. `docs/PRD.md` is absent, and the amendments file forbids reconstructing it (see Disclosures). Exit 2 is deliberately distinct from exit 1, "found problems", and from exit 0. Because `make gate` runs this first, **the composite gate target is red too.** |
-| `make test` | **exit 0, all green** — `tests/unit/` plus `tests/property/` (the fold-stability permutation test). Needs `make install` first; pytest lives in `.venv`. The count is deliberately not written here: this repository's whole claim is that nothing is typed into a document by hand, and a hand-maintained test count goes stale on the next commit. Run the target for the number. |
+| `make compliance` | **exit 0, green.** The restored ADK-aligned v1.2 PRD now passes the BAR-007 ID audit and all four invariant lints. |
+| `make test` | **exit 0, green** — unit, property and integration suites pass. Run the target for the current count; it changes as coverage grows. |
 | `make corpus` | **exit 0** — 13 artifacts regenerated from `BIBLE.md`, every one re-read through `baraza.ingest.readers`. Exits 1 if any artifact fails or skips that round trip, so a missing reader dependency cannot pass as green. |
 | `make verify-manifest` | **exit 2** — prints `found 18 of 18 planted problems`, then stops: no event log exists, so 0 of 17 behaviour probes could be observed. Plants present is not the same as plants caught, and the script refuses to conflate them. |
 | `make verify-anchors` | **exit 2** — rebuilds the source registry from the bytes on disk (11 sources resolve) and then reports that there are no citations to verify, because no ingest run has happened. |
@@ -253,8 +253,11 @@ model-verification and adaptation-scoring scripts under `scripts/`.
 
 What is missing is what the table says is missing: the recorded cassettes that make
 the offline demo run — and, downstream of them, every behavioural observation the
-manifest and anchor verifiers exist to make — the generated transcripts, the merged
-PRD, an ADK agent on the production call path, and any deployment at all.
+manifest and anchor verifiers exist to make — plus generated transcripts and live
+Vertex model verification. The merged PRD and the ADK production extraction path are
+now present. Deployment status is recorded in `STOPPED-DEPLOY.md`: the public
+successor service is live, while the Scheduler trigger remains a separately recorded
+failure rather than an autonomy claim.
 
 A README that told you `make demo` works when it does not is the exact failure this
 project spends a compliance script preventing. The reproducibility gate for the
@@ -292,10 +295,10 @@ with requirement IDs is in **[`docs/compliance.md`](docs/compliance.md)**.
 | **Agent Development Kit (ADK)** | `src/baraza/agents.py` builds the extractor, reconciler and interviewer as `google.adk.agents.LlmAgent` instances, each holding only the tools its role requires, with peer and parent transfer disabled so no reasoning agent can hand work to the approver. The approver is deliberately **not** an agent and has no model. `src/baraza/ingest/extract.py` drives the extractor through an ADK `Runner` with turn and wall-clock ceilings. | Imported, instantiated and **running the live extraction path** (`google-adk` 2.6.2); asserted by `tests/unit/test_agents.py` and `tests/unit/test_agent_extraction.py`. Reconciler and interviewer are built but still reach the model through `llm.py`; offline replay is direct by design |
 | **Vertex AI** | Every model call in the system, through `src/baraza/llm.py`. Reasoning role: contradiction adjudication, agenda synthesis, the divergence turn, successor synthesis. Fast role: claim extraction over corpus chunks, entity alias proposals, interviewer follow-ups where first-token latency binds. | Implemented. Pins unverified until `make verify-models` runs green, and no response has been recorded yet |
 | **Vertex AI (Gemma)** | The BAR-303 ingestion relevance pre-filter, keep-or-drop per chunk before any Gemini call, behind a `stub` / `gemma` flag. Unattended ingestion runs `stub`, disclosed as a stub in its docstring, in `metrics.json` and in the console output of any run that used it. | **Interface final; Gemma has never run.** The `gemma` branch calls `generate_content` while the pin declares `surface="vertex-endpoint"`, and `GemmaFilter.endpoint` is assigned and never read — a live run would fail open on every chunk. That is now stated rather than hidden: `FilterReport.failed_open` counts undecided keeps, a degraded pass prints `DEGRADED — the filter never ran` instead of `100.0%`, and `metrics_entry` returns `not yet measured`. The additional-model bonus is **not claimed** |
-| **Firestore** | The append-only claim-event log, sessions and entities. Create-only writes; `deploy/firestore.rules` rejects update and delete at the database level. | Implemented, rules written; not yet deployed |
-| **Cloud Run Jobs** | The ingestion Job and the nightly `baraza-reconcile` Job. Retry-safe because event IDs are content hashes. | Implemented and containerized (`deploy/Dockerfile.job`); not yet deployed |
-| **Cloud Run services** | `src/baraza/interview/service.py` reads as `Audience.OWNER` and is not public. `src/baraza/successor/service.py` is the public surface a logged-out judge visits, and reads only claims that are committed **and** readable by `Audience.PUBLIC`. | Implemented, one image for both (`deploy/service-*.yaml`); not yet deployed |
-| **Cloud Scheduler** | Nightly trigger for the reconcile Job (BAR-021), stood up early so execution history accumulates in real time. | Manifest written (`deploy/scheduler.yaml`); not yet deployed. `scheduler_nightly_runs_completed` is `not yet measured` |
+| **Firestore** | The append-only claim-event log, sessions and entities. Create-only writes; `deploy/firestore.rules` rejects update and delete at the database level. | Deployed and verified; see `STOPPED-DEPLOY.md` for the dated evidence. |
+| **Cloud Run Jobs** | The ingestion Job and the nightly `baraza-reconcile` Job. Retry-safe because event IDs are content hashes. | Deployed; the reconcile Job has been manually verified. This is not evidence of a successful scheduled run. |
+| **Cloud Run services** | `src/baraza/interview/service.py` reads as `Audience.OWNER` and is not public. `src/baraza/successor/service.py` is the public surface a logged-out judge visits, and reads only claims that are committed **and** readable by `Audience.PUBLIC`. | Deployed. The public surface now includes read-only `/`, `/ledger`, and `/agenda` routes; each applies `Audience.PUBLIC`. |
+| **Cloud Scheduler** | Nightly trigger for the reconcile Job (BAR-021), stood up early so execution history accumulates in real time. | Deployed but not accepted as working evidence: invocation failure is documented in `STOPPED-DEPLOY.md`. `scheduler_nightly_runs_completed` remains `not yet measured`. |
 | **Cloud Trace** | OpenTelemetry spans over the reasoning chain, from `src/baraza/telemetry.py`. A span carries a claim's `digest()` and never its quote — a trace backend is a second copy of everything you put in it, with its own retention and its own export path, and none of those route through `readable_by`. | Implemented; no deployed trace exists yet |
 | **Cloud Storage** | Intended for corpus artifact staging for the deployed ingestion Job. | Declared in `pyproject.toml` and **not called from any code path**, so nothing in this repository claims it as used |
 

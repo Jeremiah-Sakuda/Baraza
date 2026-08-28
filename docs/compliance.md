@@ -22,9 +22,10 @@ yet true.
 
 ## Provenance, and what this file cannot check
 
-**The official rules text is not carried in this repository.** It was pasted into a
-build session prompt and is not reproduced in the tree. So each row states where its
-requirement wording came from:
+**The official rules text was checked from the live Devpost rules page and the
+ADK-aligned v1.2 product contract is now committed at `docs/PRD.md`.** The PRD is a
+project contract, not a substitute for the official rules; before submitting, the
+team must still re-check the live page for changes.
 
 - **(recovered)** — the requirement text is present in
   `baraza-prd-v1.2-amendments.md` §3, which recovered those rows from PRD v1.1.
@@ -33,14 +34,9 @@ requirement wording came from:
   the official rules**, and a row marked this way is a statement about what Baraza
   built, not a verified quotation of what was required.
 
-Separately: `docs/PRD.md` is absent, so the BAR-007 ID audit cannot run. Roughly
-thirty-five requirement IDs exist in this repository as identifiers with no
-acceptance criteria. Any ID marked **†** below has no recovered AC text in the tree;
-citing it means "this is the requirement that owns this work", not "this AC has been
-read and satisfied".
-
-IDs with full recovered requirement text: BAR-007, BAR-020, BAR-021, BAR-303,
-BAR-309, BAR-320, BAR-330, BAR-410.
+`make compliance` now runs the BAR-007 PRD audit and the invariant lints. A green
+audit validates internal requirement references; it does not turn an unmeasured or
+undeployed feature into a completed one.
 
 ---
 
@@ -56,7 +52,7 @@ BAR-309, BAR-320, BAR-330, BAR-410.
 | **Project description and README** (in-tree inference) | `README.md` carries the problem, the mechanism with its arithmetic, spin-up instructions, the seven contract targets, the negative decisions required by BAR-501, the disclosures, and an explicit statement of what has and has not been measured. | BAR-501† | `README.md` |
 | **Architecture diagram** (in-tree inference) | `docs/architecture.md` (Mermaid, renders on GitHub) and `docs/architecture.svg` (self-contained, legible in light and dark). Both show the four native formats, the model roles, the append-only log, the fold, on-write detection, the ledger and agenda, the interview and approval path, the visibility boundary, the successor reader and the Scheduler. Neither prints a model ID, because `make verify-models` has not run green. | BAR-505† | `docs/architecture.md`, `docs/architecture.svg` |
 | **Demonstration video** (in-tree inference) | Not yet produced. Planned content: the unattended agenda generation, the contradiction catch, the divergence moment, approval with the visibility choice, the static graph diff, and a Scheduler execution-history frame. | BAR-601†, BAR-602†, BAR-603†, BAR-604†, BAR-605†, BAR-606†, BAR-607†, BAR-608† | Recording gate 2026-08-28 in `docs/GATE.md` |
-| **Publicly reachable hosted instance** (in-tree inference) | Not yet deployed. The hosted instance reads as `Audience.PUBLIC`, which is the least-privileged audience in `src/baraza/schema/visibility.py`, so a logged-out judge sees only claims explicitly published. | BAR-410, BAR-411† | Not yet checkable |
+| **Publicly reachable hosted instance** (in-tree inference) | The deployed successor service reads as `Audience.PUBLIC`, so a logged-out judge sees only explicitly public committed claims. It now exposes read-only `/`, `/ledger`, and `/agenda` views, all rendered through the same audience boundary. The Scheduler trigger remains unresolved; this row does not claim autonomous execution. | BAR-410, BAR-411 | `STOPPED-DEPLOY.md`; `tests/unit/test_public_surfaces.py` |
 | **Reproducibility from a clean clone** (in-tree inference) | `make install` then `make demo`, offline, with no credentials: local append-only JSONL event log and recorded model cassettes. `make bootstrap` and `make teardown` provision and remove the deployed path, and `teardown` is safe to run repeatedly. **Not yet met:** `fixtures/cassettes/` holds no recordings, so `make demo` exits 2 and does no work. Recording them is a supervised step that costs live Vertex calls. | BAR-506†, BAR-007 | Reproducibility gate 2026-08-25 in `docs/GATE.md`; the README's status table records every target's observed exit code |
 | **Disclosure of AI assistance** (in-tree inference) | Disclosed in `README.md`: the assistant wrote the majority of the code under the session protocol in `AGENTS.md`, with every session's prompt and outcome logged. Ported prior work and the placeholder finding file are disclosed in the same section. | No BAR ID — submission-level | `README.md`, Disclosures |
 | **Additional Google models beyond the primary one** (in-tree inference) | Gemma as the ingestion relevance pre-filter, with a real interface and a `stub` / `gemma` flag, declared in `src/baraza/schema/models.py` so the claim traces to code rather than to a sentence. **This bonus is not earned and may not be claimed as things stand:** the survival rate is `not yet measured`, and the `gemma` branch reaches the model through `generate_content` while the pin declares `surface="vertex-endpoint"` — `GemmaFilter.endpoint` is assigned and never read, so a live run would fail open on every chunk and Gemma would not have done any work. Earning it needs an endpoint-aware call path plus a green `make verify-models`; forgoing it needs this row deleted. Either is honest; claiming it as-is is not. A text-embedding pin was also listed here; it has been removed, because no module ever embedded anything and the rule at the top of this file forbids claiming a component that does not exist — including in the file that states the rule. | BAR-303 | `src/baraza/ingest/prefilter.py`; `docs/metrics.json`; `grep -rn embed src/` returns nothing |

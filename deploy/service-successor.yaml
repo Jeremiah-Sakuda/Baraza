@@ -14,11 +14,10 @@
 # and explicitly chose to publish. `visibility` defaults to `private`; a claim
 # nobody made a decision about is invisible here by construction, not by filter.
 #
-# The consequence is worth stating plainly rather than engineering away: on a
-# fresh deployment this page shows nothing. That is the boundary working. A demo
-# surface that showed private testimony because someone forgot a predicate would
-# be the failure this project keeps naming, and an empty page is what the
-# correct version looks like before anyone has approved anything.
+# The read-only hosted views are `/` (published record), `/ledger`, and
+# `/agenda`. On a fresh deployment they show no published material. That is the
+# boundary working: a demo surface that showed private testimony because someone
+# forgot a predicate would be the failure this project keeps naming.
 #
 # min-instances is 0. A judge hitting a cold start waits about a second; a warm
 # instance would bill every idle hour from now to Oct 1 to avoid that second.
