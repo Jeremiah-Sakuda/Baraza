@@ -650,6 +650,18 @@ if [ -n "$INTERVIEW_URL_FOR_JOB" ]; then
   ok "BARAZA_SESSION_URL -> ${INTERVIEW_URL_FOR_JOB}"
 fi
 
+# The owner console renders outbound tabs to the public product, and localhost
+# must not hardcode a .run.app host, so the base URL travels by env the same
+# way the session URL does.
+PUBLIC_URL_FOR_CONSOLE="$(gcloud run services describe "$SVC_SUCCESSOR" \
+  --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)"
+if [ -n "$PUBLIC_URL_FOR_CONSOLE" ]; then
+  run "console public base" gcloud run services update "$SVC_INTERVIEW" \
+    --region="$REGION" --project="$PROJECT" \
+    --update-env-vars="BARAZA_PUBLIC_BASE_URL=${PUBLIC_URL_FOR_CONSOLE}" --quiet
+  ok "BARAZA_PUBLIC_BASE_URL -> ${PUBLIC_URL_FOR_CONSOLE}"
+fi
+
 TRIGGER_URL="$(gcloud run services describe "$SVC_TRIGGER" \
   --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)"
 [ -n "$TRIGGER_URL" ] \

@@ -132,6 +132,20 @@ _STYLE = """
   .diff-added { color:var(--accent); }
   .diff-removed { color:var(--danger); text-decoration:line-through; }
 
+  /* record home */
+  .stats { display:flex; gap:1rem; flex-wrap:wrap; margin:1rem 0 .25rem; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px;
+          padding:.8rem 1.1rem; min-width:9rem; }
+  .stat b { display:block; font-size:1.5rem; letter-spacing:-.02em; }
+  .stat span { color:var(--mut); font-size:.85rem; }
+  .walkthrough { background:var(--card); border:1px solid var(--line);
+                 border-radius:12px; padding:1rem 1.25rem; margin:1.25rem 0; }
+  .walkthrough h2 { margin:.1rem 0 .5rem; font-size:1.05rem; }
+  .tour { margin:.5rem 0; padding-left:1.2rem; }
+  .tour li { margin:.35rem 0; }
+  .tour a { font-weight:600; }
+  h2.section { margin-top:1.75rem; font-size:1.1rem; }
+
   /* approval queue */
   .queue-item { display:grid; gap:.5rem; }
   .queue-controls { display:flex; gap:1rem; flex-wrap:wrap; align-items:center;
@@ -167,20 +181,138 @@ def _page(
     )
 
 
+PUBLIC_BASE_ENV = "BARAZA_PUBLIC_BASE_URL"
+
+
 def _owner_nav(active: str) -> list[tuple[str, str, bool]]:
-    return [
+    """Owner console tabs, plus outbound links to the public product.
+
+    The two surfaces are separate deployments, so without these links the
+    operator has to remember a second URL mid-session. The public base comes
+    from the environment because localhost must not hardcode a .run.app host.
+    """
+    import os
+
+    tabs = [
         ("/", "Sessions", active == "sessions"),
         ("/approvals", "Approval queue", active == "approvals"),
     ]
+    base = os.environ.get(PUBLIC_BASE_ENV, "").rstrip("/")
+    if base:
+        tabs.extend(
+            [
+                (f"{base}/dossier", "Dossier ↗", False),
+                (f"{base}/doctrine", "Doctrine ↗", False),
+            ]
+        )
+    return tabs
 
 
 def _public_nav(active: str) -> list[tuple[str, str, bool]]:
     return [
-        ("/", "Published record", active == "record"),
+        ("/", "Record", active == "record"),
+        ("/ledger", "Ledger", active == "ledger"),
+        ("/agenda", "Agenda", active == "agenda"),
         ("/dossier", "Dossier", active == "dossier"),
         ("/doctrine", "Doctrine", active == "doctrine"),
-        ("/ledger", "Disputed ledger", active == "ledger"),
     ]
+
+
+
+
+def render_public_shell(
+    *,
+    title: str,
+    heading: str,
+    lede: str,
+    body: str,
+    active: str,
+) -> str:
+    """Wrap a public page body in the one shared shell.
+
+    Exists because the site briefly shipped with two rendering systems: the
+    dossier and doctrine views used this module's header and tabs while the
+    record, ledger, and agenda pages carried their own inline HTML with no
+    navigation at all. A judge clicking through saw two different products.
+    Every public page now goes through here, so a missing tab is a code review
+    comment rather than a discovery.
+    """
+    return _page(
+        title=title,
+        heading=heading,
+        lede=lede,
+        body=body,
+        nav=_public_nav(active),
+        wordmark_note="the published record",
+    )
+
+
+def render_record_home(
+    *,
+    summary: dict[str, Any],
+    cards: str,
+    withheld_note: str,
+) -> str:
+    """The public front door, written for a visitor with no context.
+
+    Judges land here logged out. The page has three jobs, in order: say what
+    they are looking at in two sentences, hand them a short guided path through
+    the tabs, and only then show the published record itself. The live counters
+    stay: every number is a query over the folded log, never a literal in a
+    template.
+    """
+    stats = (
+        '<div class="stats">'
+        f'<div class="stat"><b>{summary["published"]}</b>'
+        "<span>published records</span></div>"
+        f'<div class="stat"><b>{summary["events_folded"]}</b>'
+        "<span>events folded</span></div>"
+        f'<div class="stat"><b>{summary["scheduled_reconcile_runs"]}</b>'
+        "<span>scheduled reconcile runs</span></div>"
+        "</div>"
+    )
+    walkthrough = (
+        '<section class="walkthrough"><h2>How to read this site</h2>'
+        "<p>Baraza is a working partner that keeps an auditable file of what it "
+        "believes about its user. Every belief is stored as a claim with a "
+        "verbatim quote and an anchor to the moment it was said, in an "
+        "append-only log whose deployed rules reject edits and deletes. "
+        "Nothing acts until its owner ratifies it.</p>"
+        '<ol class="tour">'
+        '<li><a href="/ledger">The ledger</a> lists what the record disagrees '
+        "with itself about, ranked, with the evidence this audience is allowed "
+        "to read.</li>"
+        '<li><a href="/agenda">The agenda</a> shows the questions those '
+        "disagreements raise. The agent leads its sessions with these; no "
+        "human writes them.</li>"
+        '<li><a href="/dossier">The dossier</a> is the file the agent keeps on '
+        "its user: each published belief with its exact quote and anchor, and "
+        "an honest count of what exists but is not published.</li>"
+        '<li><a href="/doctrine">The doctrine</a> is those beliefs compiled '
+        "into the working policy, where every rule cites the claim that "
+        "created it.</li>"
+        "</ol>"
+        "<p>Everything below was ratified by its owner and explicitly "
+        "published. Private is the default; publishing is a second, separate "
+        "decision, and both are events in the log.</p></section>"
+    )
+    counters_note = (
+        '<p class="prov">Counts are live queries over the append-only event '
+        "log, not values typed into this page. Scheduled reconcile runs counts "
+        "Cloud Scheduler runs and only those; a scheduled job is never counted "
+        "as organic activity.</p>"
+    )
+    body = stats + counters_note + walkthrough + '<h2 class="section">The published record</h2>' + withheld_note + cards
+    return render_public_shell(
+        title="Baraza — the published record",
+        heading="The published record",
+        lede=(
+            "An auditable memory: every belief a claim, every claim a quote, "
+            "every change an append."
+        ),
+        body=body,
+        active="record",
+    )
 
 
 # ---------------------------------------------------------------- session index

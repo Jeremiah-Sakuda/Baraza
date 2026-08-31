@@ -225,12 +225,8 @@ def _render_page(state: GraphState) -> str:
             "disclosed here, and no logged-out request can reach them.</p>"
         )
 
-    return _PAGE.format(
-        published=summary["published"],
-        withheld_note=withheld_note,
-        events=summary["events_folded"],
-        scheduled=summary["scheduled_reconcile_runs"],
-        cards=cards,
+    return views.render_record_home(
+        summary=summary, cards=cards, withheld_note=withheld_note
     )
 
 
@@ -296,11 +292,12 @@ def _render_ledger_page(state: GraphState) -> str:
             '<p>Disputes can be counted without exposing private evidence. '
             'This public view shows only the evidence readable by this audience.</p></div>'
         )
-    return _STATIC_PAGE.format(
+    return views.render_public_shell(
         title="Baraza — disputed ledger",
         heading="The disputed ledger",
         lede="A ranked, read-only view of what the published record disagrees about.",
         body=cards,
+        active="ledger",
     )
 
 
@@ -329,132 +326,15 @@ def _render_agenda_page(state: GraphState) -> str:
             '<p>Owner-facing questions are generated from the full permitted ledger. '
             'This public preview never derives a question from unpublished evidence.</p></div>'
         )
-    return _STATIC_PAGE.format(
+    return views.render_public_shell(
         title="Baraza — interview agenda",
         heading="The interview agenda",
         lede="Citation-backed public prompts derived from the readable disputed ledger.",
         body=cards,
+        active="agenda",
     )
 
 
-# Self-contained: no external stylesheet, script, or font. A public page that
-# fetches from a CDN is a public page whose contents depend on a third party
-# being up and honest.
-_PAGE = """<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Baraza — the published record</title>
-<style>
-  :root {{ color-scheme: light dark; --fg:#11150f; --bg:#fbfaf6; --mut:#5d6355;
-           --line:#dcd9cd; --card:#ffffff; --accent:#3f6212; }}
-  @media (prefers-color-scheme: dark) {{
-    :root {{ --fg:#e9ece3; --bg:#12140f; --mut:#9aa290; --line:#2a2e24;
-             --card:#191c15; --accent:#a3c25c; }}
-  }}
-  * {{ box-sizing:border-box; }}
-  body {{ margin:0; padding:2rem 1.25rem 4rem; background:var(--bg); color:var(--fg);
-         font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }}
-  main {{ max-width:52rem; margin:0 auto; }}
-  h1 {{ font-size:1.6rem; margin:0 0 .25rem; letter-spacing:-.01em; }}
-  .lede {{ color:var(--mut); margin:0 0 2rem; }}
-  .stats {{ display:flex; flex-wrap:wrap; gap:1.5rem; padding:1rem 0;
-           border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-           margin-bottom:2rem; }}
-  .stat b {{ display:block; font-size:1.5rem; font-weight:600; }}
-  .stat span {{ color:var(--mut); font-size:.8rem; text-transform:uppercase;
-               letter-spacing:.06em; }}
-  .claim {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
-           padding:1rem 1.15rem; margin-bottom:1rem; }}
-  .claim h3 {{ margin:0 0 .5rem; font-size:1rem; font-weight:600; }}
-  .pred {{ color:var(--mut); font-weight:400; margin-left:.5rem; }}
-  blockquote {{ margin:0 0 .75rem; padding-left:.9rem; border-left:3px solid var(--accent); }}
-  footer {{ color:var(--mut); font-size:.78rem; font-family:ui-monospace,SFMono-Regular,monospace; }}
-  .dot {{ margin:0 .4rem; }}
-  .empty {{ border:1px dashed var(--line); border-radius:10px; padding:1.5rem; }}
-  .empty h2 {{ margin-top:0; font-size:1.05rem; }}
-  .withheld {{ color:var(--mut); font-size:.9rem; }}
-  form {{ display:flex; gap:.5rem; margin:2.5rem 0 1rem; }}
-  input {{ flex:1; padding:.7rem .85rem; border-radius:8px; border:1px solid var(--line);
-          background:var(--card); color:var(--fg); font:inherit; }}
-  button {{ padding:.7rem 1.1rem; border-radius:8px; border:1px solid var(--accent);
-           background:var(--accent); color:var(--bg); font:inherit; cursor:pointer; }}
-  #answer {{ white-space:pre-wrap; }}
-  .note {{ color:var(--mut); font-size:.85rem; border-top:1px solid var(--line);
-          margin-top:3rem; padding-top:1rem; }}
-</style></head><body><main>
-
-<h1>The published record</h1>
-<p class="lede">Everything below was ratified by its owner and explicitly
-published by them. Nothing here was published by default.
-See also <a href="/dossier">the dossier</a> and <a href="/doctrine">the
-compiled doctrine</a>.</p>
-
-<div class="stats">
-  <div class="stat"><b>{published}</b><span>published records</span></div>
-  <div class="stat"><b>{events}</b><span>events folded</span></div>
-  <div class="stat"><b>{scheduled}</b><span>scheduled reconcile runs</span></div>
-</div>
-
-{cards}
-{withheld_note}
-
-<form id="ask" autocomplete="off">
-  <input id="q" name="q" placeholder="Ask the record a question" aria-label="Ask the record a question">
-  <button type="submit">Ask</button>
-</form>
-<div id="answer"></div>
-
-<p class="note">Counts are live queries over the append-only event log, not
-values typed into this page. &ldquo;Scheduled reconcile runs&rdquo; counts Cloud
-Scheduler runs and only those; a scheduled job is never counted as organic
-activity. Answers are drawn only from the published records above, with a
-citation for every sentence &mdash; when the record cannot support an answer,
-this surface says so and stops rather than guessing.</p>
-
-<script>
-document.getElementById('ask').addEventListener('submit', async function (e) {{
-  e.preventDefault();
-  var out = document.getElementById('answer');
-  var q = document.getElementById('q').value.trim();
-  if (!q) return;
-  out.textContent = 'Reading the record\\u2026';
-  try {{
-    var r = await fetch('/api/ask', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ question: q }})
-    }});
-    var d = await r.json();
-    var lines = [d.answer];
-    if (d.citations && d.citations.length) {{
-      lines.push('');
-      lines.push('Sources:');
-      d.citations.forEach(function (c) {{ lines.push('  [' + c.anchor + '] "' + c.quote + '"'); }});
-    }}
-    if (d.withheld) {{
-      lines.push('');
-      lines.push('(' + d.withheld + ' further record(s) match but are not published.)');
-    }}
-    out.textContent = lines.join('\\n');
-  }} catch (err) {{
-    out.textContent = 'The record could not be reached.';
-  }}
-}});
-</script>
-</main></body></html>"""
-
-_STATIC_PAGE = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
-<style>
-body {{ max-width:52rem; margin:0 auto; padding:2rem 1.25rem 4rem; font:16px/1.6 system-ui,sans-serif; }}
-.lede, footer, .withheld {{ color:#5d6355; }} .claim, .empty {{ border:1px solid #dcd9cd; border-radius:10px; padding:1rem 1.15rem; margin:1rem 0; }}
-.pred {{ margin-left:.5rem; font-weight:400; color:#5d6355; }} footer {{ font: .78rem ui-monospace,monospace; }}
-</style></head><body><main><p><a href="/">Published record</a></p>
-<h1>{heading}</h1><p class="lede">{lede}</p>{body}
-</main></body></html>"""
 
 
 # ------------------------------------------------------- dossier and doctrine
