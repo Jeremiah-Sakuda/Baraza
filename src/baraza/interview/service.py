@@ -1,4 +1,4 @@
-"""The deployed interview service (BAR-410) — and the owner's session console.
+"""The deployed interview service (BAR-410), and the owner's session console.
 
 A thin HTTP surface over :class:`~baraza.interview.interviewer.Interviewer`,
 :class:`~baraza.interview.session_store.SessionStore` and
@@ -8,7 +8,7 @@ conversational logic lives in those modules; this file adds transport and the
 boundary decisions that only exist once the thing is reachable over a network.
 
 **Not public.** ``deploy/service-interview.yaml`` creates no ``allUsers``
-invoker binding. This surface reads as :data:`Audience.OWNER` — it renders the
+invoker binding. This surface reads as :data:`Audience.OWNER`, it renders the
 user's own private testimony back to the user, by design. The dossier service is
 the public one and reads a strictly narrower set.
 
@@ -22,7 +22,7 @@ written, and a resumed request folds the session back out of the log.
 (``baraza.ingest.extract``) and parts of the interviewer surface are owned by a
 parallel lane and change under this service's feet. A symbol that is absent
 degrades the one feature that needed it, with the degradation stated in the
-response — a missing extractor must cost one turn's beliefs, never the whole
+response, a missing extractor must cost one turn's beliefs, never the whole
 console. A symbol that is present but whose backend is unreachable is a 503
 that says so: this service never fabricates a reply.
 
@@ -70,7 +70,7 @@ __all__ = ["app", "create_app"]
 SERVICE_NAME = os.environ.get("BARAZA_SERVICE_NAME", "baraza-interview")
 
 # The session reads as the claim's owner. Written once, here, and passed
-# explicitly into everything below — an audience that is inferred at a call site
+# explicitly into everything below, an audience that is inferred at a call site
 # is an audience that will eventually be inferred wrongly.
 SERVICE_AUDIENCE = Audience.OWNER
 
@@ -94,7 +94,7 @@ clarifiers in a row is a worse session than one missed nuance."""
 _UNREACHABLE_DETAIL = (
     "The model backend could not be reached. Your turn was recorded in the "
     "append-only log, but no beliefs were extracted and no reply was generated "
-    "— nothing is ever fabricated in its place. Retry when the backend is up; "
+    ",  nothing is ever fabricated in its place. Retry when the backend is up; "
     "the recorded turn will still be there."
 )
 
@@ -103,7 +103,7 @@ def now_millis() -> EpochMillis:
     """Wall clock as integer epoch millis, UTC.
 
     Routed through ``to_epoch_millis`` rather than computed inline so that every
-    instant in the system — corpus, session, heartbeat — is produced by one
+    instant in the system, corpus, session, heartbeat, is produced by one
     normalizer. BAR-309 is a rule about comparisons, and the cheapest way to
     keep comparisons correct is to never let an un-normalized instant exist.
     """
@@ -115,7 +115,7 @@ class _FixedPacing:
     """The constant follow-up budget, shaped like what ``plan_next`` expects.
 
     Exists so the interviewer's planner can be called whether or not the
-    interview lane still accepts a pacing argument — ``call_tolerant`` drops the
+    interview lane still accepts a pacing argument, ``call_tolerant`` drops the
     keyword if the parameter is gone.
     """
 
@@ -129,7 +129,7 @@ class _Runtime:
     """Per-instance handles. Constructed lazily so import never needs credentials.
 
     Everything here is a cache or a client. Nothing here is state that would be
-    lost if the instance died — that all lives in the append-only log, which is
+    lost if the instance died, that all lives in the append-only log, which is
     what makes ``minScale: 0`` safe on a conversational surface.
     """
 
@@ -221,7 +221,7 @@ class DivergenceDecision(BaseModel):
     ``that_governs`` reaffirms the old belief and retracts the new statement;
     ``both_conditional`` records a new conditional rule, superseding the new
     statement's wording, and retires the disagreement. All three run through
-    :class:`ApprovalFlow` — this endpoint constructs no promotion events itself.
+    :class:`ApprovalFlow`, this endpoint constructs no promotion events itself.
     """
 
     choice: str = Field(pattern="^(this_governs|that_governs|both_conditional)$")
@@ -236,7 +236,7 @@ class ApprovalItem(BaseModel):
     claim_id: str
     decision: str = Field(pattern="^(approve|reject|defer)$")
     # Absent means the claim keeps `private`. An approver declining to choose is
-    # a valid outcome and resolves to the tier that leaks nothing — the default
+    # a valid outcome and resolves to the tier that leaks nothing, the default
     # is never "whatever the client sent".
     visibility: str | None = Field(default=None, pattern="^(private|successor|org|public)$")
     contradiction_id: str | None = None
@@ -257,7 +257,7 @@ def _turn_payload(turn: Turn) -> dict[str, Any]:
 
 
 def _plan_payload(plan: Any) -> dict[str, Any]:
-    """Serialize a ``TurnPlan`` through ``getattr`` — the shape is owned by the
+    """Serialize a ``TurnPlan`` through ``getattr``, the shape is owned by the
     interview lane and may gain or lose fields between integrate passes."""
     body: dict[str, Any] = {
         "kind": getattr(getattr(plan, "kind", None), "value", None),
@@ -341,7 +341,7 @@ def _extract_beliefs(
     Returns the extracted claims and an optional degradation note. The symbol is
     resolved by name at call time; a missing extractor is a stated degradation,
     while an extractor that raises means the backend is down and the caller must
-    answer 503 — the two failures are different facts and are reported as such.
+    answer 503, the two failures are different facts and are reported as such.
     """
     extract_fn = resolve_symbol(
         "baraza.ingest.extract",
@@ -395,7 +395,7 @@ def _append_pending_claim(claim: Claim, *, occurred_at: EpochMillis, actor: str)
 def _detect_on_write(claims: list[Claim]) -> int:
     """On-write contradiction detection for freshly asserted beliefs.
 
-    Reuses the reconciler's blocked, temporally-gated detector — no sweep. A
+    Reuses the reconciler's blocked, temporally-gated detector, no sweep. A
     detector failure is swallowed per claim: the nightly job re-examines
     anything missed, so losing one on-write detection costs freshness, not
     facts.
@@ -409,7 +409,7 @@ def _detect_on_write(claims: list[Claim]) -> int:
     for claim in claims:
         try:
             detection = detector.detect(claim, pool, aliases=state.aliases)
-        except Exception:  # noqa: BLE001 — the nightly job is the backstop
+        except Exception:  # noqa: BLE001, the nightly job is the backstop
             continue
         for contradiction in detection.contradictions:
             _runtime.store.append(
@@ -497,7 +497,7 @@ def _agenda_rows(agenda: Agenda, state: GraphState) -> tuple[list[dict[str, Any]
     """Agenda items with their retirement ticks, from the folded log.
 
     An item is retired when the contradiction that spawned it is no longer
-    open — resolution events retire agenda items, so the closed loop is visible
+    open, resolution events retire agenda items, so the closed loop is visible
     on screen rather than asserted in prose.
     """
     open_ids = {c.contradiction_id for c in state.open_contradictions()}
@@ -520,9 +520,9 @@ def _agenda_rows(agenda: Agenda, state: GraphState) -> tuple[list[dict[str, Any]
 def _open_divergence(session: Session, state: GraphState) -> dict[str, Any] | None:
     """Rebuild the divergence card for the last unadjudicated divergence turn.
 
-    The card is a projection of the log — the agent's divergence turn cites the
+    The card is a projection of the log, the agent's divergence turn cites the
     conflicting claim, and the new side's pending claim ID is carried in the
-    turn's ``extra`` — so a reloaded page shows the same card the live response
+    turn's ``extra``, so a reloaded page shows the same card the live response
     did. The old side's quote is re-read through the audience predicate on
     every render; it is never cached in the turn.
     """
@@ -553,7 +553,7 @@ def _open_divergence(session: Session, state: GraphState) -> dict[str, Any] | No
 def _pending_rows(state: GraphState, *, session_id: str | None) -> list[dict[str, Any]]:
     """Pending beliefs for the approval queue, quotes read as OWNER.
 
-    This surface is the owner's console — see ``SERVICE_AUDIENCE`` — so pending
+    This surface is the owner's console, see ``SERVICE_AUDIENCE``, so pending
     private claims are legible here and only here.
     """
     rows = []
@@ -586,7 +586,7 @@ async def _lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     application = FastAPI(
-        title="Baraza — interview service",
+        title="Baraza: interview service",
         version="0.2.0",
         lifespan=_lifespan,
         # No interactive docs on a surface that renders private testimony. The
@@ -614,7 +614,7 @@ def create_app() -> FastAPI:
 
     @application.get("/readyz")
     def readyz() -> dict[str, Any]:
-        """Store reachability, on demand. Not wired to a probe — see /healthz."""
+        """Store reachability, on demand. Not wired to a probe, see /healthz."""
         try:
             events = len(_runtime.store.read_all())
         except Exception as exc:  # noqa: BLE001
@@ -696,7 +696,7 @@ def create_app() -> FastAPI:
                 # No open disagreement means no agenda-led question exists. The
                 # agent refuses to ask a citation-grounded question it cannot
                 # cite, so the honest response is that there is nothing to open
-                # a session about — not an invented opener.
+                # a session about, not an invented opener.
                 raise HTTPException(
                     status_code=409,
                     detail=(
@@ -757,7 +757,7 @@ def create_app() -> FastAPI:
         The order is load-bearing: the partner's turn is appended first, then
         everything model-dependent runs, then the agent's reply is appended
         before it is returned. A process killed anywhere in between resumes
-        with the turn recorded, which is the correct direction to fail — losing
+        with the turn recorded, which is the correct direction to fail, losing
         a reply costs a page reload, silently dropping a turn costs the user a
         fact about themselves.
         """
@@ -799,7 +799,7 @@ def create_app() -> FastAPI:
                 extracted, degradation = _extract_beliefs(
                     session=session, turn=turn, occurred_at=occurred_at
                 )
-            except Exception as exc:  # noqa: BLE001 — backend down, be honest
+            except Exception as exc:  # noqa: BLE001, backend down, be honest
                 raise HTTPException(status_code=503, detail=_UNREACHABLE_DETAIL) from exc
             if degradation:
                 notes.append(degradation)
@@ -951,7 +951,7 @@ def create_app() -> FastAPI:
                     status_code=422,
                     detail=(
                         "splitting into a conditional requires the conditional's "
-                        "wording — the rule is the user's, not the system's to invent"
+                        "wording, the rule is the user's, not the system's to invent"
                     ),
                 )
             # The conditional supersedes the new statement's wording (a new
@@ -1073,7 +1073,7 @@ def create_app() -> FastAPI:
         Tier is ``pending`` and visibility is ``private``; only the approval
         path promotes and only an approver chooses visibility. This endpoint
         cannot commit anything, and the service account it runs under is not the
-        thing stopping it — the code path simply does not exist here.
+        thing stopping it, the code path simply does not exist here.
         """
         sessions = SessionStore(_runtime.store)
         session = sessions.load(session_id)

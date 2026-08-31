@@ -1,13 +1,13 @@
-"""The deployed successor service (BAR-410, BAR-411) — and the public surface.
+"""The deployed successor service (BAR-410, BAR-411), and the public surface.
 
 This is the hosted URL a judge visits while logged out. Everything about it is
 shaped by that.
 
 **It reads one set and only one set: claims that are ``committed`` *and*
 ``readable_by(Audience.PUBLIC)``.** Both halves matter and they are different
-axes. ``committed`` is the retraction axis — a claim reaches it because a human
+axes. ``committed`` is the retraction axis, a claim reaches it because a human
 approved it, and a rejected claim leaves permanently. ``PUBLIC`` is the
-visibility axis — an approver explicitly chose to publish. ``visibility``
+visibility axis, an approver explicitly chose to publish. ``visibility``
 defaults to ``private``, so a claim nobody made a decision about is invisible
 here by construction rather than by filter.
 
@@ -22,7 +22,7 @@ judge actually visits the one surface that lies.
 committed record and refuses when that record cannot support an answer. It does
 not fall back on general knowledge about how student organizations usually work.
 A successor cannot tell a remembered fact from a fluent guess, and a guess about
-who can sign a cheque is worse than silence — silence is recoverable.
+who can sign a cheque is worse than silence, silence is recoverable.
 
 **Counts are honest, contents are not disclosed.** Where records exist that this
 audience may not read, the page reports how many. Telling a visitor that three
@@ -31,7 +31,7 @@ boundary; showing nothing would be a lie by omission.
 
 The service account behind this surface holds a read-only Firestore role. Even
 if a request path here were wrong, it could not append, promote, or publish
-anything — `deploy/README.md` carries the matrix of which layer enforces which
+anything, `deploy/README.md` carries the matrix of which layer enforces which
 row, including the rows IAM cannot express. The one deliberate exception is the
 dossier's Reject control, which routes through :class:`ApprovalFlow` (the only
 module that may construct promotion events; rejection retracts, it never
@@ -81,7 +81,7 @@ def public_audience() -> Audience:
 
     Set in ``deploy/service-successor.yaml`` so the value is visible in
     ``gcloud run services describe`` rather than only in code. An unrecognized
-    value raises at import time and the container fails to start — it does not
+    value raises at import time and the container fails to start, it does not
     fall back to a default, because every available default other than the one
     that was intended would widen what a logged-out visitor can read.
     """
@@ -155,7 +155,7 @@ def _claim_payload(claim: Claim) -> dict[str, Any]:
     """Render one published claim.
 
     The quote is read through ``quote_for(audience)``. If the predicate said no
-    the value is ``None`` and the caller drops the record — it cannot silently
+    the value is ``None`` and the caller drops the record, it cannot silently
     become an empty string that renders as a citation with nothing in it.
     """
     quote = claim.quote_for(AUDIENCE)
@@ -178,7 +178,7 @@ def _record_summary(state: GraphState) -> dict[str, Any]:
     """Live counts. Every number here is a query over the folded log.
 
     Nothing on this page is a literal typed into a template. ``withheld`` is the
-    count of committed records this audience may not read — honest as a number,
+    count of committed records this audience may not read, honest as a number,
     undisclosed as content.
     """
     committed = state.committed_claims()
@@ -210,7 +210,7 @@ def _render_page(state: GraphState) -> str:
             "<p>This is not an error and it is not an empty database. Every claim "
             "in this system is created <strong>private</strong>. A claim becomes "
             "visible here only when its owner ratified it "
-            "<em>and</em> chose to publish it — two separate decisions, recorded "
+            "<em>and</em> chose to publish it, two separate decisions, recorded "
             "as two separate events.</p>"
             "<p>Until someone makes both decisions, this page shows nothing. "
             "That is the boundary doing its job.</p>"
@@ -233,7 +233,7 @@ def _render_page(state: GraphState) -> str:
 def _render_card(claim: Claim) -> str:
     payload = _claim_payload(claim)
     if not payload["quote"]:
-        # Unreachable if the predicate and the filter agree — which is exactly
+        # Unreachable if the predicate and the filter agree, which is exactly
         # why it is checked. A disagreement between them must produce nothing,
         # never a card with an empty citation.
         return ""
@@ -293,7 +293,7 @@ def _render_ledger_page(state: GraphState) -> str:
             'This public view shows only the evidence readable by this audience.</p></div>'
         )
     return views.render_public_shell(
-        title="Baraza — disputed ledger",
+        title="Baraza: disputed ledger",
         heading="The disputed ledger",
         lede="A ranked, read-only view of what the published record disagrees about.",
         body=cards,
@@ -327,7 +327,7 @@ def _render_agenda_page(state: GraphState) -> str:
             'This public preview never derives a question from unpublished evidence.</p></div>'
         )
     return views.render_public_shell(
-        title="Baraza — interview agenda",
+        title="Baraza: interview agenda",
         heading="The interview agenda",
         lede="Citation-backed public prompts derived from the readable disputed ledger.",
         body=cards,
@@ -354,7 +354,7 @@ def _belief_rows(state: GraphState) -> list[dict[str, Any]]:
     for claim in _public_claims(state):
         quote = claim.quote_for(AUDIENCE)
         if not quote:
-            # Unreachable if the predicate and the filter agree — checked anyway
+            # Unreachable if the predicate and the filter agree, checked anyway
             # so a disagreement produces a dropped row, never an empty citation.
             continue
         rows.append(
@@ -382,7 +382,7 @@ def _resolve_doctrine(state: GraphState) -> tuple[list[dict[str, Any]] | None, s
     """Compile the doctrine via the doctrine lane's module, resolved defensively.
 
     Returns ``(rules, reason)`` where ``rules`` is ``None`` when the compiler is
-    absent or failed — the view renders the reason instead of a substitute
+    absent or failed, the view renders the reason instead of a substitute
     policy. Each rendered rule's quote is re-read here through
     ``quote_for(AUDIENCE)`` by claim ID: the compiler's output is trusted for
     rule text and provenance IDs, never for what this audience may read.
@@ -401,7 +401,7 @@ def _resolve_doctrine(state: GraphState) -> tuple[list[dict[str, Any]] | None, s
             audience=AUDIENCE,
             claims=state.readable_claims(AUDIENCE),
         )
-    except Exception as exc:  # noqa: BLE001 — degrade honestly, never invent
+    except Exception as exc:  # noqa: BLE001, degrade honestly, never invent
         return None, f"the doctrine compiler failed on this fold: {type(exc).__name__}"
 
     raw_rules = (
@@ -438,7 +438,7 @@ def _resolve_doctrine_diff(state: GraphState) -> dict[str, Any] | None:
     An epoch boundary is the most recent ``session.opened`` event: the old
     doctrine is compiled from everything before it, the new from the full log,
     and the two are handed to the doctrine lane's ``diff``. ``None`` means "no
-    diff available" — module absent, no epoch boundary yet, or a failure — and
+    diff available", module absent, no epoch boundary yet, or a failure, and
     the view says so rather than inventing an empty diff.
     """
     diff_fn = resolve_symbol(
@@ -463,7 +463,7 @@ def _resolve_doctrine_diff(state: GraphState) -> dict[str, Any] | None:
         old_doc = call_tolerant(compile_fn, state=old_state, audience=AUDIENCE)
         new_doc = call_tolerant(compile_fn, state=state, audience=AUDIENCE)
         result = diff_fn(old_doc, new_doc)
-    except Exception:  # noqa: BLE001 — degrade to "no diff", never to a made-up one
+    except Exception:  # noqa: BLE001, degrade to "no diff", never to a made-up one
         return None
     if result is None:
         return None
@@ -496,7 +496,7 @@ async def _lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     application = FastAPI(
-        title="Baraza — successor service",
+        title="Baraza: successor service",
         version="0.1.0",
         lifespan=_lifespan,
         docs_url=None,
@@ -506,7 +506,7 @@ def create_app() -> FastAPI:
 
     @application.get("/healthz")
     def healthz() -> dict[str, Any]:
-        """Liveness. No I/O — see the interview service for why."""
+        """Liveness. No I/O, see the interview service for why."""
         return {
             "status": "ok",
             "service": SERVICE_NAME,
@@ -538,7 +538,7 @@ def create_app() -> FastAPI:
 
         The public-demo surface. Readable logged out; every row passed the
         ``readable_by(Audience.PUBLIC)`` predicate, the withheld count is a live
-        query, and the empty state names the boundary as the reason — an empty
+        query, and the empty state names the boundary as the reason, an empty
         dossier is the private-by-default default working, not a broken page.
         """
         with telemetry.span("dossier.page") as active:
@@ -568,7 +568,7 @@ def create_app() -> FastAPI:
         """Retract one belief. Appends ``claim.rejected`` via the approval flow.
 
         Two boundaries hold here. Target: only a claim this audience already
-        reads can be rejected from this surface — a logged-out request must not
+        reads can be rejected from this surface, a logged-out request must not
         be able to probe or retract records it cannot see, so an unreadable
         claim answers exactly like a nonexistent one. Mechanism: the retraction
         is an ``ApprovalFlow`` rejection, so this module still constructs no
@@ -592,7 +592,7 @@ def create_app() -> FastAPI:
                 ],
                 occurred_at=occurred_at,
             )
-        except Exception as exc:  # noqa: BLE001 — a refused append is reported, not masked
+        except Exception as exc:  # noqa: BLE001, a refused append is reported, not masked
             raise HTTPException(
                 status_code=503,
                 detail=(
@@ -614,7 +614,7 @@ def create_app() -> FastAPI:
 
     @application.get("/doctrine", response_class=HTMLResponse)
     def doctrine() -> HTMLResponse:
-        """The compiled operating policy — same doctrine, every rule cited.
+        """The compiled operating policy, same doctrine, every rule cited.
 
         Rule text and provenance IDs come from the doctrine lane's compiler,
         resolved defensively; every rendered quote is re-read from the fold
@@ -677,7 +677,7 @@ def create_app() -> FastAPI:
             active.set_attribute("baraza.readable", answer.readable)
             # Citation identity travels as digests; the quoted text does not
             # enter the trace even though it is public on this surface. The rule
-            # is per-mechanism, not per-audience — a trace that carries quotes
+            # is per-mechanism, not per-audience, a trace that carries quotes
             # for public claims is a trace that will carry them for private ones
             # the day somebody reuses the helper.
             active.set_attribute(

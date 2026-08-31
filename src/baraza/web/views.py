@@ -2,7 +2,7 @@
 
 Each ``render_*`` function takes primitives (strings, ints, dicts already
 projected by the service layer) and returns a complete page. No function here
-touches the event store, an LLM client, or a ``Claim`` object — the service
+touches the event store, an LLM client, or a ``Claim`` object, the service
 layer decides *what* may be shown (that is where ``readable_by`` runs), this
 module only decides *how*. Keeping the boundary decision out of the templates
 means a template change can never widen what an audience reads.
@@ -454,7 +454,7 @@ def render_record_home(
     )
 
     return _page(
-        title="Baraza — an AI partner you can audit",
+        title="Baraza: an AI partner you can audit",
         heading="",
         lede="",
         body=hero + steps + surfaces + live + record + footer,
@@ -536,7 +536,7 @@ def render_judge_tour() -> str:
         "it end to end.</p>"
     )
     return _page(
-        title="Baraza — the two-minute tour",
+        title="Baraza: the two-minute tour",
         heading="The two-minute tour",
         lede="What to open, in order, and what to look for at each stop.",
         body=intro + body,
@@ -564,7 +564,7 @@ def render_session_index(sessions: list[dict[str, Any]]) -> str:
         rows = (
             '<div class="empty"><h2>No sessions yet.</h2>'
             "<p>A session exists only after the reconciler has produced an "
-            "agenda from the ledger — the agent leads with what the record "
+            "agenda from the ledger, the agent leads with what the record "
             "disputes, so an empty ledger means there is honestly nothing to "
             "open a session about yet.</p></div>"
         )
@@ -575,7 +575,7 @@ def render_session_index(sessions: list[dict[str, Any]]) -> str:
         '<button class="primary" type="submit">Open a session</button></form>'
     )
     return _page(
-        title="Baraza — sessions",
+        title="Baraza: sessions",
         heading="Working sessions",
         lede="Every turn is externalized to the append-only log before the next is solicited.",
         body=form + rows,
@@ -593,7 +593,7 @@ def render_divergence_card(divergence: dict[str, Any], *, session_id: str) -> st
     ``divergence`` fields: ``new_quote``/``new_anchor``/``new_claim_id`` for the
     statement just made, ``old_quote``/``old_anchor``/``old_claim_id`` for the
     committed record it collides with, plus ``contradiction_id`` and
-    ``rationale``. A missing old quote renders the withheld placeholder — the
+    ``rationale``. A missing old quote renders the withheld placeholder, the
     card can announce that a conflict exists without quoting what the audience
     may not read.
     """
@@ -624,7 +624,7 @@ def render_divergence_card(divergence: dict[str, Any], *, session_id: str) -> st
         '<button class="primary" data-choice="this_governs">This governs</button>'
         '<button data-choice="that_governs">That governs</button>'
         '<button class="quiet" data-choice="both_conditional">'
-        "Both — split into a conditional</button>"
+        "Both, split into a conditional</button>"
         "</div>"
         '<div class="conditional" id="conditional-box">'
         '<textarea id="conditional-text" '
@@ -671,7 +671,7 @@ def render_session_view(
         + (" retired" if item.get("retired") else "")
         + '">'
         + (
-            '<span class="tick" title="Resolved and retired — this item will not '
+            '<span class="tick" title="Resolved and retired, this item will not '
             'appear on the next agenda">✓</span>'
             if item.get("retired")
             else '<span class="open-mark" title="Open">○</span>'
@@ -690,7 +690,7 @@ def render_session_view(
         rail_items = '<p class="honest">The agenda is empty.</p>'
     retired_note = (
         f'<p class="honest">{retired_count} item(s) retired by resolved '
-        "disagreements — the loop closes on screen.</p>"
+        "disagreements, the loop closes on screen.</p>"
         if retired_count
         else ""
     )
@@ -724,7 +724,7 @@ def render_session_view(
 
     script = _SESSION_SCRIPT.replace("__SESSION_ID__", json.dumps(session_id))
     return _page(
-        title=f"Baraza — session {session_id}",
+        title=f"Baraza: session {session_id}",
         heading=f"Session with {persona_id}",
         lede="Every turn lands in the append-only log; the agenda shrinks as disagreements resolve.",
         body=body,
@@ -827,7 +827,7 @@ def render_dossier_view(
     """Every belief the agent holds that this audience may read.
 
     ``beliefs`` entries carry ``claim_id``, ``rule``, ``quote``, ``anchor``,
-    ``learned_at_iso``, ``tier``, ``visibility`` — the quote already read
+    ``learned_at_iso``, ``tier``, ``visibility``, the quote already read
     through the audience predicate by the service layer.
     """
     if beliefs:
@@ -852,11 +852,11 @@ def render_dossier_view(
         )
     else:
         cards = (
-            '<div class="empty"><h2>This dossier shows nothing — and that is the '
+            '<div class="empty"><h2>This dossier shows nothing, and that is the '
             "boundary working, not a broken page.</h2>"
             "<p>Every belief in this system is created <strong>private</strong>. "
             "It appears here only after its owner ratified it <em>and</em> chose "
-            "to publish it — two separate decisions, two separate events in an "
+            "to publish it, two separate decisions, two separate events in an "
             "append-only log. Until both happen, a logged-out reader sees "
             "exactly this.</p></div>"
         )
@@ -888,7 +888,7 @@ document.querySelectorAll('button[data-reject]').forEach(function (btn) {
 </script>"""
 
     return _page(
-        title="Baraza — the dossier",
+        title="Baraza: the dossier",
         heading="The dossier",
         lede=(
             "Every belief the agent holds about its user, each with the verbatim "
@@ -914,7 +914,7 @@ def render_doctrine_view(
     """The compiled operating policy, every rule with its provenance.
 
     ``rules`` entries carry ``text``, ``claim_id``, ``anchor``, ``quote``
-    (``None`` when the cited claim is not readable by this audience — the rule's
+    (``None`` when the cited claim is not readable by this audience, the rule's
     existence renders, its evidence does not). ``rules=None`` means the compiler
     was not available and ``unavailable_reason`` says so honestly.
     """
@@ -950,10 +950,10 @@ def render_doctrine_view(
     body += _render_doctrine_diff(diff)
 
     return _page(
-        title="Baraza — the doctrine",
+        title="Baraza: the doctrine",
         heading="The operating doctrine",
         lede=(
-            "The session policy compiled from ratified beliefs — same doctrine, "
+            "The session policy compiled from ratified beliefs, same doctrine, "
             "every rule cited. Each rule names the claim, anchor, and quote "
             "that put it there."
         ),
@@ -967,7 +967,7 @@ def _render_doctrine_diff(diff: dict[str, Any] | None) -> str:
     if diff is None:
         return (
             '<section class="card diff-panel"><h2>Doctrine diff</h2>'
-            '<p class="honest">No diff between epochs is available yet — either '
+            '<p class="honest">No diff between epochs is available yet, either '
             "fewer than two doctrine epochs exist, or the diff module is not "
             "present on this surface. Nothing is shown in its place.</p></section>"
         )
@@ -989,13 +989,13 @@ def _render_doctrine_diff(diff: dict[str, Any] | None) -> str:
         )
 
     return (
-        '<section class="card diff-panel"><h2>Doctrine diff — last two epochs</h2>'
+        '<section class="card diff-panel"><h2>Doctrine diff, last two epochs</h2>'
         "<ul>"
         + _entries(added, "diff-added", "added")
         + _entries(removed, "diff-removed", "removed")
         + _entries(changed, "", "changed")
         + "</ul>"
-        '<p class="honest">Each changed rule names the claim that changed it — '
+        '<p class="honest">Each changed rule names the claim that changed it, '
         "the compiler's provenance map, not an inference.</p></section>"
     )
 
@@ -1011,7 +1011,7 @@ def render_approval_queue(
     """Pending beliefs batched for session-end ratification.
 
     Each row offers approve / reject / defer and a visibility choice that
-    defaults to private — declining to choose publishes nothing.
+    defaults to private, declining to choose publishes nothing.
     """
     if pending:
         rows = "".join(
@@ -1046,7 +1046,7 @@ def render_approval_queue(
             '<div class="empty"><h2>Nothing awaits ratification.</h2>'
             "<p>Beliefs reach this queue as <em>pending</em> claims minted from "
             "session turns. None exist right now, so there is nothing to decide "
-            "— and nothing was decided for you.</p></div>"
+            ",  and nothing was decided for you.</p></div>"
         )
         submit = ""
 
@@ -1081,10 +1081,10 @@ def render_approval_queue(
         )
 
     return _page(
-        title="Baraza — approval queue",
+        title="Baraza: approval queue",
         heading="Approval queue",
         lede=(
-            "No belief reaches committed — and therefore behavior — without "
+            "No belief reaches committed, and therefore behavior, without "
             "ratification here. Deferring keeps it pending; visibility defaults "
             "to private."
         ),
