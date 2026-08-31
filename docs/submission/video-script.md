@@ -27,18 +27,22 @@ confirm it yourself on recording day).
 
 ## Global preconditions (check once, before any take)
 
-- **[user-must-do]** The dossier web face (claim panel, agenda rail, divergence
-  card, dossier list, doctrine view, approval queue) is deployed and reachable.
-  This is the WS2 surface; every shot below renders in it. Confirm by loading
-  the public URL logged out, in a private window.
+- **[agent-verified]** The web face is deployed and live: the public URL
+  returned HTTP 200 logged out with the honest empty state, a session opened
+  through the proxy with a 6-item agenda from real detected contradictions,
+  and a live turn produced a judgment-shaped belief claim (verbatim quote,
+  `turn:t-1` anchor, condition preserved) — all on 2026-08-31 against
+  `baraza-2026`. Re-load both surfaces on recording day anyway.
 - **[user-must-do]** The hosted `.run.app` URL you will read aloud in Shot 5 is
   the same URL entered on the Devpost form. The last URL verified live (HTTP 200
   logged out, 2026-08-15) was `https://baraza-successor-tlaymplktq-uc.a.run.app`;
   if the rename redeployed the public service under the dossier name, use the
   new URL everywhere and retire the old one.
-- **[user-must-do]** Application Default Credentials present; live Vertex calls
-  work from this machine. The centrepiece is shot against **live Vertex**, never
-  against cassettes.
+- **[agent-verified → user-confirm]** Live Vertex works **server-side**: the
+  deployed services carry their own service-account credentials, so the
+  centrepiece needs **no ADC on your machine** — the session view at
+  `localhost:8080` (see Navigation map) is already live Gemini. ADC is only
+  needed if you additionally want local `make demo` cassettes.
 - **[user-must-do]** At least several days of real dogfooding sessions exist in
   the Firestore event log, so the timestamps in Shots 3–6 predate recording day.
   Elapsed time cannot be faked and cannot be compressed.
@@ -51,14 +55,63 @@ confirm it yourself on recording day).
   failed 0 (2026-08-15, `STOPPED-DEPLOY.md`). Re-run it on recording day anyway — Shot 2
   depends on the refusal happening on camera.
 
+
+---
+
+## Navigation map — how to reach every screen in this script
+
+Two surfaces. Have both open in separate browser windows before any take.
+
+**A. The owner console (private — via authenticated proxy).** In a terminal:
+
+```bash
+gcloud run services proxy baraza-interview --region=us-central1 --project=baraza-2026 --port=8080
+```
+
+Leave it running; then in the browser:
+
+| Screen | URL | Used in |
+|---|---|---|
+| Session index (start a session here) | `http://localhost:8080/` | Shot 3 opening |
+| **The session view** — chat, claim panel, agenda rail, divergence card | `http://localhost:8080/sessions/<id>/view` (the index redirects you here on open) | Shot 3 |
+| **The approval queue** — ratify / reject / defer, visibility choice | `http://localhost:8080/approvals` | Shot 3 step 6 |
+
+**B. The public surface (no login — this is what judges browse).**
+Base: `https://baraza-successor-tlaymplktq-uc.a.run.app`
+
+| Screen | URL | Used in |
+|---|---|---|
+| The published record (live counters) | `/` | Shot 5 close |
+| **The dossier** — published beliefs w/ quote+anchor, Reject button, withheld count | `/dossier` | Shots 1, 4, 7 |
+| **The doctrine** — compiled rules, each citing its claim | `/doctrine` | Shots 3, 4 |
+| The disputed ledger / the agenda | `/ledger`, `/agenda` | Shot 6 |
+
+**C. Google Cloud console tabs (Shot 5) — open and sign in before the take:**
+
+- Cloud Run: `https://console.cloud.google.com/run?project=baraza-2026`
+- Firestore data (the edit-refusal shot): `https://console.cloud.google.com/firestore/databases/-default-/data/panel/events?project=baraza-2026`
+- Scheduler: `https://console.cloud.google.com/cloudscheduler?project=baraza-2026`
+- Vertex request logs: `https://console.cloud.google.com/logs/query;query=resource.type%3D%22aiplatform.googleapis.com%2FEndpoint%22?project=baraza-2026` (or Logs Explorer filtered to `aiplatform`)
+
+**The one navigation rule that keeps Shot 4 honest:** the public `/dossier`
+shows only beliefs you **chose to publish** in the approval queue — everything
+else appears as an honest withheld count. So in Shot 3 step 6, set visibility
+**public** on the demo beliefs you intend to reject on camera in Shot 4. That
+is not staging; it is the visibility choice working, and the withheld line for
+your private beliefs is part of the story.
+
 ---
 
 ## Shot 1 — The friction (0:00–0:20)
 
-**ON SCREEN:** A generic chat application's memory pane — a flat list of
-paraphrased "memories" with no sources, no dates, no way to see why any of them
-exists. (Use a mock or the builder's own account with only synthetic content
-visible; no product logo needs to be legible and no vendor is named.) At 0:12,
+**GET THERE:** public surface → `/dossier` (Navigation map B).
+
+**ON SCREEN:** A **mock** memory pane — a flat list of paraphrased
+"memories" with no sources, no dates, no way to see why any of them exists.
+**The mock is mandatory, not the safer option**: the official rules bar any
+third-party trademark, logo, or branding from the submission, so filming a real
+vendor's product is a compliance risk that buys nothing. A plain styled list
+labelled "memory" makes the point. At 0:12,
 hard cut to the Baraza dossier view: a list of beliefs, each with a verbatim
 quote, a turn anchor, and a timestamp.
 
@@ -79,6 +132,8 @@ quote, a turn anchor, and a timestamp.
 ---
 
 ## Shot 2 — Pitch, architecture, and the log that refuses (0:20–0:45)
+
+**GET THERE:** `docs/architecture.svg` open in a browser tab; Firestore console tab (Navigation map C), `events` collection, one document pre-selected.
 
 **ON SCREEN:** 0:20–0:32 the architecture diagram (`docs/architecture.svg`):
 ingest → claims → append-only Firestore log → fold → doctrine, with the
@@ -108,6 +163,8 @@ the error.
 ---
 
 ## Shot 3 — THE CENTREPIECE: one unedited take (0:45–2:10)
+
+**GET THERE:** proxy running (Navigation map A) → `localhost:8080/` → open session → you land on `/sessions/<id>/view`. Keep `localhost:8080/approvals` in a second tab for step 6, and public `/doctrine` in a third for the doctrine beat.
 
 **ON SCREEN:** The working-session view, live against Vertex. The builder is
 drafting a real document (this submission's own materials — dogfooding on
@@ -150,9 +207,11 @@ visible ask is the same machinery.
 
 **PRECONDITIONS:**
 
-- **[user-must-do]** WS2 session view + WS3 extraction and doctrine compiler +
-  WS4 divergence retarget all landed and smoke-tested end to end at least once
-  before the take.
+- **[agent-verified]** Session view, extraction, and detection are live:
+  a real session opened (`ses_b9b371757eb111c9503e4b14`, 6 agenda items) and a
+  live turn extracted a judgment-shaped belief with its condition intact
+  (2026-08-31). **[user-must-do]** One full rehearsal of the exact take,
+  including the divergence beat, before recording.
 - **[user-must-do]** Live Vertex from this machine; a second window with the
   Cloud Console log stream visible if the frame allows — live proof beats
   assertion.
@@ -163,6 +222,8 @@ visible ask is the same machinery.
 ---
 
 ## Shot 4 — The dossier: reject and rerun (2:10–2:40)
+
+**GET THERE:** public `/dossier` (the beliefs you published in Shot 3 step 6 appear here with quotes; your private ones appear as the withheld count). Reject on this page; rerun the task in the session view tab; open public `/doctrine` for the diff.
 
 **ON SCREEN:** The dossier view — the full file the agent keeps on the builder:
 every belief, quote, anchor, timestamp, status. The builder clicks **Reject**
@@ -192,6 +253,8 @@ changed rule, with the retracted claim named as its source.
 
 ## Shot 5 — Google Cloud proof (2:40–3:15)
 
+**GET THERE:** the four console tabs from Navigation map C, in order: Cloud Run → Vertex logs → Scheduler → then the public URL tab.
+
 **ON SCREEN, in order:**
 
 1. (2:40) Cloud Run dashboard for `baraza-2026`: the deployed services and the
@@ -213,24 +276,27 @@ changed rule, with the retracted claim named as its source.
 
 **PRECONDITIONS:**
 
-- **[user-must-do]** The Scheduler trigger fix (WS1, OIDC-via-service per
-  `STOPPED-DEPLOY.md`'s 2026-08-31 update) is deployed and the execution
-  history shows real successful runs. **As of 2026-08-31 the direct trigger
-  403s and history shows failures — do not film the history until it is
-  green.** If it is not fixed by recording day, film the Cloud Run *job*
-  execution list (real, successful, timestamped) instead and say "scheduled
-  initiation is deployed behind a trigger fix documented in the repo" — honest
-  and verifiable.
+- **[agent-verified]** The Scheduler chain is FIXED and verified end to end
+  (2026-08-31): fire → OIDC → `baraza-trigger` → job execution → exit 0 →
+  `heartbeat` + `session.proposed` in Firestore, both `scheduled=True`,
+  `trigger=cloud-scheduler`. Root cause and postmortem:
+  `docs/deploy-postmortem.md`. **[user-must-do]** On recording day, film
+  whatever the history actually shows — runs accrue nightly from 2026-08-31
+  and eleven earlier failed attempts are part of the honest record. If asked,
+  the failure story is a strength: the postmortem is in the repo.
 - **[user-must-do]** The `.run.app` URL filmed, spoken, and submitted are the
   same string.
-- **[agent-verified]** The `scheduled` honesty flag exists in the code path
-  (`reconcile/differential.py`, commit `0fca155`). **[user-must-do]** The
-  deployed job image postdates that commit — rebuild before filming any run
-  history (`BARAZA_PROJECT_ID=baraza-2026 make bootstrap`).
+- **[agent-verified]** The `scheduled` honesty flag is live in production:
+  the deployed image postdates commit `0fca155` (rebuilt 2026-08-31) and the
+  Firestore events from the verified scheduled run carry `scheduled=True,
+  trigger=cloud-scheduler` while manual `gcloud run jobs execute` runs are
+  labelled `manual`.
 
 ---
 
 ## Shot 6 — Leads the way: the closed loop (3:15–3:45)
+
+**GET THERE:** the invitation is in the reconcile job's log output (Cloud Run → jobs → `baraza-reconcile` → latest execution → logs) or your inbox if SMTP is configured; agenda rails are the session view of session N and N+1 in two tabs, or public `/agenda`.
 
 **ON SCREEN:** The morning invitation — the outbound notification (email or
 log entry) generated by the scheduled reconcile job: a numbered agenda, each
@@ -261,6 +327,8 @@ retirement events linking resolved items in the log.
 
 ## Shot 7 — Close (3:45–3:50)
 
+**GET THERE:** public `/dossier`, held.
+
 **ON SCREEN:** The dossier view, held. One line of caption: *Baraza — memory
 with due process.*
 
@@ -273,6 +341,25 @@ with due process.*
 **PRECONDITIONS:** none beyond Shot 4's.
 
 ---
+
+
+## On-screen captions — score the category in the judge's own words
+
+The Collaborative Partner text names six behaviours. One small lower-third
+caption per shot, in this exact wording, lets a judge tick them off without
+inferring anything:
+
+| Shot | Caption (verbatim) |
+|---|---|
+| 3 (claim panel beat) | *takes notes — your exact words, anchored* |
+| 3 (divergence beat) | *asks clarifying questions — only when your own statements collide* |
+| 3 (agenda progress) | *guides step-by-step — agenda items retire themselves* |
+| 3 (approval beat) / 4 | *a clear way to capture feedback — nothing acts unratified* |
+| 4 (doctrine diff) | *adapts to your way of thinking — every rule cites its source* |
+| 6 | *leads the way — the agent opens the session* |
+
+Keep captions under 8 words on screen at once if these read long; the table
+wording is the ceiling, not the floor.
 
 ## Timecode budget check
 
