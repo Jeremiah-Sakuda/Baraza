@@ -24,6 +24,7 @@ __all__ = [
     "render_dossier_view",
     "render_doctrine_view",
     "render_approval_queue",
+    "render_judge_tour",
     "WITHHELD_PLACEHOLDER",
 ]
 
@@ -41,23 +42,38 @@ def _e(value: Any) -> str:
 _STYLE = """
   * { box-sizing: border-box; }
   :root {
-    --fg:#1c2018; --bg:#f7f6f1; --mut:#6b7062; --line:#ddd9cc;
-    --card:#ffffff; --accent:#3f6212; --accent-soft:#eef3e2;
+    --fg:#191817; --bg:#faf9f6; --mut:#67655e; --line:#e4e1d8;
+    --card:#ffffff; --accent:#166534; --accent-ink:#0c4a26;
+    --accent-soft:#e8f3ea; --hero-grad:linear-gradient(160deg,#f2f7f0,#faf9f6 55%);
     --warn:#92400e; --warn-soft:#fef3e2; --warn-line:#f0d5a8;
     --danger:#9f1239; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg:#eceae4; --bg:#141311; --mut:#9d9a90; --line:#2b2a25;
+      --card:#1c1b18; --accent:#5fb87a; --accent-ink:#8ed2a2;
+      --accent-soft:#1d2b20; --hero-grad:linear-gradient(160deg,#181d17,#141311 55%);
+      --warn:#f0b467; --warn-soft:#2b2116; --warn-line:#4a3a22;
+      --danger:#f27698;
+    }
   }
   body { margin:0; background:var(--bg); color:var(--fg);
-         font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
-  header.site { border-bottom:1px solid var(--line); background:var(--card); }
-  header.site .inner { max-width:64rem; margin:0 auto; padding:.8rem 1.25rem;
+         font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  header.site { border-bottom:1px solid var(--line); background:var(--card);
+                position:sticky; top:0; z-index:5; }
+  header.site .inner { max-width:70rem; margin:0 auto; padding:.85rem 1.5rem;
                        display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap; }
-  header.site .wordmark { font-weight:700; letter-spacing:-.01em; }
-  header.site .wordmark small { color:var(--mut); font-weight:400; margin-left:.5rem; }
-  nav a { color:var(--mut); text-decoration:none; margin-right:1rem; font-size:.92rem; }
+  header.site .wordmark { font-weight:800; font-size:1.05rem; letter-spacing:-.02em; }
+  header.site .wordmark small { color:var(--mut); font-weight:400; margin-left:.55rem;
+                                font-size:.8rem; }
+  nav a { color:var(--mut); text-decoration:none; margin-right:1.1rem; font-size:.92rem; }
+  nav a:hover { color:var(--fg); }
   nav a.active { color:var(--fg); font-weight:600; border-bottom:2px solid var(--accent); }
-  main { max-width:64rem; margin:0 auto; padding:1.5rem 1.25rem 4rem; }
-  h1 { font-size:1.45rem; margin:.25rem 0; letter-spacing:-.01em; }
-  .lede { color:var(--mut); margin:0 0 1.5rem; }
+  main { max-width:70rem; margin:0 auto; padding:1.5rem 1.5rem 4.5rem; }
+  h1 { font-size:1.5rem; margin:.25rem 0; letter-spacing:-.015em; }
+  .lede { color:var(--mut); margin:0 0 1.5rem; max-width:46rem; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px;
           padding:1rem 1.15rem; margin-bottom:1rem; }
   .empty { border:1px dashed var(--line); border-radius:10px; padding:1.5rem;
@@ -132,7 +148,73 @@ _STYLE = """
   .diff-added { color:var(--accent); }
   .diff-removed { color:var(--danger); text-decoration:line-through; }
 
+  /* landing */
+  .hero { background:var(--hero-grad); border-bottom:1px solid var(--line);
+          margin:-1.5rem -1.5rem 0; padding:4.25rem 1.5rem 3.5rem; }
+  .hero .wrap { max-width:70rem; margin:0 auto; }
+  .hero h1 { font-family:var(--serif); font-weight:600; letter-spacing:-.02em;
+             font-size:clamp(2rem,4.6vw,3.15rem); line-height:1.12;
+             margin:0 0 1rem; max-width:44rem; }
+  .hero p.sub { font-size:1.12rem; color:var(--mut); max-width:40rem;
+                margin:0 0 1.75rem; }
+  .cta-row { display:flex; gap:.8rem; flex-wrap:wrap; }
+  a.btn { display:inline-block; text-decoration:none; border-radius:10px;
+          padding:.7rem 1.2rem; font-weight:600; font-size:.95rem; }
+  a.btn.solid { background:var(--accent); color:#fff; }
+  a.btn.solid:hover { background:var(--accent-ink); }
+  @media (prefers-color-scheme: dark) { a.btn.solid { color:#0c130e; } }
+  a.btn.ghost { border:1px solid var(--line); color:var(--fg); background:var(--card); }
+  a.btn.ghost:hover { border-color:var(--accent); }
+  .trust { color:var(--mut); font-size:.85rem; margin-top:1.4rem; }
+  section.land { padding:3rem 0 0; }
+  section.land h2 { font-family:var(--serif); font-weight:600; font-size:1.65rem;
+                    letter-spacing:-.015em; margin:0 0 .4rem; }
+  section.land > p.section-sub { color:var(--mut); max-width:44rem; margin:0 0 1.5rem; }
+  .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));
+           gap:1rem; }
+  .step { background:var(--card); border:1px solid var(--line); border-radius:14px;
+          padding:1.2rem 1.25rem; }
+  .step .num { display:inline-flex; width:1.7rem; height:1.7rem; border-radius:50%;
+               background:var(--accent-soft); color:var(--accent-ink);
+               align-items:center; justify-content:center; font-weight:700;
+               font-size:.9rem; margin-bottom:.6rem; }
+  .step h3 { margin:.1rem 0 .4rem; font-size:1.02rem; }
+  .step p { margin:0; color:var(--mut); font-size:.94rem; }
+  .step .eg { margin-top:.7rem; border-left:3px solid var(--accent);
+              background:var(--accent-soft); border-radius:0 8px 8px 0;
+              padding:.5rem .7rem; font-size:.86rem; color:var(--fg); }
+  .surfaces { display:grid; grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));
+              gap:1rem; }
+  a.surface { display:block; text-decoration:none; color:inherit;
+              background:var(--card); border:1px solid var(--line);
+              border-radius:14px; padding:1.1rem 1.2rem; }
+  a.surface:hover { border-color:var(--accent); }
+  a.surface h3 { margin:0 0 .35rem; font-size:1rem; color:var(--accent-ink); }
+  a.surface p { margin:0; color:var(--mut); font-size:.92rem; }
+  .live-strip { display:flex; gap:2.25rem; flex-wrap:wrap; align-items:baseline;
+                border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+                margin-top:3rem; padding:1.1rem 0; }
+  .live-strip .stat b { font-size:1.35rem; letter-spacing:-.02em; margin-right:.4rem; }
+  .live-strip .stat span { color:var(--mut); font-size:.88rem; }
+  .live-strip .note { color:var(--mut); font-size:.8rem; flex-basis:100%; }
+  footer.land { margin-top:3.5rem; color:var(--mut); font-size:.88rem; }
+  footer.land a { color:var(--accent-ink); }
+
+  /* judge tour */
+  .stop { display:grid; grid-template-columns:2.4rem 1fr; gap:1rem;
+          background:var(--card); border:1px solid var(--line); border-radius:14px;
+          padding:1.2rem 1.25rem; margin:0 0 1rem; }
+  .stop .num { width:2rem; height:2rem; border-radius:50%; background:var(--accent-soft);
+               color:var(--accent-ink); display:flex; align-items:center;
+               justify-content:center; font-weight:700; }
+  .stop h3 { margin:.15rem 0 .4rem; }
+  .stop h3 a { color:var(--accent-ink); }
+  .stop p { margin:.2rem 0; color:var(--mut); }
+  .stop .look { margin-top:.5rem; font-size:.9rem; color:var(--fg); }
+  .stop .look b { color:var(--accent-ink); }
+
   /* record home */
+
   .stats { display:flex; gap:1rem; flex-wrap:wrap; margin:1rem 0 .25rem; }
   .stat { background:var(--card); border:1px solid var(--line); border-radius:10px;
           padding:.8rem 1.1rem; min-width:9rem; }
@@ -210,11 +292,12 @@ def _owner_nav(active: str) -> list[tuple[str, str, bool]]:
 
 def _public_nav(active: str) -> list[tuple[str, str, bool]]:
     return [
-        ("/", "Record", active == "record"),
-        ("/ledger", "Ledger", active == "ledger"),
-        ("/agenda", "Agenda", active == "agenda"),
+        ("/", "Home", active == "record"),
+        ("/tour", "Tour", active == "tour"),
         ("/dossier", "Dossier", active == "dossier"),
         ("/doctrine", "Doctrine", active == "doctrine"),
+        ("/ledger", "Ledger", active == "ledger"),
+        ("/agenda", "Agenda", active == "agenda"),
     ]
 
 
@@ -253,65 +336,212 @@ def render_record_home(
     cards: str,
     withheld_note: str,
 ) -> str:
-    """The public front door, written for a visitor with no context.
+    """The landing page. Written for a visitor with zero context.
 
-    Judges land here logged out. The page has three jobs, in order: say what
-    they are looking at in two sentences, hand them a short guided path through
-    the tabs, and only then show the published record itself. The live counters
-    stay: every number is a query over the folded log, never a literal in a
-    template.
+    The test this page is built against: someone who has never heard of the
+    project reads the hero and the four steps and can say what the product
+    does. Product vocabulary (claim, doctrine, fold) is introduced only after
+    the plain-language version of the same idea, never instead of it.
+
+    Every number in the live strip remains a query over the folded log. The
+    published record itself moves to the bottom: a stranger needs the story
+    before the data.
     """
-    stats = (
-        '<div class="stats">'
-        f'<div class="stat"><b>{summary["published"]}</b>'
-        "<span>published records</span></div>"
-        f'<div class="stat"><b>{summary["events_folded"]}</b>'
-        "<span>events folded</span></div>"
-        f'<div class="stat"><b>{summary["scheduled_reconcile_runs"]}</b>'
-        "<span>scheduled reconcile runs</span></div>"
+    hero = (
+        '<div class="hero"><div class="wrap">'
+        "<h1>Your AI assistant is learning about you. "
+        "Baraza shows you the file.</h1>"
+        '<p class="sub">Baraza is an AI working partner that keeps an open, '
+        "auditable record of everything it believes about you: your exact "
+        "words, the moment you said them, and the rule it derived. It asks "
+        "before any belief takes effect, and it tells you when you contradict "
+        "yourself.</p>"
+        '<div class="cta-row">'
+        '<a class="btn solid" href="/tour">Take the two-minute tour</a>'
+        '<a class="btn ghost" href="/dossier">See the live file</a>'
         "</div>"
+        '<p class="trust">Live deployment. Every count on this page is a real '
+        "query against the production database, and this page works without "
+        "an account.</p>"
+        "</div></div>"
     )
-    walkthrough = (
-        '<section class="walkthrough"><h2>How to read this site</h2>'
-        "<p>Baraza is a working partner that keeps an auditable file of what it "
-        "believes about its user. Every belief is stored as a claim with a "
-        "verbatim quote and an anchor to the moment it was said, in an "
-        "append-only log whose deployed rules reject edits and deletes. "
-        "Nothing acts until its owner ratifies it.</p>"
-        '<ol class="tour">'
-        '<li><a href="/ledger">The ledger</a> lists what the record disagrees '
-        "with itself about, ranked, with the evidence this audience is allowed "
-        "to read.</li>"
-        '<li><a href="/agenda">The agenda</a> shows the questions those '
-        "disagreements raise. The agent leads its sessions with these; no "
-        "human writes them.</li>"
-        '<li><a href="/dossier">The dossier</a> is the file the agent keeps on '
-        "its user: each published belief with its exact quote and anchor, and "
-        "an honest count of what exists but is not published.</li>"
-        '<li><a href="/doctrine">The doctrine</a> is those beliefs compiled '
-        "into the working policy, where every rule cites the claim that "
-        "created it.</li>"
-        "</ol>"
-        "<p>Everything below was ratified by its owner and explicitly "
-        "published. Private is the default; publishing is a second, separate "
-        "decision, and both are events in the log.</p></section>"
+
+    steps = (
+        '<section class="land"><h2>How it works</h2>'
+        '<p class="section-sub">Four ideas, in the order they happen.</p>'
+        '<div class="steps">'
+        '<div class="step"><span class="num">1</span>'
+        "<h3>It takes notes in your own words</h3>"
+        "<p>When you tell it how you want things done, it stores your exact "
+        "sentence with a timestamp, not a paraphrase. Each note is called a "
+        "claim.</p>"
+        '<div class="eg">"Never state a dollar figure without citing the '
+        'document it came from." Saved verbatim, anchored to the moment.</div>'
+        "</div>"
+        '<div class="step"><span class="num">2</span>'
+        "<h3>It catches you contradicting yourself</h3>"
+        "<p>Tell it two things that cannot both be true and it stops, shows "
+        "you both of your own quotes, and asks which one governs. It never "
+        "silently keeps the newer one.</p>"
+        "</div>"
+        '<div class="step"><span class="num">3</span>'
+        "<h3>Nothing acts until you approve it</h3>"
+        "<p>Beliefs sit in a queue until you ratify them. Approved beliefs "
+        "compile into the working policy it follows, called the doctrine, "
+        "where every rule cites the sentence that created it.</p>"
+        "</div>"
+        '<div class="step"><span class="num">4</span>'
+        "<h3>The record cannot be quietly rewritten</h3>"
+        "<p>Everything lives in an append-only log whose database rules "
+        "reject edits and deletes. Corrections are new entries. Rejecting a "
+        "belief is itself recorded, and the next session provably runs "
+        "without it.</p>"
+        "</div></div></section>"
     )
-    counters_note = (
-        '<p class="prov">Counts are live queries over the append-only event '
-        "log, not values typed into this page. Scheduled reconcile runs counts "
-        "Cloud Scheduler runs and only those; a scheduled job is never counted "
-        "as organic activity.</p>"
+
+    surfaces = (
+        '<section class="land"><h2>Explore the live product</h2>'
+        '<p class="section-sub">Four views over one append-only record. What '
+        "you can read here is what the owner chose to publish; everything "
+        "else shows up as an honest count, never as content.</p>"
+        '<div class="surfaces">'
+        '<a class="surface" href="/dossier"><h3>The dossier</h3>'
+        "<p>The file it keeps on its user. Each published belief with its "
+        "verbatim quote and anchor.</p></a>"
+        '<a class="surface" href="/doctrine"><h3>The doctrine</h3>'
+        "<p>Beliefs compiled into working policy. Every rule cites its "
+        "source sentence.</p></a>"
+        '<a class="surface" href="/ledger"><h3>The ledger</h3>'
+        "<p>What the record disagrees with itself about, ranked by stakes.</p></a>"
+        '<a class="surface" href="/agenda"><h3>The agenda</h3>'
+        "<p>The questions those disagreements raise. The agent opens its "
+        "sessions with these; no human writes them.</p></a>"
+        "</div></section>"
     )
-    body = stats + counters_note + walkthrough + '<h2 class="section">The published record</h2>' + withheld_note + cards
-    return render_public_shell(
-        title="Baraza — the published record",
-        heading="The published record",
-        lede=(
-            "An auditable memory: every belief a claim, every claim a quote, "
-            "every change an append."
+
+    live = (
+        '<div class="live-strip">'
+        f'<span class="stat"><b>{summary["published"]}</b>'
+        "<span>published beliefs</span></span>"
+        f'<span class="stat"><b>{summary["events_folded"]}</b>'
+        "<span>events in the log</span></span>"
+        f'<span class="stat"><b>{summary["scheduled_reconcile_runs"]}</b>'
+        "<span>scheduled nightly runs</span></span>"
+        '<span class="note">Live queries over the append-only event log, not '
+        "numbers typed into this page. Scheduled runs counts Cloud Scheduler "
+        "runs and only those; automation is never passed off as activity."
+        "</span></div>"
+    )
+
+    record = (
+        '<section class="land"><h2>The published record</h2>'
+        '<p class="section-sub">Everything below was ratified by its owner '
+        "and explicitly published, two separate decisions recorded as two "
+        "separate events. Private is the default.</p>"
+        + withheld_note
+        + cards
+        + "</section>"
+    )
+
+    footer = (
+        '<footer class="land"><p>Baraza means council: the place where '
+        "disputes are heard and settled on the record. The dispute this one "
+        "hears is you versus you.</p>"
+        '<p>Built for the All Things Agentic hackathon. '
+        '<a href="https://github.com/Jeremiah-Sakuda/Baraza">Source and '
+        "architecture on GitHub</a>. Runs on Google Cloud: Cloud Run, "
+        "Firestore, Cloud Scheduler, and Gemini through Vertex AI.</p></footer>"
+    )
+
+    return _page(
+        title="Baraza — an AI partner you can audit",
+        heading="",
+        lede="",
+        body=hero + steps + surfaces + live + record + footer,
+        nav=_public_nav("record"),
+        wordmark_note="memory with due process",
+    )
+
+
+def render_judge_tour() -> str:
+    """A guided path for a first-time visitor, judges especially.
+
+    Static by design: the tour must cost nothing, work logged out, and never
+    invoke a model on a public GET. Each stop says what to open and exactly
+    what to look for, so the product's properties are checkable rather than
+    asserted.
+    """
+    stops = [
+        (
+            "/dossier",
+            "Open the dossier",
+            "This is the file the agent keeps on its user. Each entry is a "
+            "belief with the user's verbatim sentence and an anchor to the "
+            "turn where it was said.",
+            "Every quote has an anchor like turn:t-4 and a timestamp. Note "
+            "the withheld count near the top: beliefs that exist but were "
+            "not published are counted honestly, never shown.",
         ),
-        body=body,
-        active="record",
+        (
+            "/doctrine",
+            "Read the doctrine",
+            "Approved beliefs compile into the working policy the agent "
+            "actually runs under.",
+            "Each rule carries the claim it came from. There is no rule "
+            "without a source sentence, and conflicting approved rules are "
+            "excluded with a notice rather than silently resolved.",
+        ),
+        (
+            "/ledger",
+            "Check the ledger",
+            "Before the agent asks its user anything, it finds what the "
+            "record disagrees with itself about.",
+            "Rows are ranked by stakes. Where the evidence is unpublished, "
+            "the disagreement is still counted, and the page says so instead "
+            "of leaking it.",
+        ),
+        (
+            "/agenda",
+            "See the agenda",
+            "The disagreements become the questions the agent leads its next "
+            "session with. No human writes these.",
+            "Each question names its sources. When a question is answered "
+            "and approved, it retires itself and never comes back.",
+        ),
+        (
+            "/",
+            "Verify the live counts",
+            "Back on the home page, the strip above the published record "
+            "shows the system's own accounting.",
+            "The scheduled-runs figure counts Cloud Scheduler executions and "
+            "nothing else. This product treats honest counting as a feature; "
+            "the address bar you are looking at is the production Cloud Run "
+            "URL.",
+        ),
+    ]
+    body = "".join(
+        '<div class="stop">'
+        f'<span class="num">{index}</span><div>'
+        f'<h3><a href="{_e(href)}">{_e(title)}</a></h3>'
+        f"<p>{_e(what)}</p>"
+        f'<p class="look"><b>Look for:</b> {_e(look)}</p>'
+        "</div></div>"
+        for index, (href, title, what, look) in enumerate(stops, start=1)
+    )
+    intro = (
+        '<p class="section-sub">Five stops, about two minutes. Everything '
+        "is live and logged out; nothing on this path costs anything or "
+        "requires an account. The owner's session console, where beliefs are "
+        "created and ratified, is deliberately private; the demo video shows "
+        "it end to end.</p>"
+    )
+    return _page(
+        title="Baraza — the two-minute tour",
+        heading="The two-minute tour",
+        lede="What to open, in order, and what to look for at each stop.",
+        body=intro + body,
+        nav=_public_nav("tour"),
+        wordmark_note="memory with due process",
     )
 
 

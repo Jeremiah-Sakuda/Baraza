@@ -607,6 +607,11 @@ def create_app() -> FastAPI:
             "events_appended": result.events_appended,
         }
 
+    @application.get("/tour", response_class=HTMLResponse)
+    def tour() -> HTMLResponse:
+        """The judge tour. Static, model-free, logged out by design."""
+        return HTMLResponse(views.render_judge_tour())
+
     @application.get("/doctrine", response_class=HTMLResponse)
     def doctrine() -> HTMLResponse:
         """The compiled operating policy — same doctrine, every rule cited.
