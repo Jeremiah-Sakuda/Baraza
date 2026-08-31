@@ -535,10 +535,10 @@ upsert_job() {
 # would turn one failed night into nine executions in the history, and the
 # history is the evidence.
 upsert_job "$JOB_RECONCILE" "$EMAIL_RECONCILE" \
-  --set-env-vars="BARAZA_JOB=reconcile,BARAZA_RECONCILE_MODE=${BARAZA_RECONCILE_MODE:-stub},BARAZA_PROJECT_ID=${PROJECT},BARAZA_LOCATION=${REGION},BARAZA_OFFLINE=0"
+  --set-env-vars="BARAZA_JOB=reconcile,BARAZA_RECONCILE_MODE=${BARAZA_RECONCILE_MODE:-stub},BARAZA_PROJECT_ID=${PROJECT},BARAZA_LOCATION=global,BARAZA_OFFLINE=0"
 
 upsert_job "$JOB_INGEST" "$EMAIL_INGEST" \
-  --set-env-vars="BARAZA_JOB=ingest,BARAZA_PROJECT_ID=${PROJECT},BARAZA_LOCATION=${REGION},BARAZA_OFFLINE=0"
+  --set-env-vars="BARAZA_JOB=ingest,BARAZA_PROJECT_ID=${PROJECT},BARAZA_LOCATION=global,BARAZA_OFFLINE=0"
 
 if [ "$INGEST_ENTRYPOINT_PRESENT" = "0" ]; then
   info "NOTE: ${JOB_INGEST} is provisioned but its entrypoint (baraza.cli) has"

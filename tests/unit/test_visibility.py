@@ -34,7 +34,7 @@ from baraza.schema.visibility import (
     readable_by,
     redacted_for,
 )
-from baraza.successor.librarian import REFUSAL_TEXT, Librarian
+from baraza.dossier.librarian import REFUSAL_TEXT, Librarian
 from baraza_testkit import FakeLLMClient, asserted, claim, committed, ms, visibility_set
 
 PRIVATE_QUOTE = "The reserve account password was shared with the outgoing chair."

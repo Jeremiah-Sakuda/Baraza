@@ -55,7 +55,7 @@ from baraza.reconcile.ledger import DisputedLedger, LedgerRow
 from baraza.schema.claim import Claim
 from baraza.schema.temporal import to_iso
 from baraza.schema.visibility import Audience
-from baraza.successor.librarian import Librarian
+from baraza.dossier.librarian import Librarian
 
 __all__ = ["app", "create_app", "public_audience"]
 

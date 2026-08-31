@@ -64,8 +64,15 @@ class ModelPin:
 
 # --------------------------------------------------------------------- pins
 
+# Live verification 2026-08-31 (user-token REST + google-genai SDK against
+# project baraza-2026): gemini-3.5-pro DOES NOT EXIST in the Vertex catalog —
+# the pro line is gemini-3.1-pro-preview (< 3.5). gemini-3.7-flash and
+# gemini-3.5-flash both resolve and answer at location=global; both satisfy the
+# hackathon's "Gemini 3.5 or newer" floor. gemini-embedding-001 resolves
+# (3072 dims). The original pins were plausible literals nobody had checked —
+# the exact defect class this module's docstring warns about.
 REASONING: Final[ModelPin] = ModelPin(
-    model_id="gemini-3.5-pro",
+    model_id="gemini-3.7-flash",
     role=(
         "Contradiction adjudication (BAR-320), agenda synthesis, the divergence "
         "turn, and successor-mode synthesis. Every call that must be right more "
@@ -153,5 +160,13 @@ def project_id() -> str:
 
 
 def location() -> str:
-    """Vertex region. Defaults to us-central1, overridable per session."""
-    return os.environ.get("BARAZA_LOCATION", "us-central1")
+    """Vertex location for MODEL calls. Defaults to ``global``.
+
+    Not the Cloud Run region. Verified live 2026-08-31: every current Gemini
+    model in this project's catalog serves from location ``global`` and returns
+    404 from ``us-central1`` — the original regional default made every pinned
+    ID unresolvable regardless of which model was named. Infra (Cloud Run,
+    Scheduler, Artifact Registry) remains regional and is configured
+    separately in deploy/.
+    """
+    return os.environ.get("BARAZA_LOCATION", "global")

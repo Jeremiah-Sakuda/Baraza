@@ -74,8 +74,10 @@ spec:
               value: baraza.interview.service:app
             - name: BARAZA_PROJECT_ID
               value: __PROJECT_ID__
+            # Vertex model location — NOT the Cloud Run region. Verified live
+            # 2026-08-31: Gemini 3.5+ serves from 'global'; regional endpoints 404.
             - name: BARAZA_LOCATION
-              value: __REGION__
+              value: global
             - name: BARAZA_SERVICE_NAME
               value: baraza-interview
             # Explicitly not offline. The offline cassette path is the demo

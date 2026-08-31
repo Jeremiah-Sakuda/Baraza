@@ -69,7 +69,7 @@ from baraza.schema.event import Event, EventType
 from baraza.schema.session import Session, TurnKind, TurnRole
 from baraza.schema.temporal import to_epoch_millis
 from baraza.schema.visibility import Audience, Visibility
-from baraza.successor.librarian import Librarian
+from baraza.dossier.librarian import Librarian
 
 __all__ = ["main", "Console", "OnWriteReconciler", "load_corpus_manifest"]
 

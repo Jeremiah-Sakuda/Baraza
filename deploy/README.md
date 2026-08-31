@@ -43,7 +43,7 @@ BARAZA_PROJECT_ID=your-project make teardown CONFIRM=--yes-destroy
 | `../scripts/teardown.sh` | `make teardown`. Idempotent. Requires `--yes-destroy`. |
 | `../scripts/verify_append_only.sh` | Proves the append-only guarantee against a live project. Reports skipped checks as skipped. |
 | `../src/baraza/interview/service.py` | The interview surface. Reads as `Audience.OWNER`. |
-| `../src/baraza/successor/service.py` | The public surface. Reads as `Audience.PUBLIC`. |
+| `../src/baraza/dossier/service.py` | The public surface. Reads as `Audience.PUBLIC`. |
 | `../src/baraza/telemetry.py` | OpenTelemetry wiring. Spans carry `claim.digest()`, never the quote. |
 
 ---
