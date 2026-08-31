@@ -1,353 +1,278 @@
-# Devpost submission checklist — Baraza
+# Devpost submission checklist — Baraza (DOSSIER pivot)
 
-**Deadline per `docs/PRD.md` §5: Aug 31, 5:00 PM PDT. Aug 30 is the checklist
-walk; Aug 31 is buffer.**
+**Deadline: today, 2026-08-31, 5:00 PM PDT.** This checklist was rewritten
+2026-08-31 against the current state of the tree and the live `baraza-2026`
+project. Items marked done are done because a command ran or a record in the
+repo says so, with the evidence named — not because a file exists.
 
 ## How to read this
 
-Each item is marked with who can close it:
+- **(agent-done)** — closed by a coding session; evidence cited.
+- **(agent)** — closable by a coding session; not yet closed.
+- **(user-only)** — requires your browser, your accounts, your camera, or your
+  judgment.
 
-- **(agent)** — closable by a coding session. No human needed.
-- **(human-only)** — requires a browser, an account, a payment method, a
-  console, a camera, or a judgment a script cannot make.
-- **(agent → human)** — the agent prepares it; a human verifies and submits.
-
-**⚠ Source caveat.** The official rules text is **not in this repository.** It
-was pasted into a session prompt and is not committed anywhere in the tree. Every
-item below is reconstructed from that prompt and from `docs/PRD.md` §4. Before
-submitting, **open the live rules page and re-derive this list against it.**
-Items marked **[VERIFY-RULES]** are ones where the exact wording or threshold
-matters and a paraphrase is not good enough.
+**⚠ Source caveat (still true).** The official rules text is not committed in
+this repository. Every item below derives from the rules as pasted into
+session prompts. Before submitting, open the live rules page and re-derive
+sections A–H against it; items tagged **[VERIFY-RULES]** are where exact
+wording matters.
 
 ---
 
 ## A. Category and eligibility
 
-- [ ] **(human-only)** Category selected on the Devpost form: **The Collaborative
-      Partner**. Text prepared in `devpost-description.md`.
-- [ ] **(human-only)** Confirm one-prize-per-project still applies and that
-      selecting one category does not forfeit consideration under the others.
-      **[VERIFY-RULES]**
-- [ ] **(human-only)** Entry submitted as an individual, matching how the project
-      is described everywhere else.
-- [ ] **(human-only)** Confirm eligibility (region, age, employment) against the
-      live rules. **[VERIFY-RULES]**
-- [ ] **(human-only)** Submission opened on the correct Devpost project page and
-      the project is not left in draft.
+- [ ] **(user-only)** Category selected on the form: **The Collaborative
+      Partner**. Text prepared in `devpost-description.md` (rewritten for the
+      dossier pivot, 2026-08-31 — do not paste an older cached copy).
+- [ ] **(user-only)** Confirm one-prize-per-project and cross-category
+      consideration against the live rules. **[VERIFY-RULES]**
+- [ ] **(user-only)** Entry submitted as an individual, matching how the
+      project describes itself everywhere.
+- [ ] **(user-only)** Eligibility (region, age, employment) confirmed against
+      the live rules. **[VERIFY-RULES]**
+- [ ] **(user-only)** Submission is on the correct Devpost project page and not
+      left in draft.
 
 ---
 
 ## B. Hosted project URL
 
-- [ ] **(human-only)** A hosted URL exists and is reachable. **Nothing is
-      deployed as of this writing.** `deploy/` now carries the Dockerfiles,
-      the two Cloud Run service manifests, the Scheduler manifest and the
-      Firestore rules, and `scripts/bootstrap_gcp.sh` exists and is
-      syntax-clean — but none of it has been run against a project.
-- [ ] **(human-only)** URL loads **logged out**, in a private/incognito window,
-      from a machine that has never authenticated to the project. Not "should
-      work" — actually opened and confirmed.
-- [ ] **(human-only)** The logged-out view demonstrates something. A login wall
-      that a judge cannot get past is functionally a dead link.
-- [ ] **(human-only)** The URL stays live and **free to access until at least
-      Oct 1**. **[VERIFY-RULES]** — confirm the exact date on the rules page.
-- [ ] **(human-only)** Billing configured so the service is not suspended before
-      that date, and budget alerts set. A judged URL that 404s in September
-      because credits ran out is a self-inflicted loss.
-- [ ] **(agent)** No credential, key, project ID, or service-account file is
-      reachable from any public surface. Verify `.gitignore` coverage and grep
-      the working tree before the repo goes public.
-- [ ] **(human-only)** The hosted instance contains **no real person or
-      organization data.** The corpus is synthetic; confirm by reading the
-      rendered page, not by trusting the fixture generator.
+- [x] **(agent-done)** A deployment exists. `baraza-2026` is live: Firestore
+      with append-only rules verified live, Artifact Registry images, four
+      least-privilege service accounts, two Cloud Run jobs, two Cloud Run
+      services. Evidence: `STOPPED-DEPLOY.md` (2026-08-15) and commit
+      `c5bb3fa`. The public URL verified then, HTTP 200 logged out:
+      `https://baraza-successor-tlaymplktq-uc.a.run.app`.
+- [ ] **(user-only)** Confirm which URL is current on submission day. If the
+      dossier web face (WS2) redeployed the public surface under a new service
+      name, the form, the video narration, and this file must all carry the
+      **same** URL. One URL, three places, byte-identical.
+- [ ] **(user-only)** URL loads **logged out**, in a private window, from a
+      machine that never authenticated to the project. Actually opened, not
+      "should work."
+- [ ] **(user-only)** The logged-out view demonstrates something — the judge
+      pages must render without credentials. A login wall is a dead link.
+- [ ] **(user-only)** URL stays live and free to access through the judging
+      window (do **not** run `make teardown` before Oct 1). **[VERIFY-RULES]**
+      on the exact end date.
+- [ ] **(user-only)** Billing budget alert set so the service is not suspended
+      mid-judging.
+- [x] **(agent-done)** No credential, key, or service-account file reachable
+      from any public surface — full-history secret scan came back clean before
+      the repo went public (`docs/BY-HAND.md` H1).
+- [ ] **(user-only)** The hosted instance shows no real person or organization
+      data. The corpus is synthetic and the dossier subject is the builder
+      himself; confirm by reading the rendered pages, not the generator.
 
 ---
 
 ## C. Repository access
 
-- [ ] **(human-only)** Repository is public **or** access is granted to **both**
-      of these, per the rules:
-      - `testing@devpost.com`
-      - `cloudhackathons@google.com`
-      Granting one and not the other is a common and fatal miss.
-- [ ] **(human-only)** If the repo is private, access is granted with permissions
-      that survive the judging window (not a time-limited invite that expires).
-- [ ] **(agent)** Repository contains no secrets, no service-account JSON, no
-      `.env`. `.gitignore` already covers these; confirm with a history scan, not
-      just a working-tree scan — a secret committed and later deleted is still in
-      the history.
-- [ ] **(agent)** No real person, member, company, or organization name appears
-      anywhere in the tree — code, fixtures, comments, docs, commit messages.
-- [x] **(agent)** License file present and consistent with `pyproject.toml`.
-      `LICENSE` is the Apache-2.0 text; `pyproject.toml` declares Apache-2.0.
+- [x] **(agent-done)** Repository is **public** at
+      <https://github.com/Jeremiah-Sakuda/Baraza>. Public satisfies the access
+      requirement outright; the grants to `testing@devpost.com` and
+      `cloudhackathons@google.com` are only needed if it ever goes private —
+      in that case grant **both**, with invites that survive the judging
+      window.
+- [ ] **(user-only)** Open the repo URL in a private window on submission day
+      and confirm it is still public and shows the latest push.
+- [x] **(agent-done)** No secrets in history or working tree (scan cited in
+      §B). `.gitignore` covers env files and service-account JSON.
+- [ ] **(agent)** Re-grep the tree before the final push: no real person,
+      member, or company named anywhere — code, fixtures, comments, docs,
+      commit messages.
+- [x] **(agent-done)** `LICENSE` (Apache-2.0) present and consistent with
+      `pyproject.toml`.
 
 ---
 
 ## D. README with spin-up instructions
 
-- [x] **(agent)** `README.md` exists and `pyproject.toml`'s `readme` key
-      resolves. Its status table is the per-command exit-code record; re-run
-      those commands and re-date the table before submitting, because a status
-      table is stale the moment a session lands.
-- [ ] **(agent)** README states what the project is in the first three lines, in
-      the PRD §1.3 order.
-- [ ] **(agent)** README contains **spin-up instructions a stranger can follow**:
-      clone → `make install` → `make demo`, with the prerequisites named
-      (Python 3.11+, no GCP project required for the offline path).
-- [ ] **(agent)** README documents the seven contract make targets and what each
-      proves.
-- [ ] **(agent)** README cites the divergence turn by ID (e.g. "see turn `t-14`")
-      so a judge can locate the exact exchange in a committed transcript.
-      Requires committed transcripts to exist first.
-- [ ] **(agent)** README's `## Negative decisions` section, per BAR-501 — no
-      vector DB, no ML entity matcher, no destructive merges, no voice, and the
-      adaptation mechanism considered and not adopted.
+- [ ] **(agent)** README rewritten for the dossier framing (WS7). The pitch in
+      the first three lines is the dossier pitch, not the succession pitch.
+      Until this lands, the README contradicts the submission.
+- [ ] **(agent)** Spin-up instructions a stranger can follow: clone →
+      `make install` → `make demo`, prerequisites named (Python 3.11+, no GCP
+      project required for the offline path).
 - [ ] **(agent)** Every number in the README traces to a metrics entry or a
-      runnable script. Where none exists, the README says `not yet measured`.
-- [ ] **(human-only)** A **clean clone on a different machine** runs
-      `make install && make demo` green with no network access except Vertex
-      (PRD §5, Aug 25 reproducibility gate). This cannot be self-certified from
-      the machine that built it.
+      runnable script; where none exists it says `not yet measured`.
+- [ ] **(user-only)** Clean clone on a **different machine** runs
+      `make install && make demo` green. Cannot be self-certified from the
+      machine that built it.
 
 ---
 
 ## E. Architecture diagram
 
-- [x] **(agent → human)** Diagram exists (BAR-505). Two of them:
-      `docs/architecture.md` (Mermaid, renders inline on GitHub) and
-      `docs/architecture.svg` (16 KB, self-contained, tracked, legible in light
-      and dark, with a full prose `<desc>` for screen readers). This line used to
-      read "**None exists in the tree**" and had been wrong since B3.
-- [x] **(agent)** Diagram shows the Google Cloud services by name: Cloud Run Jobs
-      (ingestion, `baraza-reconcile`), Cloud Run services (exit interview,
-      successor), Firestore, Cloud Scheduler, Vertex AI.
-- [x] **(agent)** Diagram shows the stages and what each may write, including the
-      line that matters — approval is the only writer of `claim.committed`, and
-      the dashed visibility boundary every reader crosses. It labels lanes rather
-      than agent objects; the per-agent tool matrix lives in
-      `src/baraza/agents.py` and `docs/compliance.md`.
-- [x] **(agent)** Diagram displays **no unmeasured number.** The only figures on
-      it are design constants and arithmetic that follows from them
-      (`MAX_RETRIEVED = 20`; `3000 × 2999 / 2 = 4,498,500`), and the pre-filter
-      rate is printed as `not yet measured`.
-- [x] **(agent)** Diagram names **no framework the code does not import.** It
-      names no framework at all.
-- [ ] **(human-only)** Diagram is embedded in the Devpost gallery and readable at
-      the size Devpost renders it. Test at gallery scale, not at full size.
+- [x] **(agent-done)** Diagram exists: `docs/architecture.md` (Mermaid) and
+      `docs/architecture.svg` (self-contained, legible in light and dark),
+      naming the Google Cloud services (Cloud Run services and jobs, Firestore,
+      Cloud Scheduler, Vertex AI), showing that approval is the only writer of
+      `claim.committed`, displaying no unmeasured number and naming no
+      framework the code does not import.
+- [ ] **(agent)** Update the diagram's labels for the pivot where they still
+      say "successor"/"exit interview" — the mechanism is unchanged but a judge
+      reading the diagram against the video must not find two projects.
+- [ ] **(user-only)** Diagram embedded in the Devpost gallery and readable at
+      the size Devpost renders it.
 
 ---
 
 ## F. Video
 
-- [ ] **(human-only)** Recorded from `docs/submission/video-script.md`.
-- [ ] **(human-only)** **Duration ≤ 4:00**, verified in the editor's timeline, not
-      estimated. Script is budgeted to 3:50.
-- [ ] **(human-only)** Uploaded to **YouTube or Vimeo**. **[VERIFY-RULES]** —
-      confirm which platforms are accepted.
-- [ ] **(human-only)** Video is **public**, not unlisted, if the rules require
-      public. **[VERIFY-RULES]** Confirm by opening the link logged out, in a
-      private window.
-- [ ] **(human-only)** No copyrighted music. Silence is fine.
-- [ ] **(human-only)** **Google Cloud proof frames present** (mandatory):
-      - [ ] Cloud Run console showing the deployed services and jobs
-      - [ ] Vertex AI request logs
-      - [ ] Cloud Scheduler **execution history** with nightly runs visible
-- [ ] **(human-only)** The `.run.app` URL is **spoken aloud** and visible on
-      screen, and is the same URL submitted on the form.
-- [ ] **(human-only)** The centrepiece terminal section is one unedited take —
-      no cuts, no speed ramps.
-- [ ] **(human-only)** Every visible string in every frame is synthetic. Freeze
-      and read the corpus frames before the cut is locked.
-- [ ] **(human-only)** No unmeasured number is spoken or captioned. Cross-check
-      against the "what must NOT be claimed" list in the script.
-- [ ] **(human-only)** Video link added to the Devpost form **and** the link
-      opens for a logged-out viewer.
+- [ ] **(user-only)** Recorded from `docs/submission/video-script.md`
+      (rewritten 2026-08-31 for the dossier demo — the old succession script
+      is gone; record from the current file only).
+- [ ] **(user-only)** Duration ≤ 4:00, verified in the editor's timeline.
+      Script is budgeted to 3:50.
+- [ ] **(user-only)** Uploaded to YouTube or Vimeo. **[VERIFY-RULES]** on
+      accepted platforms and on public-vs-unlisted; confirm by opening the
+      link logged out.
+- [ ] **(user-only)** No copyrighted music. Silence is fine.
+- [ ] **(user-only)** Google Cloud proof frames present (mandatory):
+      - [ ] Cloud Run console — deployed services and jobs
+      - [ ] Vertex AI request logs — `gemini-3.7-flash` / `gemini-3.5-flash`
+            calls visible
+      - [ ] Cloud Scheduler execution history — **only if the trigger fix has
+            landed and runs are green**; otherwise film the Run job execution
+            list and use the honest fallback narration in the script (Shot 5
+            precondition).
+- [ ] **(user-only)** The `.run.app` URL spoken aloud, visible on screen, and
+      identical to the URL on the form.
+- [ ] **(user-only)** The centrepiece (Shot 3) is one unedited take against
+      live Vertex — no cuts, no cassettes.
+- [ ] **(user-only)** Every visible string in every frame is synthetic or the
+      builder's own. Freeze-frame pass before locking the cut.
+- [ ] **(user-only)** No unmeasured number spoken or captioned — walk
+      Appendix B of the script against the locked cut.
+- [ ] **(user-only)** Video link added to the form and opens for a logged-out
+      viewer.
 
 ---
 
 ## G. Language
 
-- [ ] **(agent)** All submission text is in English: description, README, repo
-      docs, diagram labels.
-- [ ] **(human-only)** Video narration and any on-screen text is in English, or
-      subtitled in English. **[VERIFY-RULES]**
+- [x] **(agent-done)** All submission text is in English: description, README,
+      repo docs, diagram labels, this directory.
+- [ ] **(user-only)** Video narration and on-screen text in English (or
+      English-subtitled). **[VERIFY-RULES]**
 
 ---
 
 ## H. Bonus URLs
 
-- [ ] **(human-only)** **Blog post** published (dev.to or Medium) from
-      `blog-post.md`, and the URL added to the submission.
-- [ ] **(human-only)** Blog post contains the required "created for the purposes
-      of entering this hackathon" statement, in the **exact wording the rules
-      specify**. **[VERIFY-RULES]** — the draft carries a paraphrase and a note
-      to replace it.
-- [ ] **(human-only)** **Social posts** published from `social-posts.md` (X and
-      LinkedIn), each carrying `#AllThingsAgenticHackathon` exactly.
-- [ ] **(human-only)** Social post URLs added to the submission form.
-- [ ] **(human-only)** Posts are **publicly visible** — a LinkedIn post set to
-      connections-only earns nothing.
-- [ ] **(agent → human)** **Additional models** bonus: Gemma as the ingestion
-      relevance pre-filter, pinned in `src/baraza/schema/models.py`. This rests
-      on Gemma alone now — the embedding pin that used to be cited alongside it
-      has been deleted, because nothing in the tree embedded anything and a
-      bonus claimed on an unbuilt component is worse than no bonus. The claim is
-      only submittable once the pre-filter has actually run in `gemma` mode in a
-      supervised session — currently `gemma_prefilter_mode_used` is
-      `not yet measured`, so **the bonus is not yet earned.** **[VERIFY-RULES]**
-      on what counts as "used".
+- [ ] **(user-only)** Blog post published (dev.to or Medium) from
+      `blog-post.md` and the URL added to the submission. The draft's first
+      line carries the "created for the purposes of entering this hackathon"
+      statement — **[VERIFY-RULES]** confirm the exact required wording and
+      adjust before publishing.
+- [ ] **(user-only)** Social posts published from `social-posts.md` (one X, one
+      LinkedIn variant), each carrying `#AllThingsAgenticHackathon` exactly,
+      each publicly visible, URLs added to the form. Replace `<VIDEO-URL>` /
+      `<BLOG-URL>` placeholders before posting.
+- [ ] **(user-only)** **Additional-models bonus: claim only if earned.** The
+      Gemma pre-filter's endpoint-aware call path was deliberately left
+      unwritten (see `docs/FINDINGS.md`, B5 addendum) and
+      `gemma_prefilter_mode_used` is `not yet measured`. Unless that changed
+      in a supervised session with evidence, **do not claim this bonus.**
 
 ---
 
 ## I. Google Cloud requirements
 
-- [x] **(agent → human)** **≥1 Google agent framework used.** **Met.**
-      `src/baraza/agents.py` (import block, lines 118-122) imports `LlmAgent`,
-      `RunConfig`, `InMemoryRunner` and `FunctionTool` from `google.adk`;
-      `build_extractor` / `build_reconciler` /
-      `build_interviewer` return real `LlmAgent` instances, and
-      `tests/unit/test_agents.py::test_agents_are_genuinely_adk_agents` asserts
-      `isinstance` against the ADK class. Verify with
-      `grep -rn "google\.adk" src/` → 7 hits. Second, independent basis: the
-      GenAI SDK is on every model call path (three `from google.genai import
-      types` sites in `src/baraza/llm.py`).
-- [x] **(agent)** **Put an ADK agent on the production call path.** Done in B5.
-      `baraza.ingest.extract.AgentClaimExtractor` binds `read_chunk` and
-      `propose_claim` to the chunk and the three validation gates, drives the
-      extractor through an ADK `Runner`, and bounds it with
-      `RunConfig(max_llm_calls=MAX_AGENT_TURNS)` and an `asyncio.wait_for`.
-      `IngestionPipeline` selects it on any non-offline run.
-      `grep -rn "baraza.agents" src/` now returns `ingest/extract.py`.
-      **Two limits to state out loud:** the reconciler and interviewer are still
-      built-but-not-driven, and offline replay is deliberately the direct path,
-      so nothing shown from `make demo` is an ADK loop.
-- [x] **(agent)** `docs/framework-decision.md` updated to record which branch
-      actually shipped (the primary; the fallback trigger was never tested), and
-      the compliance matrix updated to match.
-- [ ] **(human-only)** **≥1 Google Cloud infrastructure service used**, provably:
-      Cloud Run, Firestore, Cloud Scheduler. Requires deployment.
-- [ ] **(human-only)** Vertex AI used for all model calls, with logs to prove it.
-- [ ] **(agent)** `make verify-models` runs green. The script exists;
-      **it has never run.** It exits **3** ("could not run") because
-      `BARAZA_PROJECT_ID` is unset and is deliberately not defaulted. Until it
-      exits 0, no artifact states which model version shipped.
-- [ ] **(human-only)** Scheduler execution history shows **≥10 nightly reconcile
-      runs** before recording day (BAR-410), with the stub-to-real replacement
-      date identifiable. ⏳ **Time-gated — requires ten nights.** Nothing is
-      deployed, so the clock has not started.
-- [ ] **(agent)** Scheduler runs are labelled as scheduled anywhere runs or
-      traffic are counted. Never presented as organic activity.
+- [x] **(agent-done)** ≥1 Google agent framework used: ADK agents built and an
+      ADK `Runner` on the production extraction path
+      (`src/baraza/ingest/extract.py`; `grep -rn "google\.adk" src/`). The
+      GenAI SDK is on every model call path (`src/baraza/llm.py`). Two honest
+      limits, stated in `docs/compliance.md`: the reconciler and interviewer
+      agents are built but reach the model through `llm.py`, and offline
+      replay is deliberately the direct path — nothing filmed from `make demo`
+      is an agent loop.
+- [x] **(agent-done)** ≥1 Google Cloud infrastructure service used, provably:
+      Cloud Run, Firestore, Cloud Scheduler all deployed on `baraza-2026`
+      (`STOPPED-DEPLOY.md`, commit `c5bb3fa`).
+- [x] **(agent-done)** Model pins live-verified against Vertex on 2026-08-31:
+      `gemini-3.7-flash` (reasoning), `gemini-3.5-flash` (fast),
+      `gemini-embedding-001`, location `global` — recorded in
+      `src/baraza/schema/models.py` (commit `9c05a46`). The originally pinned
+      pro model **did not exist** in the catalog; this is why the
+      verify-before-quote rule exists.
+- [ ] **(user-only)** Vertex AI request logs captured for the video, showing
+      the two Gemini models under project `baraza-2026`.
+- [ ] **(user-only)** Scheduler: the direct trigger 403s (root-caused
+      2026-08-31 to Scheduler's OAuth token path — `STOPPED-DEPLOY.md`
+      update). The OIDC-via-service fix is WS1's to deploy. On submission day,
+      state only what the execution history actually shows; scheduled runs are
+      labelled `scheduled` wherever counted, never presented as organic.
+- [ ] **(agent)** After any deploy change: `scripts/verify_append_only.sh`
+      green, and the job image postdates commit `0fca155` so manual runs are
+      not recorded as scheduled.
 
 ---
 
-## J. Repo-internal blockers that gate everything above
+## J. Repo-internal blockers that gate the demo
 
-Recorded here because a submission checklist that ignores the state of the tree
-is a wish list. Re-verified by running every command on **2026-08-13** (session
-B3); the closed items below are closed because a command was run, not because a
-file appeared.
+Re-derived 2026-08-31 for the pivot. The WS numbers are the DECISION doc's
+build plan (`docs/pivot/DECISION-dossier.md` §3).
 
-**Still red:**
-
-- [ ] **(agent)** `fixtures/cassettes/` holds no recordings, so `make demo`,
-      `make demo-agenda` and `make demo-interview` all exit 2 before doing any
-      work. **This is now the top blocker** — it is upstream of the transcripts,
-      of every behavioural probe in `make verify-manifest`, of every citation in
-      `make verify-anchors`, and of `make adaptation-metric`. Recording is a
-      supervised step: `python3 scripts/record_cassettes.py --yes`, which costs
-      live Vertex calls.
-- [ ] **(agent)** `docs/PRD.md` merged, so `make compliance` runs its actual
-      BAR-007 audit instead of exiting 2. ~35 requirement IDs currently have no
-      acceptance criteria in the tree. `make gate` is red for this reason alone.
-- [x] **(agent)** `docs/antigravity/decision.md` was a **placeholder** carrying a
-      second-hand negative claim about another vendor's SDK. Resolved the way the
-      file itself prescribed for an unlocatable source: deleted, citation removed
-      from the framework decision, and `docs/framework-decision.md` now states
-      plainly that ADK was chosen without a published comparison. Nothing was
-      summarized from memory. If the original Aug 8 finding is ever located, it
-      can be added with an attribution header and the justification upgraded —
-      but the submission does not depend on it.
-- [ ] **(agent)** `fixtures/transcripts/` does not exist; it is written by replay
-      runs, so it unblocks when the cassettes land.
-- [ ] **(agent)** `fixtures/golden-log.jsonl` does not exist. `AGENTS.md`'s repo
-      layout names it; the verifiers look for it and fall back to
-      `out/events.jsonl`.
-- [ ] **(agent)** `baraza.agents` is imported only by `tests/unit/test_agents.py`.
-      ADK **is** imported and the fleet **is** built — the old "no module imports
-      ADK" entry is resolved — but no production caller drives an ADK `Runner`
-      yet. See section I and `docs/compliance.md`.
-- [ ] **(agent)** `docs/BUILD-LOG.md` has no entry for sessions **B1** or **B2**,
-      both of which are in the commit history. The session protocol requires the
-      entry before the commit; two sessions skipped it, and the prompts are not
-      recoverable after the fact.
-
-**Now green, each verified by running it on 2026-08-13:**
-
-- [x] `src/baraza/cli.py` exists and all four CLI-backed targets reach their
-      cassette check before failing.
-- [x] `scripts/verify_manifest.py` — `found 18 of 18 planted problems`, exit 2
-      pending an event log.
-- [x] `scripts/verify_anchors.py` — 11 sources re-registered from bytes on disk,
-      exit 2 pending an event log.
-- [x] `scripts/adaptation_metric.py` — exit 1, refuses to score an empty corpus
-      of transcripts rather than printing a zero.
-- [x] `scripts/generate_corpus.py` — exit 0, 13 artifacts, every one round-tripped
-      through the project's own readers.
-- [x] `scripts/verify_models.py`, `scripts/with_emulator.sh` — exist; both report
-      "could not run" honestly when their prerequisite is absent.
-- [x] `fixtures/` carries `BIBLE.md`, `MANIFEST.md`, the generated corpus, the
-      entity gold set and both interview personas.
-- [x] `tests/` — `tests/unit` and `tests/property` pass in full; `make test`
-      prints the count, which is not transcribed here because a transcribed
-      count is wrong after the next commit. `tests/emulator` holds the SIGKILL
-      rig; its JSONL half passes with no emulator
-      (`pytest tests/emulator -k jsonl`).
-- [x] `deploy/` carries both Dockerfiles, both service manifests, the Scheduler
-      manifest, the Firestore rules, `bootstrap_gcp.sh` and `teardown.sh`. Every
-      shell script in `scripts/` and `deploy/` passes `bash -n`.
-- [x] `LICENSE` and `README.md` both exist.
-- [x] `python3 scripts/compliance.py --no-prd` passes all four invariant lints
-      (visibility boundary, model pin location, temporal comparison, metrics
-      provenance), each originally verified by planting a violation and watching
-      it fail.
+- [ ] **(agent)** WS2 web face deployed — claim panel, agenda rail, divergence
+      card, dossier list with Reject, doctrine view, approval queue. Every shot
+      in the video renders in it. **Absent is fatal; adequate is acceptable.**
+- [ ] **(agent)** WS3 belief engine — turn-level extraction (quote + `turn:t-N`
+      anchor, fabricated-anchor stop intact) and the doctrine compiler with
+      rule←claim provenance, property-tested for byte stability.
+- [ ] **(agent)** WS1 initiation — Scheduler fix deployed, `initiate.py`
+      appending honestly-labelled `session.proposed` events, outbound
+      invitations flowing, and **real dogfooding sessions in the log** (elapsed
+      time is the deliverable; it cannot be backfilled).
+- [ ] **(agent)** WS4 contradiction-on-the-user live in the session view, with
+      the retired mechanism named in DECISION §4 fully off the live path.
+- [ ] **(agent)** WS5 doctrine diff + rewritten `scripts/adaptation_metric.py`
+      (determinism replay + compliance battery, imports nothing from the
+      package). Until the battery runs, both numbers are `not yet measured`.
+- [ ] **(agent)** `fixtures/transcripts/` populated via cassette recording
+      (`scripts/record_cassettes.py`, supervised — costs live Vertex calls).
+      Currently empty; upstream of `make demo` and the metric.
+- [ ] **(agent)** WS7 realignment — README, PRD narrative, and
+      `docs/architecture.*` rewritten to the dossier framing; `dossier/` rename
+      already landed (commit `9c05a46`, test suite green after the rename).
 
 ---
 
-## K. Day-of submission walk (Aug 30)
+## K. Day-of submission walk (today)
 
-Do these in order, on the day, in one sitting:
-
-1. **(human-only)** Open the live rules page. Re-derive sections A–H against it.
-   Note every **[VERIFY-RULES]** item resolved.
-2. **(agent)** `make gate` green on a clean clone.
-3. **(human-only)** Clean clone on a second machine; `make install && make demo`.
-4. **(human-only)** Open the hosted URL in a private window. Click through the
-   demo path as a logged-out judge would.
-5. **(human-only)** Open the video link in a private window. Watch it to the end.
-   Confirm the timer stops at or under 4:00.
-6. **(human-only)** Open the repo URL in a private window, or confirm both
-   access grants are live.
-7. **(human-only)** Open the blog URL and both social URLs in a private window.
-8. **(agent)** Grep every submission artifact for placeholders: `<`, `TODO`,
-   `TBD`, `XXX`. Zero hits before submitting.
-9. **(agent)** Grep every submission artifact for numbers. Every one traces to a
-   metrics entry with a run ID, or the artifact says `not yet measured`.
-10. **(human-only)** Paste `devpost-description.md` into the form field by field.
-    Category: The Collaborative Partner.
-11. **(human-only)** Submit. Then reload the public submission page **logged
-    out** and read it as a judge would.
-12. **(agent)** Append the submission to `docs/BUILD-LOG.md` with the URLs, and
+1. **(user-only)** Open the live rules page; resolve every **[VERIFY-RULES]**
+   tag above.
+2. **(agent)** `PYTHONPATH=src .venv/bin/python -m pytest -q` green;
+   `.venv/bin/python scripts/compliance.py --no-prd` green.
+3. **(user-only)** Hosted URL in a private window; click through as a
+   logged-out judge.
+4. **(user-only)** Video link in a private window, watched to the end, timer
+   ≤ 4:00.
+5. **(user-only)** Repo URL in a private window — public, current.
+6. **(user-only)** Blog and social URLs in a private window.
+7. **(agent)** Grep every submission artifact for `TODO`, `TBD`, `XXX`, and
+   `<` placeholders. The only permitted angle-bracket tokens are the
+   deliberately-unfilled URL slots this checklist names.
+8. **(agent)** Grep every submission artifact for numbers: each traces to
+   `docs/metrics.json` with a run ID, or the artifact says `not yet measured`
+   (Devpost fields excepted — there, unmeasured numbers are omitted entirely).
+9. **(user-only)** Paste `devpost-description.md` field by field. Category:
+   The Collaborative Partner. Built With includes `google-adk`.
+10. **(user-only)** Submit, then reload the public submission page logged out
+    and read it as a judge.
+11. **(agent)** Append the submission to `docs/BUILD-LOG.md` with the URLs and
     record in `docs/FINDINGS.md` what was still unmeasured at submission time.
 
 ---
 
 ## What this checklist will not do for you
 
-It will not tell you that a number is wrong. Every artifact in
-`docs/submission/` currently writes `not yet measured` where a number belongs,
-because that is the true state. The moment a measurement run produces a real
-value, it goes into `docs/metrics.json` with a run ID and a date, and **only
-then** does it appear in a description, a diagram, a post, or a narration line.
-
-The failure mode this whole directory is built against: a plausible number typed
-into a submission field at 4 a.m. because the field looked empty.
+It will not tell you that a number is right. Every repo artifact writes
+`not yet measured` where an unmeasured number belongs, because that is the
+true state; Devpost fields omit unmeasured numbers instead of announcing them.
+A value enters any surface only after it lands in `docs/metrics.json` with a
+run ID and a date. The failure mode this directory is built against: a
+plausible number typed into a submission field at 4 a.m. because the field
+looked empty.

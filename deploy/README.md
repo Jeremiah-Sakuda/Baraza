@@ -373,6 +373,8 @@ Recorded here so they are found by reading rather than by being surprised.
    are what stop everyone else.
 
 5. **No metric in `docs/metrics.json` has been filled in by this lane.**
-   `scheduler_nightly_runs_completed` and
+   `initiated_sessions_scheduled_count` (each Scheduler-fired run appends its
+   `session.proposed` event labelled `scheduled` — never counted as organic
+   activity) and
    `scheduler_stub_to_real_replacement_date` stay `"not yet measured"` until
    there is an execution history to count. The command that counts it is above.

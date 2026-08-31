@@ -1,267 +1,179 @@
-# Baraza
+# Baraza — memory with due process
 
-> **Every May, thousands of organizations forget everything.**
+Every AI product is bolting on "memory," and every one of them is an opaque blob
+the user can neither inspect nor correct. Baraza is a working partner whose every
+belief about you is a **claim with a verbatim quote and a turn anchor**, appended
+to a log that provably rejects edits. It catches you contradicting your own
+guidance and makes you resolve it with both quotes on screen. It will not act on
+any belief you have not ratified. Adaptation stops being a vibe and becomes due
+process: you can open the file it keeps on you, see why every rule exists,
+retract any of it — and the next session runs under the amended doctrine, with
+every rule citing the claim that put it there.
 
-Baraza is succession intelligence: it reads years of an organization's accumulated
-mess — chat exports, a skew-scanned constitution, headerless budget sheets, meeting
-minutes — and asks the corpus what it disagrees with itself about. It turns those
-disagreements into a ranked ledger and an interview agenda no human wrote, then
-conducts the exit interview with the departing officer, holding their testimony
-against the documentary record and naming the divergence in the moment it appears.
-Approved answers become committed memory with an explicit visibility choice, and a
-resolved question retires itself, so the next interview is shorter than the last.
+The name is literal. A *baraza* is the council where disputes are heard on the
+record. The dispute this one convenes is you-of-Tuesday versus you-of-Thursday.
 
 ---
 
-## The friction
+## What it does
 
-Officer turnover is annual and total. The handover is a document written at 1 a.m.
-by someone who has already mentally left, and it contains the things that were easy
-to write down.
+Six mechanisms, one substrate:
 
-What it does not contain is where the institution actually lives:
-
-- The chat thread with four years of decisions in it, which nobody has ever exported.
-- The constitution, scanned crooked in some prior year, amended twice since in
-  minutes that were never folded back into it.
-- The budget workbook whose header row was deleted at some point and never restored,
-  so column `B` means something only to a person who no longer answers email.
-- The three separate answers to "who can sign for the account", each of which was
-  true at a different time, none of which is dated in the place you would look.
-
-The incoming officer inherits an account and a calendar and no way to tell a settled
-fact from a contested one. The failure is not that the records are missing. It is
-that they disagree, nobody has ever compared them, and the one person who could
-reconcile them leaves in May.
-
-Baraza does the comparison before that person leaves, and asks them about the
-specific places the record fights itself — with citations on both sides.
+1. **It opens the session.** A scheduled reconcile pass ends by generating the
+   agenda from open contradictions and stale beliefs, appends a
+   `session.proposed` event honestly labelled `scheduled`, and notifies you. The
+   session opens with the agent speaking first: a numbered plan, each item citing
+   the ledger entry that spawned it. Initiation is proven by timestamps in an
+   append-only log, not by a staged push.
+2. **It takes notes you can audit.** Every preference, rule and judgment in your
+   turns becomes a `Claim` — quote mandatory, anchor `turn:t-N`, fabricated
+   anchor a stop condition — appended to a Firestore log whose deployed rules
+   reject update and delete. Try the edit in the console; the rule refuses.
+3. **It asks only earned questions.** A clarifying question exists because the
+   disputed ledger says two of your own statements collide, or because a rule is
+   too under-specified to compile. Both quotes render on the divergence card, and
+   the agent refuses to silently overwrite the old rule until you adjudicate.
+4. **It guides the work item by item.** The agenda state machine drives a real
+   drafting session; a resolved contradiction retires its own agenda item, so
+   session N+1 is shorter than session N and the retirement events link them in
+   the log.
+5. **Feedback is the approval gate.** No belief reaches `committed` — and
+   therefore behavior — without you ratifying it through an approver that has no
+   model. The Dossier view lists every belief with its quote and the moment it
+   was learned; one click rejects, the retraction is itself an append-only
+   event, and the same task reruns differently.
+6. **It adapts on the record.** The doctrine compiler folds committed beliefs
+   into the session's operating policy — same doctrine, every rule cited. The
+   doctrine diff between epochs shows which belief changed which rule, by claim
+   ID and quote.
 
 ---
 
 ## How it works
 
-### The append-only log, the fold, the graph
-
-There is no mutable graph store. Every write is an event appended to a log —
-`claim.asserted`, `claim.adjudicated`, `contradiction.detected`, `claim.committed`,
-`claim.rejected`, `claim.visibility_set`, `entity.alias_linked`, `session.turn`,
-`heartbeat`. Event IDs are content hashes, so a Cloud Run Job that dies halfway and
-is retried appends nothing twice.
-
-`claim.adjudicated` is the nightly reconciler recording which claims it has already
-examined, and it is worth a sentence because of what it replaced. The job used to
-work out its own backlog by comparing `claim.observed_at` against the previous
-heartbeat — but `observed_at` is the instant the *source document was authored*, not
-the instant the claim was written, and the corpus starts in 2016. Every claim was
-older than every heartbeat, so once one night had run the filter selected the empty
-set on every night after it: the job exited 0, made zero model calls, and found
-nothing, forever. The fix was not a better timestamp. It was to stop inferring and
-let the log carry the fact, which is what the rest of the system already does.
-
-Every rendered graph state is a **fold** over that log (`src/baraza/fold/graph.py`).
-There is no cache that can drift from the log and no code path that mutates a graph
-state in place. If a graph looks wrong, the log is the truth and the fold is the bug.
-Fixing bad data means appending a superseding event, never editing one. In
-production, `create()` is the only write verb the store exposes and the Firestore
-security rules reject update and delete at the database level, so an application bug
-cannot mutate history even if it tries.
-
-The fold is deterministic because events are ordered by `(occurred_at_millis,
-event_id)` — integers, never strings. That is the whole reason a permutation test on
-serialized UTC offsets can assert a byte-identical graph.
-
-### Contradiction detection on write, and the arithmetic that forces it
-
-A decade of a student organization's records yields on the order of **3,000 claims**.
-That is the design assumption; the measured count for this corpus is `not yet
-measured` (`docs/metrics.json`, key `claims_extracted_total`).
-
-An all-pairs contradiction sweep over 3,000 claims is
-
 ```
-3000 × 2999 / 2  =  4,498,500 comparisons
+your turns ──► claims (quote + turn:t-N anchor)
+                  │ append-only log (Firestore rules reject update/delete)
+                  ▼
+            fold over the log ──► disputed ledger ──► agenda
+                  │                                     │
+                  ▼                                     ▼
+            DOCTRINE (committed beliefs only)     partner session
+                  ▲                                     │
+                  │        approval gate (no model) ◄───┘
+                  └── claim.committed / claim.rejected
 ```
 
-At one model call per comparison, that is not a system, it is a bill. Batching does
-not save it either — it changes the constant, not the 4.5 million.
+**Claims.** Extraction targets judgment shape — conditions, thresholds,
+exceptions ("cite-first *unless* the recipient is internal") — not tone. A claim
+without a resolvable anchor never enters the log; `make verify-anchors`
+re-resolves every anchor against its registered source and fails on drift.
 
-So detection is **on write and blocked** (`src/baraza/reconcile/detect.py`):
+**The append-only log.** `create()` is the only write verb the store exposes,
+and `deploy/firestore.rules` rejects update and delete at the database level —
+verified live (`scripts/verify_append_only.sh`). Event IDs are content hashes,
+so a retried job appends nothing twice. Fixing bad data means appending a
+superseding event, never editing one. Every rendered state is a fold over that
+log (`src/baraza/fold/graph.py`); there is no cache that can drift from it.
 
-1. A claim is asserted.
-2. Retrieve only claims sharing its **blocking key** — subject entity ∪ object
-   entities ∪ `predicate_hint`, with alias edges resolved at query time. Typical
-   block size in this corpus is single digits.
-3. **Temporally gate** the block on epoch interval overlap. Two claims about
-   consecutive fiscal years cannot contradict each other; this gate removes the
-   largest single source of false positives before any model sees them.
-4. Cap the survivors at `MAX_RETRIEVED = 20`, ranked by recency and confidence.
-5. Make **one** call — roughly 3k tokens — asking which of the retrieved claims
-   actually conflict with the new one.
+**Contradiction detection — on you, on write.** The same machinery that
+reconciled an organization's records (`src/baraza/reconcile/detect.py`) now runs
+with *you* as the subject. When a new claim lands, retrieval is exact-match
+blocking on subject ∪ object entities ∪ `predicate_hint`, temporally gated on
+epoch interval overlap, capped at `MAX_RETRIEVED = 20`, then adjudicated in one
+bounded model call. The arithmetic is why: at the design assumption of ~3,000
+claims, an all-pairs sweep is 3000 × 2999 / 2 = **4,498,500** comparisons —
+a bill, not a system. On-write blocking makes it one bounded call per claim
+written, and the cost per write does not grow with the corpus.
 
-That is **one bounded call per claim written**, not one per pair. Three thousand
-claims cost three thousand bounded calls instead of four and a half million, and the
-cost per write does not grow with corpus size — it is capped at 20 retrieved claims
-by construction, not by hoping the blocks stay small.
+**The divergence card.** "On turn t-14 you said 'never send before I've seen
+it' [quote]. Just now: 'just send the routine ones' [quote]. Which governs, and
+what is 'routine'?" The agent will not pick a side for you. Adjudication often
+splits the collision into a conditional — a judgment-shaped belief, not a
+preference — and that belief goes through the gate like any other.
 
-The sweep is not an optimization we skipped. It is a design we refused.
+**The approval gate.** `claim.committed` is constructed in exactly one module,
+`src/baraza/interview/approval.py`. The approver is deliberately **not** an
+agent and has no model — promotion is the one operation that must never be a
+model's judgment call. Approvals batch at session end. Rejection retracts
+permanently: out of retrieval, out of the ledger, out of every future agenda.
 
-### The visibility boundary
+**The doctrine.** The compiler folds committed beliefs into the session's
+operating policy with a rule ← claim provenance map. Compilation is
+deterministic — replaying the fold reproduces the doctrine byte for byte, under
+permuted UTC offsets — and that claim is confined to compilation. Whether the
+model then complies with a cited rule is measured, not asserted: the compliance
+battery reports its number with provenance, imperfect if imperfect
+(`docs/metrics.json`).
 
-This is the headline property, and it is the one that fails open if you are careless.
-So it is structural, not conventional.
+**Time is integers.** Every temporal comparison runs on integer epoch millis,
+UTC (`src/baraza/schema/temporal.py`). ISO-8601 is serialization only; comparing
+instants as strings is a defect class observed in a sibling project (it kept a
+revoked grant active under mixed UTC offsets) and `make compliance` lints for it.
 
-- `visibility` is set at append time and is never unset. A claim built without one is
-  `private` — the tier that leaks nothing.
-- `readable_by(claim, audience)` is defined **once**, in
-  `src/baraza/schema/visibility.py`. Divergence detection, the ledger, the agenda,
-  the interviewer's question renderer, the graph view and successor mode all route
-  through that one predicate.
-- A claim's quote is **not a readable attribute**. It lives behind
-  `claim.quote_for(audience)`. Code that writes `claim.quote` raises `AttributeError`
-  at the access site instead of quietly rendering private testimony to the wrong
-  reader. `scripts/compliance.py` fails the build if anything outside
-  `src/baraza/schema/` so much as mentions the protected field.
-- The predicate **fails closed on bad input** — an unknown audience, an unknown
-  visibility, a missing attribute all return `False` rather than raising, because a
-  boundary that raises can be caught and swallowed by a caller trying to be robust,
-  and the swallowed exception path is where leaks live.
-
-The reconciler is allowed to **count** a claim the reader cannot see toward a
-contradiction's existence. It is never allowed to render that claim's text into a
-question for that reader. Those are two different operations, and `RedactedClaim`
-is the only thing that crosses between them: structural coordinates, no quote, no
-object literal, no anchor text.
-
-An agenda item whose sides the interviewee cannot read is **downgraded, not
-dropped** — it survives as an open-ended prompt with no quotes attached. Dropping it
-would let the boundary silently shrink the agenda, which would make the visibility
-choice look free when it is not.
-
-### Epoch temporal normalization
-
-Every temporal comparison in the system operates on integer epoch milliseconds, UTC
-(`src/baraza/schema/temporal.py`). ISO-8601 is a serialization format and is never a
-comparison key. Sorting or comparing instants as strings is prohibited outright, and
-`make compliance` lints for the pattern.
-
-This is a ported defect class, not a style preference. In a sibling project an
-ISO-string sort inside a `resolve()` function let a revoked grant stay active under
-mixed UTC offsets while byte-stability tests stayed green. The pair that actually
-diverges has to cross a date boundary:
-
-| a | b | string order says | instant order says |
-|---|---|---|---|
-| `2026-05-01T20:00:00-05:00` | `2026-05-02T00:00:00Z` | `a < b` | `a > b` |
-
-`a` is 2026-05-02T01:00Z — one hour *after* `b` — but sorts before it as text. The
-corpus plants exactly this pair, the manifest lists it, and the fold-stability
-property test names it.
-
-Naive datetimes and offsetless ISO strings are rejected loudly at the parse site
-rather than guessed at. A wrong instant is a silent correctness defect; a raised
-error is a loud one.
-
-Full detail, with a rendered diagram: **[`docs/architecture.md`](docs/architecture.md)**.
+Full detail with the diagram: **[`docs/architecture.md`](docs/architecture.md)**.
 
 ---
 
 ## Spin up
 
-### Offline, no credentials, no GCP project
+Offline, no credentials, no GCP project:
 
 ```bash
 git clone https://github.com/Jeremiah-Sakuda/Baraza.git baraza
 cd baraza
-make install     # creates .venv, installs the package with dev extras
-make demo        # ingest -> agenda -> replay interview -> successor query
+make install     # creates .venv, installs from requirements.lock
+make demo        # ingest -> agenda -> replay session -> dossier query
 ```
 
-`make demo` runs entirely on your machine. The event log is a local append-only
-JSONL file (`JsonlEventStore`), and model responses come from **recorded cassettes**
-in `fixtures/cassettes/` — real captured Vertex responses replayed by prompt hash,
-not hand-authored text. If a cassette is missing for a prompt, the offline client
-raises rather than inventing a response, and it does not silently fall back to a
-stub. Nothing in the offline path touches the network.
+`make demo` runs entirely on your machine: a local append-only JSONL event log,
+with model responses replayed from **recorded cassettes** — real captured Vertex
+responses replayed by prompt hash, never hand-authored text. If a cassette is
+missing, the offline client raises rather than inventing a response.
 
-> **Precondition, and it is not met yet:** `fixtures/cassettes/` holds no recordings
-> in the current tree, so `make demo` stops before doing any work and tells you so
-> with the reason. Recording the
-> cassettes runs the whole demo once against live Vertex
-> (`python3 scripts/record_cassettes.py --yes`) and costs money, which makes it a
-> supervised step rather than an overnight one. Until those recordings are committed,
-> the offline path does not run on a clean clone. See the status table below.
+> **Honest precondition:** until recorded cassettes are committed under
+> `fixtures/cassettes/`, `make demo`, `make demo-agenda` and `make demo-interview`
+> exit **2** before doing any work and say why. Recording them
+> (`python3 scripts/record_cassettes.py --yes`) runs once against live Vertex and
+> costs money, which makes it a supervised step. The status of every target is
+> observed and dated below; **[`docs/BUILD-LOG.md`](docs/BUILD-LOG.md) is the
+> authority on what has landed since.**
 
-`make demo-agenda` and `make demo-interview` run offline under the same conditions;
-all three targets pass `--offline`. Add `REPLAY=1` to feed the interview canned
-answers on a timer, and `PERSONA=terse` (or `expansive`) to pick a fixture.
-
-### Deployed
+Deployed:
 
 ```bash
 export BARAZA_PROJECT_ID=your-project-id
 gcloud auth application-default login
 make bootstrap   # APIs, Firestore + rules, per-stage service accounts, Jobs, Scheduler
 make verify-models
-make teardown    # removes everything bootstrap created; safe to run repeatedly
+make teardown    # removes everything bootstrap created; needs CONFIRM=--yes-destroy
 ```
 
-`make bootstrap` provisions least-privilege service accounts per stage. The
-extraction stage's account **cannot** write a `claim.committed` event — not by
-convention, by IAM. Only the approval path promotes a claim.
+`make bootstrap` provisions least-privilege service accounts per stage; only the
+approval path promotes a claim. `make verify-models` resolves every pinned model
+ID against live Vertex and exits nonzero on any that does not.
 
-`make verify-models` resolves every pinned model ID against live Vertex and exits
-nonzero on any that does not resolve. Until it has run green against the target
-project, **no document in this repository states which model version shipped** —
-including this one. That is why you will not find a model ID in this README or in the
-architecture diagram: the pins live in `src/baraza/schema/models.py` and nowhere
-else, and `make compliance` fails the build on a model-ID literal written anywhere
-else in the tree.
+### Status — observed on this tree, 2026-08-31 (post-integration pass)
 
-### Status — every target run and observed, 2026-08-28
-
-**Nothing below is inferred.** Each row is the exit code and message produced by
-running that command against this working tree. The build proceeds in overnight
-sessions, so this is a dated snapshot rather than a promise — **the last entry in
-[`docs/BUILD-LOG.md`](docs/BUILD-LOG.md) is the authority on what has landed**, and
-every target that is not yet wired exits nonzero rather than exiting 0 having done
-nothing.
+Each row is the exit code produced by running the command, not an inference.
+This snapshot was taken after the pivot's workstreams landed and were
+integrated; re-run any row before quoting it. `make gate` chains the
+compliance, lint, test, and verification targets; today it stops at
+`verify-anchors` for the same stated reason as the rows below — no cassettes,
+so no event log to verify against.
 
 | Command | Observed |
 |---|---|
-| `python3 scripts/compliance.py --no-prd` | **exit 0, green.** All four invariant lints pass. |
-| `make compliance` | **exit 0, green.** The restored ADK-aligned v1.2 PRD now passes the BAR-007 ID audit and all four invariant lints. |
-| `make test` | **exit 0, green** — unit, property and integration suites pass. Run the target for the current count; it changes as coverage grows. |
-| `make corpus` | **exit 0** — 13 artifacts regenerated from `BIBLE.md`, every one re-read through `baraza.ingest.readers`. Exits 1 if any artifact fails or skips that round trip, so a missing reader dependency cannot pass as green. |
-| `make verify-manifest` | **exit 2** — prints `found 18 of 18 planted problems`, then stops: no event log exists, so 0 of 17 behaviour probes could be observed. Plants present is not the same as plants caught, and the script refuses to conflate them. |
-| `make verify-anchors` | **exit 2** — rebuilds the source registry from the bytes on disk (11 sources resolve) and then reports that there are no citations to verify, because no ingest run has happened. |
-| `make demo`, `make demo-agenda`, `make demo-interview` | **exit 2** — refuses to start: `fixtures/cassettes/` holds no recordings. The message names the recorder and says why the offline client will not invent a response. **This is the single gap between here and a working clean-clone demo, and it is what blocks the two rows above from observing any behaviour.** |
-| `make adaptation-metric` | **exit 1** — `fixtures/transcripts/` does not exist, so the scorer has nothing to score and says so instead of printing a zero. Transcripts come from replay runs and are never hand-authored, so this unblocks when the demo does. |
-| `make verify-models` | **exit 3** — could not run: `BARAZA_PROJECT_ID` is unset and is deliberately not defaulted. No pinned model ID has been resolved against live Vertex. |
-| `make test-emulator` | **exit 1** on this machine — no JDK, and the Firestore emulator is a JVM process. The script reports that rather than skipping quietly. The JSONL half of the SIGKILL rig does run without it: `pytest tests/emulator -k jsonl` → **1 passed**. |
-| Agent framework (BAR-020) | **imported, instantiated, and driven by a `Runner` on the live ingestion path.** `src/baraza/agents.py` imports `LlmAgent`, `RunConfig`, `InMemoryRunner` and `FunctionTool` from `google.adk` (v2.6.2) and builds three real ADK agents with per-agent tool isolation; `tests/unit/test_agents.py` asserts `isinstance` against the genuine ADK class. `baraza.ingest.extract.AgentClaimExtractor` drives the extractor through an ADK `Runner` with `read_chunk` / `propose_claim` bound to the real validation gates, and `IngestionPipeline` selects it on any non-offline run — which is what `deploy/entrypoint-job.sh` invokes. What is *not* true: the reconciler and interviewer agents are built and isolation-tested but still reach the model through `src/baraza/llm.py`; and the **offline replay path is direct by design**, because an ADK `Runner` bypasses the cassette client and a replay must never be mis-narrated as a live agent loop. So `make demo` does not exercise ADK; `--no-offline` does. |
+| `python3 scripts/compliance.py --no-prd` | **exit 0** — all four invariant lints green |
+| `make compliance` | **exit 0** — BAR-007 PRD audit plus the lints, green |
+| `make test` | **exit 0** — unit, property and integration suites pass; run it for the current count |
+| `make demo` / `demo-agenda` / `demo-interview` | **exit 2** — refuses to start: `fixtures/cassettes/` holds no recordings, and the offline client will not invent one |
+| `make verify-manifest` | **exit 2** — every plant present, zero behaviour observed: no event log exists yet |
+| `make verify-anchors` | **exit 2** — sources re-register from bytes on disk; no citations to verify until an ingest run happens |
+| `make adaptation-metric` | **red on purpose** (the scorer exits 1; `make` reports that as exit 2) — it names each missing input (the determinism replay and the battery outputs `make battery-run` must record) and the exact command that produces it, instead of printing a zero |
 
-What is built: the schema (claim, event, session, contradiction, visibility, temporal,
-model pins), the fold, the append-only store, the ingestion spine with all four
-format readers, the reconciler, the interview engine, the approval flow, the successor
-librarian and the CLI that wires them together — `find src -name '*.py' -print0 |
-xargs -0 wc -l` for the current count. Also present: the generated synthetic corpus
-and its manifest under `fixtures/`, the unit, property and emulator test suites under
-`tests/`, the deploy manifests and Firestore rules under `deploy/`, and the bootstrap,
-teardown, corpus-generation, manifest- and anchor-verification, cassette-recording,
-model-verification and adaptation-scoring scripts under `scripts/`.
-
-What is missing is what the table says is missing: the recorded cassettes that make
-the offline demo run — and, downstream of them, every behavioural observation the
-manifest and anchor verifiers exist to make — plus generated transcripts and live
-Vertex model verification. The merged PRD and the ADK production extraction path are
-now present. Deployment status is recorded in `STOPPED-DEPLOY.md`: the public
-successor service is live, while the Scheduler trigger remains a separately recorded
-failure rather than an autonomy claim.
-
-A README that told you `make demo` works when it does not is the exact failure this
-project spends a compliance script preventing. The reproducibility gate for the
-offline path is 2026-08-25 (`docs/GATE.md`), on a clean clone on a different machine.
+A README that told you `make demo` works when it does not is the exact failure
+this project spends a compliance script preventing.
 
 ---
 
@@ -269,208 +181,145 @@ offline path is 2026-08-25 (`docs/GATE.md`), on a clean clone on a different mac
 
 These seven are the contract. Everything else in the Makefile is scaffolding.
 
-| Target | What it does | What it proves |
-|---|---|---|
-| `make compliance` | BAR-007 PRD ID audit plus four invariant lints | That the invariants are machine-checked, not remembered. Orphan requirement IDs, dangling references, range notation in a matrix cell, a model-ID literal outside the pin module, a read of protected quote text outside the schema package, an ISO-string comparison, or a number in `metrics.json` without provenance each fail the build with a `file:line`. |
-| `make demo` | Offline end to end: ingest, agenda, replay interview, successor query | That the whole system runs on a laptop with no credentials — and therefore that a judge can check any claim in this README themselves. |
-| `make demo-agenda` | Cold ingest to disputed ledger and interview agenda, unattended | That the agenda is generated, not authored. Nobody types the questions; they fall out of what the corpus disagrees with. |
-| `make demo-interview` | The interview loop; `REPLAY=1` feeds canned answers on a timer | That the interviewer is agenda-led, asks clarifying follow-ups, and names a divergence between testimony and record with both citations. |
-| `make verify-manifest` | Prints `found N of N planted problems` **and the misses** | That detection is measured against a known-answer set rather than demoed on its best case. Printing the misses is the point; a detector that only reports its hits is a detector nobody can score. |
-| `make verify-anchors` | Re-resolves every citation anchor against its registered source | That no citation is fabricated. An anchor that does not resolve, or whose source checksum has drifted, is a failure and not a warning. |
-| `make adaptation-metric` | Standalone scorer over `fixtures/transcripts/`, no application imports | That the adaptation claim is independently checkable. The application emits labelled transcripts; a separate script computes the number, so the system never grades its own homework. |
+| Target | What it proves |
+|---|---|
+| `make compliance` | The invariants are machine-checked, not remembered: PRD ID audit plus lints for a protected-quote read outside the schema package, a model-ID literal outside the pin module, an ISO-string instant comparison, and a metrics entry without provenance — each failing with a `file:line`. |
+| `make demo` | The whole loop runs on a laptop with no credentials, so a judge can check any claim in this README themselves. |
+| `make demo-agenda` | The agenda is generated, not authored. Nobody types the questions; they fall out of what the record disagrees with. |
+| `make demo-interview` | The session is agenda-led and names a divergence with both citations; `REPLAY=1` feeds canned answers on a timer. |
+| `make verify-manifest` | Detection is scored against a known-answer set and **prints its misses** — a detector that only reports hits cannot be scored. |
+| `make verify-anchors` | No citation is fabricated. An anchor that does not resolve, or whose source checksum drifted, fails rather than warns. |
+| `make adaptation-metric` | The adaptation claim is independently checkable: a standalone script with no application imports computes the two honest numbers — the doctrine determinism replay and the rule-compliance battery — so the system never grades its own homework. |
 
-Supporting targets: `install`, `test`, `test-emulator`, `test-all`, `verify-models`,
-`corpus`, `bootstrap`, `teardown`, `gate`. Run `make help` for the split.
+Supporting targets: `install`, `test`, `test-emulator`, `test-all`,
+`verify-models`, `corpus`, `battery-run`, `bootstrap`, `teardown`, `gate`. Run
+`make help`.
 
 ---
 
 ## Google Cloud
 
-The hackathon's mandatory stack requires at least one Google agent framework and at
-least one Google Cloud infrastructure service. Baraza uses several; the full mapping
-with requirement IDs is in **[`docs/compliance.md`](docs/compliance.md)**.
+The mandatory stack: at least one Google agent framework and at least one Google
+Cloud service. The full mapping with requirement IDs is in
+**[`docs/compliance.md`](docs/compliance.md)**.
 
-| Service | Where it is used | State |
-|---|---|---|
-| **Agent Development Kit (ADK)** | `src/baraza/agents.py` builds the extractor, reconciler and interviewer as `google.adk.agents.LlmAgent` instances, each holding only the tools its role requires, with peer and parent transfer disabled so no reasoning agent can hand work to the approver. The approver is deliberately **not** an agent and has no model. `src/baraza/ingest/extract.py` drives the extractor through an ADK `Runner` with turn and wall-clock ceilings. | Imported, instantiated and **running the live extraction path** (`google-adk` 2.6.2); asserted by `tests/unit/test_agents.py` and `tests/unit/test_agent_extraction.py`. Reconciler and interviewer are built but still reach the model through `llm.py`; offline replay is direct by design |
-| **Vertex AI** | Every model call in the system, through `src/baraza/llm.py`. Reasoning role: contradiction adjudication, agenda synthesis, the divergence turn, successor synthesis. Fast role: claim extraction over corpus chunks, entity alias proposals, interviewer follow-ups where first-token latency binds. | Implemented. Pins unverified until `make verify-models` runs green, and no response has been recorded yet |
-| **Vertex AI (Gemma)** | The BAR-303 ingestion relevance pre-filter, keep-or-drop per chunk before any Gemini call, behind a `stub` / `gemma` flag. Unattended ingestion runs `stub`, disclosed as a stub in its docstring, in `metrics.json` and in the console output of any run that used it. | **Interface final; Gemma has never run.** The `gemma` branch calls `generate_content` while the pin declares `surface="vertex-endpoint"`, and `GemmaFilter.endpoint` is assigned and never read — a live run would fail open on every chunk. That is now stated rather than hidden: `FilterReport.failed_open` counts undecided keeps, a degraded pass prints `DEGRADED — the filter never ran` instead of `100.0%`, and `metrics_entry` returns `not yet measured`. The additional-model bonus is **not claimed** |
-| **Firestore** | The append-only claim-event log, sessions and entities. Create-only writes; `deploy/firestore.rules` rejects update and delete at the database level. | Deployed and verified; see `STOPPED-DEPLOY.md` for the dated evidence. |
-| **Cloud Run Jobs** | The ingestion Job and the nightly `baraza-reconcile` Job. Retry-safe because event IDs are content hashes. | Deployed; the reconcile Job has been manually verified. This is not evidence of a successful scheduled run. |
-| **Cloud Run services** | `src/baraza/interview/service.py` reads as `Audience.OWNER` and is not public. `src/baraza/successor/service.py` is the public surface a logged-out judge visits, and reads only claims that are committed **and** readable by `Audience.PUBLIC`. | Deployed. The public surface now includes read-only `/`, `/ledger`, and `/agenda` routes; each applies `Audience.PUBLIC`. |
-| **Cloud Scheduler** | Nightly trigger for the reconcile Job (BAR-021), stood up early so execution history accumulates in real time. | Deployed but not accepted as working evidence: invocation failure is documented in `STOPPED-DEPLOY.md`. `scheduler_nightly_runs_completed` remains `not yet measured`. |
-| **Cloud Trace** | OpenTelemetry spans over the reasoning chain, from `src/baraza/telemetry.py`. A span carries a claim's `digest()` and never its quote — a trace backend is a second copy of everything you put in it, with its own retention and its own export path, and none of those route through `readable_by`. | Implemented; no deployed trace exists yet |
-| **Cloud Storage** | Intended for corpus artifact staging for the deployed ingestion Job. | Declared in `pyproject.toml` and **not called from any code path**, so nothing in this repository claims it as used |
-
-**Scheduled runs are labelled as scheduled.** Every event the nightly Job appends is
-marked `scheduled=True`, and a Cloud Scheduler run is never counted as organic
-activity in any accounting, anywhere — including the video and the submission
-write-up.
+| Service | Where it is used |
+|---|---|
+| **Vertex AI** | Every model call, through `src/baraza/llm.py`. Reasoning role: `gemini-3.7-flash`. Fast role: `gemini-3.5-flash`. Location: `global`. These three were **live-verified 2026-08-31** against project `baraza-2026` — the same resolution `make verify-models` performs — after the original pins turned out to name a model that does not exist in the catalog. That is why model IDs appear in this table and nowhere else in this file: the pins live in `src/baraza/schema/models.py`, everything resolves through `models.resolve(role)`, and `make compliance` fails the build on a literal written anywhere else in the source tree. |
+| **Agent Development Kit (ADK)** | `src/baraza/agents.py` builds the extractor, reconciler and interviewer as `google.adk.agents.LlmAgent` instances with per-agent tool isolation and transfer disabled. The extractor runs on the live ingestion path through an ADK `Runner`. The approver is deliberately not an agent and has no model. The offline replay path is direct by design, so a replay is never mis-narrated as a live agent loop. |
+| **Firestore** | The append-only event log. Create-only writes; `deploy/firestore.rules` rejects update and delete at the database level — **deployed and verified live** (`scripts/verify_append_only.sh`). |
+| **Cloud Run** | Three surfaces: the private session service (`src/baraza/interview/service.py`, reads as owner), the public dossier surface (`src/baraza/dossier/service.py` — a logged-out judge sees only claims committed **and** readable by `Audience.PUBLIC`), and `baraza-trigger` — the OIDC-guarded hop that lets Scheduler start the reconcile Job after the direct Scheduler→Jobs-API path 403'd (root cause and fix recorded in `STOPPED-DEPLOY.md`). Plus the ingestion and reconcile Cloud Run Jobs, retry-safe because event IDs are content hashes. |
+| **Cloud Scheduler** | The scheduled initiation trigger. Every event a scheduled run appends is labelled `scheduled=True` and is never counted as organic activity, anywhere — including the video. |
+| **Artifact Registry, Cloud Build** | Container images for the Jobs and services, built and pushed by `make bootstrap` / `deploy/cloudbuild.yaml`. |
 
 ---
 
 ## Negative decisions
 
-Things deliberately not built. Each of these was live, and each was refused for a
-reason that is arithmetic or a stated principle rather than a schedule.
+Things deliberately not built. Each was live, and each was refused for a stated
+reason rather than a schedule.
 
-**No vector database — and, in the end, no embeddings either.** Retrieval for
-contradiction detection is exact-match blocking: subject entity ∪ object entities ∪
-`predicate_hint`, with alias edges resolved at query time, then a temporal gate, then
-a cap of 20 (`src/baraza/reconcile/detect.py`). Typical block size in this corpus is
-single digits. A managed vector index would add a service, a schema, a sync path that
-can drift from the log, and a new failure mode; an index earns its keep somewhere
-north of a million vectors, and this is a few thousand claims.
+**No silent belief overwrite.** When two committed rules conflict, the doctrine
+compiler refuses to pick between them. The conflict becomes a divergence card
+and an agenda item; only your adjudication — an append-only event — resolves it.
+A partner that silently absorbs your latest contradiction isn't adapting to you;
+it's erasing you.
 
-The honest part of this entry is the second half. An embedding model *was* pinned in
-`src/baraza/schema/models.py`, for "blocking-key expansion", and three documents
-described it as a shipped component — while `grep -rn embed src/` returned only the
-pin itself. It was never built and nothing called it. The pin and every claim
-resting on it have been removed rather than retrofitted, because a repository whose
-argument is that documented invariants must be mechanically checkable does not get
-to describe a component it did not write. Embedding-based expansion of the blocking
-key remains a reasonable thing to build; it is not in here.
+**No output-causality claims.** The demo artifact is a *doctrine diff* — honest,
+because the compiler emits rule ← claim provenance — plus before/after output
+pairs on a fixed task. No line of model output is ever annotated with the belief
+that "caused" it, because that causal chain is not observable and asserting it
+would be a fabricated number wearing prose.
 
-**No real entity matcher.** A student organization has on the order of a hundred
-distinct entities across a decade — officers, roles, accounts, vendors, events. The
-alias problem is a few thousand candidate pairs, nearly all of which fall to
-normalized string rules, leaving a residue small enough for one model call plus human
-confirmation. The cardinality does not justify ML, and a learned matcher's failures
-are the kind you cannot explain to the person whose institutional memory is at stake.
-Unconfirmed proposals do not become edges.
+**No O(n²) contradiction sweep.** The arithmetic is above: 4,498,500 comparisons
+at the design assumption, versus one bounded call per write. Named as a refusal
+because the sweep is the obvious implementation and it demos fine on fifty
+claims.
 
-**No destructive identity merges.** `sameAs` edges only; identity resolves at query
-time through the fold's alias map. Both IDs stay in the log and in every claim that
-used them. A wrong merge in a mutable store is unrecoverable; a wrong `sameAs` edge is
-one superseding event away from being undone.
+**No vector database — and no embeddings either.** Retrieval is exact-match
+blocking with alias edges resolved at query time; typical block size is single
+digits. An earlier revision pinned an embedding model that nothing called; the
+pin and every claim resting on it were removed rather than retrofitted.
 
-**No O(n²) contradiction sweep.** The arithmetic is above: 4,498,500 comparisons at
-the design assumption, versus one bounded call per write. This one is worth naming as
-a *refusal* rather than an optimization, because the sweep is the obvious
-implementation and it demos fine on fifty claims.
+**No real entity matcher, no destructive merges.** `sameAs` edges only, human
+confirmed, resolved at query time. A wrong merge in a mutable store is
+unrecoverable; a wrong edge is one superseding event from undone.
 
-**No voice, no TTS.** Cut unconditionally, and it stays cut even though a multimodal
-prize category exists. It would have added a recording surface, a latency budget and a
-failure mode to a product whose value is in what the text says, and the honest reason
-to build it would have been the prize rather than the user.
+**No voice, no TTS.** Cut unconditionally, even though a multimodal prize
+category exists — the honest reason to build it would have been the prize.
 
-**No enterprise deployment claims.** The market framing generalizes; the demo claims
-stay scoped to a single organization's corpus. Baraza has not been run against an
-enterprise records estate and this repository will not imply that it has.
-
-**Considered and not adopted: feeding approval and edit deltas into the style profile
-as a second adaptation mechanism.** It matches the literal language of the track
-("captures feedback… constantly adapts") and it would have been straightforward to
-build. It was rejected because it adds no verifiable property beyond the measured
-metric that already exists: adaptation is already structural, already labelled per
-turn, and already scored by a standalone script over committed transcripts. A second
-mechanism that cannot be independently measured makes the claim louder and not truer.
+**No enterprise deployment claims.** One user, one dossier, stated plainly
+below.
 
 ---
 
 ## What is measured and what is not
 
-Every number Baraza displays anywhere — this README, the architecture diagram,
-console output, the video overlay — traces to an entry in
-**[`docs/metrics.json`](docs/metrics.json)**, to a live query, or to a script you can
-run. Nothing is typed into a document by hand.
+Every number displayed anywhere — this README, the diagram, console output, the
+video overlay — traces to **[`docs/metrics.json`](docs/metrics.json)**, a live
+query, or a script you can run. An entry there is either an object carrying
+`value`, `provenance`, `run_id` and `date`, or the literal string
+`"not yet measured"`. There is no third form and no placeholder estimate; an
+in-process timing is never reported as a deployed measurement.
 
-An entry in that file is either the literal string `"not yet measured"` or an object
-carrying `value`, `provenance`, `run_id` and `date`. There is no third form and no
-placeholder estimate. `provenance` is one of `measured in-process`, `measured
-deployed`, or `not yet measured` — an in-process timing is never reported as a
-deployed measurement. `make compliance` fails the build on any entry that breaks that
-shape.
+As of this tree, **every metrics entry reads `not yet measured` and the `runs`
+array is empty** — including doctrine-replay determinism, the rule-compliance
+delta, claim counts, contradiction precision against the planted manifest, and
+the scheduled-run count. `not yet measured` means exactly that: not a
+conservative estimate, not a value awaiting confirmation.
 
-**All 20 entries in `docs/metrics.json` currently read `not yet measured`, and the
-`runs` array is empty.** That includes the corpus counts, the Gemma pre-filter
-survival rate, the entity scorecard, contradiction precision against the planted
-manifest, first-token latency, the adaptation depths per persona, and the Scheduler
-run count. Nothing has been measured because nothing has been run end to end yet.
-Entries reading `not yet measured` **have not been measured** — they are not
-conservative estimates, rounded figures, or values awaiting confirmation. Check it
-with `python3 -c "import json;print(json.load(open('docs/metrics.json'))['metrics'])"`.
-
-Numbers that appear in this README and are *not* measurements:
-
-- **3,000 claims** is a design assumption about corpus size, stated as such, used to
-  derive the detection arithmetic. The actual count for this corpus is `not yet
-  measured`.
-- **4,498,500** and the 20-claim cap are arithmetic and a code constant
-  (`MAX_RETRIEVED` in `src/baraza/reconcile/detect.py`). Both are checkable without
-  running anything.
-- **"thousands of organizations"** in the opening line is rhetoric. It is the only
-  sentence in this file that asserts a quantity nothing in this repository counted,
-  and it is flagged here rather than left to look like a finding.
+Numbers in this README that are *not* measurements: **3,000 claims** is a design
+assumption stated as such; **4,498,500** and the cap of **20** are arithmetic
+and a code constant (`MAX_RETRIEVED`, `src/baraza/reconcile/detect.py`), both
+checkable without running anything.
 
 ---
 
 ## Disclosures
 
-**Built with AI coding assistance.** This project was built with an agentic coding
-assistant, which the hackathon rules explicitly permit. The assistant wrote the
-majority of the code in this repository under a session protocol recorded in
-`AGENTS.md`: overnight unattended sessions against mechanical phase gates, with
+**Built with AI coding assistance,** which the hackathon rules expressly permit.
+The majority of the code was written by an agentic coding assistant under the
+session protocol in `AGENTS.md`: unattended sessions against mechanical gates,
 supervised review between them. Every session's opening prompt, verbatim course
-corrections, outcome and key decisions are logged in
-[`docs/BUILD-LOG.md`](docs/BUILD-LOG.md), and the toolchain observations — including
-what degraded — are in [`docs/FINDINGS.md`](docs/FINDINGS.md). The design decisions,
-the invariants and the refusals in this document are the author's; the typing was
-largely not.
+corrections, outcome and key decisions are in
+[`docs/BUILD-LOG.md`](docs/BUILD-LOG.md); toolchain observations, including what
+degraded, are in [`docs/FINDINGS.md`](docs/FINDINGS.md). The design decisions,
+invariants and refusals are the author's; the typing was largely not.
 
-**The agent framework was chosen without a published comparison.** BAR-020
-originally resolved the question by *citing* an Aug 8 negative finding from a sibling
-project — a headless multi-agent assertion about another vendor's SDK that failed
-verification. The source document was never copied into this repository, and what
-stood in for it was a placeholder describing the finding from memory. That
-placeholder has been deleted rather than filled in from memory or left standing: a
-remembered paraphrase of evidence is not evidence, and an unverifiable negative claim
-about a named vendor's product is not something this repository will publish just
-because it would make a decision look better justified. So there is no framework
-comparison here. ADK is used, it is genuinely imported and driven
-(`src/baraza/agents.py`, `src/baraza/ingest/extract.py`), and the reason it was
-picked over alternatives is not documented. `docs/framework-decision.md` says the
-same thing at length. No framework is claimed anywhere in this repository that the
-code does not import.
+**This project began as succession intelligence** — the same engine pointed at
+an organization's records instead of a person's guidance. The pivot to the
+dossier is recorded, with its reasoning, in
+[`docs/pivot/DECISION-dossier.md`](docs/pivot/DECISION-dossier.md); the corpus
+readers, the manifest verifier and the multi-audience visibility tests from that
+phase remain in the tree as an eval harness.
 
-**Several defect-class guards are ported from a sibling project.** They are not
-novel work and are not presented as such. The epoch-normalization rule (BAR-309)
-exists because an ISO-string sort in that project's `resolve()` kept a revoked grant
-active under mixed UTC offsets while byte-stability tests stayed green. The numbers
-discipline — never a plausible number where a measured one belongs, never an
-in-process timing reported as a deployed measurement, never a scheduled job counted
-as organic traffic — is ported from the same place, where each of those was observed
-rather than theorized. The early-Scheduler pattern (BAR-021) is ported too. What is
-new here is the enforcement: the guards are lints in `scripts/compliance.py` that
-fail the build, and they were verified by planting each violation and watching it
-fire with a `file:line` before removing the plant.
+**Several defect-class guards are ported from a sibling project** and are not
+presented as novel: epoch normalization (an ISO-string sort there kept a revoked
+grant active under mixed UTC offsets while tests stayed green), and the numbers
+discipline above, where each rule was observed rather than theorized. What is
+new here is enforcement — the guards are build-failing lints in
+`scripts/compliance.py`, verified by planting each violation and watching it
+fire with a `file:line`.
 
-**The PRD contract is incomplete.** `docs/PRD.md` is absent from this repository.
-The amendments file carries full text for roughly fifteen requirement IDs; the
-remaining approximately thirty-five exist only as identifiers with no acceptance
-criteria, and the amendments file forbids reconstructing them. `make compliance`
-exits **2** ("the audit could not run") rather than 0, so the gap reads as a gap
-rather than as a pass. Any requirement whose acceptance criteria live only in the
-unrecovered file is currently being satisfied against inference rather than against
-a contract.
+**The agent framework was chosen without a published comparison.** The negative
+finding that once justified the choice failed verification and was deleted
+rather than paraphrased from memory; `docs/framework-decision.md` says so at
+length. ADK is used, genuinely imported and driven; the reason it beat
+alternatives is not documented.
 
-**Model output in the offline demo is replayed, not live.** `make demo` uses recorded
-cassettes — real Vertex responses captured to `fixtures/cassettes/` with the model ID,
-run ID and UTC date of the recording. Nothing in this repository fabricates model
-output. A number derived from a cassette replay is a replayed measurement and says so
+**Offline demo output is replayed, not live.** Cassettes are real Vertex
+responses captured with model ID, run ID and UTC date. Nothing in this
+repository fabricates model output; a replayed number says it is replayed
 wherever it appears.
 
-**No real people, organizations or data.** The corpus is fully synthetic, generated
-from `fixtures/corpus/BIBLE.md` against `fixtures/MANIFEST.md`. No real person,
-student, member, company or organization is named anywhere in this repository, its
-fixtures, its tests or its video — and none is named as a bad actor.
+**No real people, organizations or data.** The eval corpus is fully synthetic,
+generated from `fixtures/corpus/BIBLE.md` against `fixtures/MANIFEST.md`. The
+dogfooding subject is the builder himself, and no real person or company is
+named anywhere in this repository, its fixtures, its tests or its video — least
+of all as a bad actor.
 
 ---
 
 ## License
 
 Apache-2.0. See [`LICENSE`](LICENSE).
-
----
-
-*This September, mine won't.*

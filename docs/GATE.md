@@ -18,6 +18,37 @@ individually prohibited:
 
 ---
 
+## Status refresh — 2026-08-31 (DOSSIER pivot)
+
+Observed by running the commands on this tree, not inferred. The per-gate
+sections below are kept as the dated history they are; where a section
+disagrees with this table, this table is newer. `docs/BUILD-LOG.md` remains the
+authority on what has landed since.
+
+| Check | Observed 2026-08-31 |
+|---|---|
+| `make compliance` | **exit 0** — `docs/PRD.md` was restored in session B6, so the BAR-007 audit runs; all four invariant lints green. The G0 warning below is retained as history and is resolved. |
+| `python3 scripts/compliance.py --no-prd` | **exit 0** |
+| `make test` | **exit 0** — unit, property and integration suites green in full (the gate asserts *all green*, not a count) |
+| `make demo` / `demo-agenda` / `demo-interview` | **exit 2** — `fixtures/cassettes/` still holds no recordings; the offline client refuses to invent one |
+| `make verify-manifest` | **exit 2** — 18 of 18 plants present, 0 behaviour probes observed: no event log yet |
+| `make verify-anchors` | **exit 2** — no citations to verify until an ingest run happens |
+| `make adaptation-metric` | **red on purpose** (the scorer exits 1; `make` reports that as exit 2) — it names each missing input (determinism replay, battery outputs from `make battery-run`) and the command that produces it, rather than printing a zero |
+| Model pins | **live-verified 2026-08-31** against project `baraza-2026` (the resolution `make verify-models` performs); pins in `src/baraza/schema/models.py` only |
+| Deploy | Firestore append-only rules deployed and verified; Cloud Run Jobs and services live; the Scheduler 403 is root-caused with the `baraza-trigger` OIDC-hop fix recorded in `STOPPED-DEPLOY.md`; `scheduler_nightly_runs_completed` remains `not yet measured` |
+
+The pivot (`docs/pivot/DECISION-dossier.md`, PRD §6) adds workstream
+obligations — scheduled initiation, turn-level belief extraction, the doctrine
+compiler and diff, the rewritten adaptation scorer, the web face. Each lands
+under the same discipline: green means the named tests plus `make compliance`
+pass mechanically, and no gate below is weakened to admit it.
+
+The calendar gates below (Aug 15/22/25/28) are kept as written; the ones whose
+dates have passed record what was true at the time, and the reproducibility and
+recording gates remain the bar for the submission artifacts.
+
+---
+
 ## G0 — Substrate (B0)
 
 ```bash

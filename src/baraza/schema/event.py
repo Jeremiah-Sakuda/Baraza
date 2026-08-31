@@ -82,6 +82,16 @@ class EventType(StrEnum):
     SESSION_TURN = "session.turn"
     SESSION_CLOSED = "session.closed"
 
+    SESSION_PROPOSED = "session.proposed"
+    """The nightly reconciler proposed the next working session, agenda attached.
+
+    Appended by ``reconcile/initiate.py`` at the end of every job run, carrying
+    the generated agenda and the ``scheduled`` flag resolved honestly from the
+    trigger. This is the initiation evidence: a log of these events with
+    ``scheduled=True`` timestamps proves the agent opened sessions on its own
+    schedule, which no staged push can retroactively fake in an append-only
+    log."""
+
     HEARTBEAT = "heartbeat"
     """BAR-021. The stub reconcile Job writes one of these per nightly run so
     execution history accumulates from day two. Always labelled as a scheduled

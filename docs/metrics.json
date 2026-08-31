@@ -37,11 +37,21 @@
     "agenda_items_retired_after_interview": "not yet measured",
 
     "interview_first_token_ms_replay": "not yet measured",
-    "adaptation_mean_followup_depth_persona_a": "not yet measured",
-    "adaptation_mean_followup_depth_persona_b": "not yet measured",
-    "adaptation_in_session_change_turn_id": "not yet measured",
 
-    "scheduler_nightly_runs_completed": "not yet measured",
+    "doctrine_determinism_replays": "not yet measured",
+    "doctrine_determinism_result": "not yet measured",
+    "doctrine_committed_rules_total": "not yet measured",
+    "doctrine_rule_compliance_pre_commit": "not yet measured",
+    "doctrine_rule_compliance_post_commit": "not yet measured",
+    "doctrine_rule_compliance_post_retraction": "not yet measured",
+    "battery_cases_total": "not yet measured",
+
+    "beliefs_committed_total": "not yet measured",
+    "beliefs_rejected_total": "not yet measured",
+    "contradictions_on_user_detected": "not yet measured",
+    "dogfooding_sessions_total": "not yet measured",
+    "initiated_sessions_scheduled_count": "not yet measured",
+
     "scheduler_stub_to_real_replacement_date": "not yet measured",
 
     "kill_survival_resumed_turn_index": "not yet measured"

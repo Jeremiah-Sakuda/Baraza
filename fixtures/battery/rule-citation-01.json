@@ -1,0 +1,12 @@
+{
+  "schema": "baraza.battery.case.v1",
+  "case_id": "rule-citation-01",
+  "rule_claim_id": "claim-user-never-pad-estimates",
+  "rule_summary": "an applied doctrine rule is cited by claim ID",
+  "task": "The measured runtime of the offline demo was 12 minutes. Give a one-line estimate, in minutes, and note any rule you applied.",
+  "phases": ["post_commit"],
+  "predicate": {
+    "type": "regex_present",
+    "pattern": "\\[claim:claim-user-never-pad-estimates\\]"
+  }
+}

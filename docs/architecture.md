@@ -1,284 +1,283 @@
 # Architecture
 
-Baraza is a log, a fold, and three readers.
+Baraza is a log, a fold, and a gate.
 
-Everything a judge needs to check is visible in the shape: writes go to an
-append-only event log; every graph state is a fold over that log; contradiction
-detection happens **on write** against a bounded block rather than as a sweep; and
-every read path — the ledger, the agenda, the interviewer, the successor — passes
-through one visibility predicate before any text is rendered.
+Everything a judge needs to check is visible in the shape: your turns become
+claims with verbatim quotes and turn anchors; every write is an event appended
+to a log that rejects edits; every rendered state — ledger, agenda, dossier,
+doctrine — is a fold over that log; contradiction detection happens **on write**
+against a bounded block, with you as the subject; and no belief reaches the
+doctrine that governs behavior without passing an approval gate that has no
+model.
 
-A static rendering of the same diagram, for contexts that do not run Mermaid, is at
-[`architecture.svg`](architecture.svg).
+A static rendering of the same diagram, for contexts that do not run Mermaid, is
+at [`architecture.svg`](architecture.svg).
 
 ---
 
-## The system
+## The loop
 
 ```mermaid
 flowchart TB
 
-  subgraph CORPUS["Corpus · four native formats · fully synthetic"]
+  subgraph INPUT["Sources"]
     direction LR
-    PDFC["Scanned PDF<br/>constitution, skewed<br/>dates with no time"]
-    CHAT["GroupMe JSON export<br/>bare epoch-second stamps<br/>mixed UTC offsets"]
-    SHEET["Headerless XLSX<br/>budget workbook<br/>locators like Sheet1!B14"]
-    MINUTES["DOCX<br/>meeting minutes"]
+    TURNS["Your session turns<br/>anchor grammar turn:t-N"]
+    CORPUS["Document corpus (eval harness)<br/>chat export · scanned PDF · XLSX · DOCX"]
   end
 
-  subgraph INGEST["1 · Ingestion — Cloud Run Job, unattended, retry-safe"]
-    direction TB
-    CH["chunking<br/>never crosses a source boundary<br/>every line tagged with its locator"]
-    PF["relevance pre-filter · keep / drop<br/>MODEL: GEMMA · flag selects stub or gemma<br/>survival rate: not yet measured"]
-    EX["claim extraction<br/>MODEL: GEMINI fast role<br/>anchor SELECTED from a closed set,<br/>never generated"]
-    VG["three validation gates<br/>anchor membership · quote grounding · schema<br/>failures dropped with a named reason, and counted"]
-    EN["entity alias pass<br/>MODEL: GEMINI fast role, ambiguous residue only<br/>sameAs edges only · human-confirmed · no merges"]
-    CH --> PF --> EX --> VG --> EN
+  subgraph EXTRACT["1 · Claim extraction"]
+    EX["preference / rule / judgment claims<br/>MODEL: GEMINI fast role<br/>quote mandatory · anchor SELECTED from a<br/>closed set, never generated<br/>fabricated anchor = stop condition"]
   end
 
-  PDFC --> CH
-  CHAT --> CH
-  SHEET --> CH
-  MINUTES --> CH
+  TURNS --> EX
+  CORPUS --> EX
 
-  LOG[("APPEND-ONLY EVENT LOG · Firestore<br/>create-only writes · rules reject update and delete<br/>event IDs are content hashes, so a retried Job is a no-op")]
+  LOG[("APPEND-ONLY EVENT LOG · Firestore<br/>create-only writes · deployed rules reject update and delete<br/>event IDs are content hashes — a retried Job is a no-op")]
 
-  EN -->|"claim.asserted"| LOG
+  EX -->|"claim.asserted (visibility defaults private)"| LOG
 
-  subgraph DETECT["2 · Contradiction detection — on write, never a sweep"]
+  subgraph DETECT["2 · Contradiction detection — on write, on YOU, never a sweep"]
     direction TB
-    BK["block on subject ∪ object entities ∪ predicate_hint<br/>aliases resolved at query time<br/>typical block size: single digits"]
-    TG["temporal gate — epoch interval overlap<br/>consecutive fiscal years cannot conflict"]
-    CAP["cap at MAX_RETRIEVED = 20<br/>ranked by recency and confidence"]
-    ADJ["ONE call, about 3k tokens<br/>MODEL: GEMINI reasoning role<br/>which of these actually conflict?"]
+    BK["block on subject ∪ object entities ∪ predicate_hint<br/>subject = the user entity · aliases resolved at query time"]
+    TG["temporal gate — epoch interval overlap"]
+    CAP["cap at MAX_RETRIEVED = 20"]
+    ADJ["ONE bounded call<br/>MODEL: GEMINI reasoning role<br/>which of these actually conflict?"]
     BK --> TG --> CAP --> ADJ
   end
 
   LOG -->|"on each claim written"| BK
   ADJ -->|"contradiction.detected"| LOG
 
-  FOLD["fold over the log → GraphState<br/>ordered by occurred_at_millis, then event_id<br/>integers, never ISO strings"]
-  GSTATE["graph state<br/>claims · open contradictions · alias map<br/>heartbeats kept separate from organic activity"]
-  LOG --> FOLD --> GSTATE
+  FOLD["fold over the log → state<br/>ordered by (occurred_at_millis, event_id)<br/>integers, never ISO strings"]
+  LOG --> FOLD
 
-  LEDGER["disputed ledger<br/>ranked: confidence · stakes · recency · spread<br/>every component printed alongside the row"]
-  AGENDA["interview agenda — questions no human wrote<br/>MODEL: GEMINI reasoning role<br/>unreadable sides downgrade the item, never drop it"]
-  GSTATE --> LEDGER --> AGENDA
+  LEDGER["disputed ledger<br/>your statements that collide, both quoted"]
+  AGENDA["agenda — items no human wrote<br/>each citing the ledger entry that spawned it<br/>resolved items retire themselves"]
+  DOCTRINE["DOCTRINE — operating policy<br/>compiled from COMMITTED beliefs only<br/>rule ← claim provenance on every rule<br/>same doctrine, every rule cited"]
+  FOLD --> LEDGER --> AGENDA
+  FOLD --> DOCTRINE
 
-  subgraph INTERVIEW["3 · Exit interview — Cloud Run service"]
+  subgraph SESSION["3 · Partner session — Cloud Run service, runs under the doctrine"]
     direction TB
-    IV["interviewer, agenda-led<br/>MODEL: GEMINI fast role for turns<br/>follow-up depth recorded per turn as data"]
-    DIV["THE DIVERGENCE TURN<br/>MODEL: GEMINI reasoning role<br/>testimony against record, both citations, in the moment"]
-    IV --> DIV
+    WORK["agenda-led working session<br/>drafting interleaved with elicitation"]
+    DIV["THE DIVERGENCE CARD<br/>'On turn t-14 you said … [quote].<br/>Just now: … [quote]. Which governs?'<br/>refuses to silently overwrite the old rule"]
+    WORK --> DIV
   end
 
-  AGENDA --> IV
-  IV -->|"session.turn appended BEFORE the next turn is solicited"| LOG
+  AGENDA --> WORK
+  DOCTRINE --> WORK
+  WORK -->|"session.turn appended BEFORE the next turn is solicited"| LOG
 
-  APPROVE["approval — the only writer of claim.committed<br/>visibility chosen explicitly; default stays private<br/>rejection retracts permanently"]
+  APPROVE["APPROVAL GATE — no model, not an agent<br/>the only writer of claim.committed<br/>batch ratification at session end<br/>rejection retracts permanently<br/>visibility chosen explicitly; default stays private"]
   DIV --> APPROVE
-  APPROVE -->|"claim.committed · claim.visibility_set"| LOG
-  APPROVE -->|"contradiction.resolved — the agenda shrinks"| LOG
+  APPROVE -->|"claim.committed · claim.visibility_set<br/>contradiction.resolved — the agenda shrinks"| LOG
 
   subgraph BOUNDARY["THE VISIBILITY BOUNDARY"]
-    RB["readable_by — defined once, in schema/visibility.py<br/>quote reachable only through quote_for<br/>fails CLOSED on unknown audience or visibility<br/>reconciler may COUNT an unreadable claim, never quote it"]
+    RB["readable_by — defined once, schema/visibility.py<br/>quote reachable only through quote_for(audience)<br/>fails CLOSED on unknown input<br/>an unreadable claim may be COUNTED, never quoted"]
   end
 
-  GSTATE --> RB
-  SUCC["successor service — Cloud Run<br/>reads only committed AND readable by the asking audience<br/>successor in handover · PUBLIC on the hosted instance, strictly narrower<br/>uncited synthesis → refusal, with its own AC"]
-  RB --> SUCC
+  FOLD --> RB
+  DOSS["dossier surface — Cloud Run, public route logged-out<br/>reads only committed AND readable by the asking audience<br/>uncited synthesis → refusal, with its own AC"]
+  RB --> DOSS
 
   SCHED["Cloud Scheduler — nightly"]
-  JOB["baraza-reconcile — Cloud Run Job<br/>stub, then replaced in place by the real one<br/>every event marked scheduled=True"]
-  SCHED --> JOB
-  JOB -->|"re-detect over claims since last run"| BK
-  JOB -->|"ledger snapshot + differential vs last night"| LOG
+  TRIG["baraza-trigger — OIDC-guarded hop<br/>Scheduler → service → jobs.run"]
+  JOB["reconcile Job — Cloud Run<br/>re-detect · agenda regeneration · session.proposed<br/>every event marked scheduled=True"]
+  SCHED --> TRIG --> JOB
+  JOB --> BK
+  JOB -->|"agenda + one outbound notification —<br/>the agent speaks first next session"| LOG
 
   classDef boundary stroke-width:3px,stroke-dasharray: 5 5;
   classDef heavy stroke-width:3px;
   class BOUNDARY,RB boundary;
-  class LOG,DIV heavy;
+  class LOG,DIV,APPROVE heavy;
 ```
 
 ---
 
 ## Which model does what
 
-Model **roles**, not model IDs. The pinned identifiers live in exactly one module,
-`src/baraza/schema/models.py`, and `scripts/compliance.py` fails the build on a
-model-ID literal written anywhere else in the tree — including, by the same
-principle, in this document. `make verify-models` resolves every pin against live
-Vertex; until it has run green against the target project, no document here states
-which model version shipped. A pinned literal nobody checked is a plausible value
-where a verified one belongs.
+Model **roles**, not model IDs, in this document. The pinned identifiers live in
+exactly one module, `src/baraza/schema/models.py`, resolved everywhere else via
+`models.resolve(role)`; `scripts/compliance.py` fails the build on a model-ID
+literal anywhere else in the source tree. The pins were live-verified against
+Vertex on 2026-08-31 (the resolution `make verify-models` performs), and the
+README's Google Cloud table records the verified IDs once.
 
 | Role | Where it is called | Why that role |
 |---|---|---|
-| **Gemini, reasoning role** | Contradiction adjudication, agenda synthesis, the divergence turn, successor-mode synthesis | Every call that must be right more than it must be quick. A wrong adjudication puts a false contradiction in front of a departing officer and spends the scarcest resource in the system — their attention. |
-| **Gemini, fast role** | Claim extraction over corpus chunks, entity alias proposals, the interviewer's ordinary turns and clarifying follow-ups | First-token latency is the binding constraint on the interview path, and extraction is a high-volume, structurally constrained task where the model selects from a closed set rather than composing. |
-| **Gemma** | The ingestion relevance pre-filter, `keep` / `drop` per chunk, before any Gemini call | Most of a chat export is scheduling noise. Filtering it with a small model is the difference between an ingestion that costs dollars and one that costs tens of dollars. Runs behind a `stub` / `gemma` flag; night-one unattended ingestion runs `stub`, disclosed as a stub in its docstring, in `docs/metrics.json`, and in the console output of any run that used it. |
-
-There is no embedding model in this table. An earlier revision listed one, for
-"blocking-key expansion in detection"; nothing in the tree ever embedded anything.
-Retrieval is exact-match blocking on subject ∪ object ∪ `predicate_hint` with alias
-edges resolved at query time (`src/baraza/reconcile/detect.py`), which is what the
-corpus's cardinality actually needs. The pin is gone from
-`src/baraza/schema/models.py` and the decision is recorded in the README's negative
-decisions.
+| **Gemini, reasoning role** | Contradiction adjudication, agenda synthesis, the divergence turn, dossier synthesis | Every call that must be right more than it must be quick. A wrong adjudication puts a false contradiction in front of the user and spends the scarcest resource in the loop — their attention at the gate. |
+| **Gemini, fast role** | Claim extraction over turns and corpus chunks, alias proposals, ordinary session turns | First-token latency binds on the session path, and extraction is high-volume and structurally constrained — the model selects anchors from a closed set rather than composing them. |
 
 ---
 
-## The five things this diagram asserts
+## What the diagram asserts
 
-### 1. The log is append-only and the graph is a fold
+### 1. The log is append-only and every state is a fold
 
-`src/baraza/fold/store.py` exposes `append` and `read_all`. There is no `update` and
-no `delete`, and that is the interface rather than an oversight. In production,
-`deploy/firestore.rules` rejects update and delete at the database level, so an
-application bug cannot mutate history even if it tries. Fixing bad data means
-appending a superseding event.
+`src/baraza/fold/store.py` exposes `append` and `read_all`; there is no `update`
+and no `delete`, and that is the interface rather than an oversight. In
+production `deploy/firestore.rules` rejects update and delete at the database
+level — deployed and verified live (`scripts/verify_append_only.sh`) — so an
+application bug cannot mutate history even if it tries.
 
-`src/baraza/fold/graph.py` is the only graph renderer. Every state you can see is a
-fold over the log — no cache, nothing that can drift. The fold raises on an event type
-it does not recognize rather than skipping it, because a silently incomplete graph is
-the exact failure an append-only log exists to prevent.
+`src/baraza/fold/graph.py` is the only state renderer. It raises on an event
+type it does not recognize rather than skipping it, because a silently
+incomplete state is the exact failure an append-only log exists to prevent.
+Event IDs are content hashes, so idempotence under retry is inherited, not
+implemented. The fold orders events by `(occurred_at_millis, event_id)` —
+integers, never strings — which is the whole reason a permutation test over
+serialized UTC offsets can assert byte-identical output.
 
-Idempotence is inherited rather than implemented: claim IDs and event IDs are content
-hashes, so a Cloud Run Job that dies halfway and is retried re-derives the same IDs
-and the second write is a no-op. That property is what makes the nightly schedule safe
-to run unattended.
+This substrate is what makes "memory with due process" more than a metaphor:
+retraction is an event, adjudication is an event, and a judge checking whether a
+belief predates demo day is reading timestamps in a log that provably rejects
+edits.
 
-### 2. Detection is bounded on write, and the arithmetic is the reason
+### 2. Contradiction detection is bounded on write — and aimed at the user
 
-Design assumption: a decade of records yields on the order of **3,000 claims**. The
-measured count is `not yet measured` (`docs/metrics.json`, key
-`claims_extracted_total`).
+Design assumption: on the order of **3,000 claims**. Measured count:
+`not yet measured` (`docs/metrics.json`). All-pairs over 3,000 claims is
+3000 × 2999 / 2 = **4,498,500** comparisons — a bill, not a system, and batching
+changes the constant, not the 4.5 million. On write, with blocking
+(`src/baraza/reconcile/detect.py`), it is one bounded call per claim: block on
+subject ∪ object ∪ `predicate_hint` with aliases resolved at query time,
+temporally gate on epoch interval overlap, cap at `MAX_RETRIEVED = 20`.
 
-All-pairs over 3,000 claims:
+The retarget from records to person is a change of subject, not of machinery:
+blocking on subject works identically when the subject is the user entity. What
+the temporal gate removed for fiscal years (consecutive terms cannot conflict)
+it removes for superseded guidance eras.
 
-```
-3000 × 2999 / 2  =  4,498,500 comparisons
-```
+### 3. The approval gate is promotion-isolated and has no model
 
-At one model call per comparison this is not a system, it is a bill; batching changes
-the constant, not the 4.5 million. On write, with blocking, it is **one bounded call
-per claim** — three thousand calls of about 3k tokens, each seeing at most 20
-retrieved claims. `MAX_RETRIEVED = 20` is a constant in
-`src/baraza/reconcile/detect.py`; the cap is by construction, not by hoping the blocks
-stay small.
+`claim.committed` and `claim.visibility_set` are constructed in exactly one
+module, `src/baraza/interview/approval.py`. Neither the ingestion package nor
+the reconcile package imports it, the deployed Firestore rules deny the event
+type on create for rules-governed callers, and a unit test asserts the negative.
+The approver is deliberately **not** an `LlmAgent` — promotion is the one
+operation that must never be a model's judgment call — and the ADK agent fleet
+has peer and parent transfer disabled so no reasoning agent can hand work to it.
 
-The temporal gate does the heaviest lifting on precision. A treasurer's FY24 signing
-authority and their successor's FY25 authority are not a contradiction, and that
-false-positive pair is a planted fixture that must not fire — under permuted
-serialized offsets.
+Promotion and the visibility choice are distinct events, so the disclosure
+decision is auditable separately from the approval. Rejection retracts
+permanently: out of retrieval, out of the ledger, out of every future agenda,
+out of the next doctrine.
 
-### 3. The visibility boundary is structural
+### 4. The doctrine is compiled, cited, and conflict-refusing
 
-- `visibility` is set at append time and never unset; a claim built without one is
-  `private`.
+The doctrine compiler folds **committed** beliefs only into the session's
+operating policy, carrying a rule ← claim provenance map: every rule names the
+claim ID and quote that put it there. Compilation is deterministic — replaying
+the fold reproduces the doctrine byte for byte under permuted serialized offsets
+— and the deterministic claim stops there: whether the model complies with a
+cited rule is a measured number with provenance, never an assertion.
+
+When two committed rules conflict, the compiler **refuses to pick between
+them**. The conflict surfaces as a divergence card and an agenda item, and only
+an adjudication event resolves it. The doctrine diff between epochs names, per
+changed rule, the claim that changed it — an honest artifact, because the
+provenance map is emitted by the compiler, not inferred from output.
+
+### 5. The visibility boundary is structural
+
+- `visibility` is set at append time and never unset; a claim built without one
+  is `private` — beliefs about you are private by default.
 - `readable_by(claim, audience)` is defined **once**, in
-  `src/baraza/schema/visibility.py`. Divergence detection, the ledger, the agenda, the
-  question renderer, the graph view and successor mode all route through it.
-- The quote is not a readable attribute. It is stored protected and reachable only
-  through `claim.quote_for(audience)`. Code that reaches for `claim.quote` raises
-  `AttributeError` at the access site. `make compliance` fails the build if the
-  protected field is named anywhere outside `src/baraza/schema/`.
-- The predicate fails **closed** on unrecognized input rather than raising, because a
-  raised exception can be swallowed by a caller trying to be robust, and the swallowed
-  path is where leaks live.
+  `src/baraza/schema/visibility.py`; every read path routes through it.
+- The quote is not a readable attribute. It lives behind
+  `claim.quote_for(audience)`; code reaching for the raw field raises at the
+  access site, and `make compliance` fails the build if the protected field is
+  named outside `src/baraza/schema/`.
+- The predicate fails **closed** on unrecognized input rather than raising,
+  because a raised exception can be swallowed by a caller trying to be robust,
+  and the swallowed path is where leaks live.
 
-The reconciler may **count** an unreadable claim toward a contradiction's existence.
-It may never render that claim's text into a question for that audience. `RedactedClaim`
-is the only thing that crosses: claim ID, subject, predicate hint, interval bounds —
-no quote, no object literal, no anchor text. An agenda item whose sides the
-interviewee cannot read is downgraded to an open-ended prompt, not dropped; dropping
-it would let the boundary silently shrink the agenda and make the visibility choice
-look free when it is not.
+The reconciler may **count** an unreadable claim toward a contradiction's
+existence; it may never render its text. `RedactedClaim` is the only thing that
+crosses: structural coordinates, no quote, no object literal, no anchor text. An
+agenda item with unreadable sides is downgraded to an open-ended prompt, never
+dropped — dropping it would let the boundary silently shrink the agenda.
 
-The successor service sits on the far side of the boundary on purpose. It reads only
-claims that are both `committed` **and** readable by the audience asking — the
-successor during a handover, and `Audience.PUBLIC` on the hosted instance a logged-out
-judge visits, which is strictly narrower. The two halves are different axes:
-`committed` is the retraction axis, reached because a human approved it and left
-permanently on rejection; visibility is the disclosure axis, and it defaults to
-private. A fresh deployment therefore shows a judge nothing at all, and that is the
-boundary working rather than an empty database.
+The public dossier surface (`src/baraza/dossier/service.py`) sits on the far
+side on purpose: it reads only claims that are both `committed` **and** readable
+by the asking audience — `Audience.PUBLIC` for a logged-out judge, strictly
+narrower than what the owner sees. A fresh deployment shows a judge nothing at
+all, and that is the boundary working, not an empty database. When the readable
+committed record cannot support an answer, the librarian
+(`src/baraza/dossier/librarian.py`) refuses, and the refusal has its own
+acceptance criterion — withheld counts are honest, withheld contents are not
+disclosed.
 
-When the readable committed record cannot support an answer, the service refuses. The
-refusal has its own acceptance criterion. A successor cannot tell a remembered fact
-from a fluent guess, and a fluent guess about who can sign a cheque is worse than
-silence — silence is recoverable, because they go and ask someone.
+### 6. Time is integers
 
-### 4. Time is integers
-
-Every comparison in the system — fold ordering, interval overlap, turn ordering,
-ledger recency — runs on integer epoch milliseconds, UTC
-(`src/baraza/schema/temporal.py`). ISO-8601 is serialization only.
-
-The corpus deliberately mixes three temporal representations: bare epoch **seconds**
-in the chat export, dates with no time at all in the scanned PDF, and offset-bearing
-ISO strings in interview turns. The normalizer reads integers below the
-epoch-seconds ceiling as seconds and above it as millis, treats a bare `YYYY-MM-DD`
-as `00:00:00Z` by documented convention, and **rejects** naive datetimes and
-offsetless ISO strings rather than guessing at an offset.
-
-The trap that proves it matters has to cross a date boundary:
+Every comparison — fold ordering, interval overlap, turn ordering, recency —
+runs on integer epoch milliseconds, UTC (`src/baraza/schema/temporal.py`).
+ISO-8601 is serialization only. The trap that proves it matters crosses a date
+boundary:
 
 | a | b | string order | instant order |
 |---|---|---|---|
 | `2026-05-01T20:00:00-05:00` | `2026-05-02T00:00:00Z` | `a < b` | `a > b` |
 
-The fold-stability property test permutes serialized offsets across the golden log and
-asserts an identical graph.
+Naive datetimes and offsetless strings are rejected loudly at the parse site
+rather than guessed at. The fold-stability property test permutes serialized
+offsets across the golden log and asserts identical output.
 
-### 5. Autonomy is evidenced, not asserted
+### 7. Initiation is evidenced, not asserted
 
-Cloud Scheduler triggers the reconcile Job nightly. The Job re-folds the log,
-snapshots the ledger, re-runs detection over claims written since the previous run,
-and writes the differential against last night's snapshot: contradictions **added**,
-contradictions **retracted** because a new document settled them, and rankings that
-moved.
+Cloud Scheduler fires nightly through `baraza-trigger` — the OIDC-guarded hop
+adopted after the direct Scheduler→Jobs-API path 403'd (root cause and fix in
+`STOPPED-DEPLOY.md`; no scope was widened — the same service account does the
+same thing, one hop later). The reconcile Job re-detects over claims written
+since its last recorded adjudication, regenerates the agenda from open
+contradictions and stale beliefs, appends a `session.proposed` event, and sends
+one outbound notification — so the next session opens with the agent speaking
+first, each agenda item citing the ledger entry that spawned it.
 
-A diff between two snapshots taken minutes apart proves nothing. The evidence is a
-diff across two genuine nights with a document dropping in between — which cannot be
-compressed retroactively, which is why the Scheduler is deployed early and stubbed
-rather than deployed late and real.
-
-Every event the Job appends is marked `scheduled=True`. A scheduled run is never
-counted as organic activity in any accounting, anywhere.
+Every event a scheduled run appends is marked `scheduled=True`
+(`src/baraza/reconcile/differential.py` carries the scheduled-vs-manual
+discipline), and a scheduled run is never counted as organic activity in any
+accounting. Multi-day initiation is proven by timestamps accumulating in the
+append-only log, which cannot be compressed retroactively — the reason the
+trigger runs live rather than being staged for the video.
 
 ---
 
 ## Where each box lives
 
-| Box in the diagram | Module |
+| Box | Module |
 |---|---|
-| Corpus readers, locator grammars | `src/baraza/ingest/readers.py`, `src/baraza/ingest/sources.py` |
-| Chunking | `src/baraza/ingest/chunking.py` |
-| Relevance pre-filter | `src/baraza/ingest/prefilter.py` |
-| Claim extraction and its validation gates | `src/baraza/ingest/extract.py` |
-| Entity table and alias pass | `src/baraza/ingest/entities.py` |
-| The unattended pipeline that wires them | `src/baraza/ingest/pipeline.py` |
+| Turn/corpus claim extraction and its validation gates | `src/baraza/ingest/extract.py` |
+| Corpus readers, chunking, entities (eval harness) | `src/baraza/ingest/` |
 | Append-only store, both backends | `src/baraza/fold/store.py` |
-| The fold and the graph state | `src/baraza/fold/graph.py` |
+| The fold | `src/baraza/fold/graph.py` |
 | Blocking, temporal gate, adjudication | `src/baraza/reconcile/detect.py` |
 | Disputed ledger and its ranking | `src/baraza/reconcile/ledger.py` |
-| Agenda generation | `src/baraza/reconcile/agenda.py` |
-| Nightly Job, stub and real | `src/baraza/reconcile/job.py` |
-| Differential across nights | `src/baraza/reconcile/differential.py` |
-| Interviewer, adaptation, divergence turn | `src/baraza/interview/interviewer.py` |
+| Agenda generation and retirement | `src/baraza/reconcile/agenda.py` |
+| Scheduled reconcile Job, differential across runs | `src/baraza/reconcile/job.py`, `differential.py` |
+| Initiation — agenda, `session.proposed`, one notification | `src/baraza/reconcile/initiate.py` |
+| The Scheduler-facing trigger service (`baraza-trigger`) | `src/baraza/reconcile/trigger_service.py` |
+| **Doctrine compiler — rule ← claim provenance, byte-stable** | `src/baraza/doctrine/compiler.py` |
+| Doctrine diff — the causal claim per changed rule | `src/baraza/doctrine/diff.py` |
+| The web face over the service seams | `src/baraza/web/` |
+| Session engine and the divergence turn | `src/baraza/interview/interviewer.py` |
 | Session state that survives a kill | `src/baraza/interview/session_store.py` |
-| Approval, promotion, visibility choice | `src/baraza/interview/approval.py` |
-| Interview HTTP surface, not public, reads as owner | `src/baraza/interview/service.py` |
-| Successor librarian and its refusal | `src/baraza/successor/librarian.py` |
-| Successor HTTP surface — the public one, reads as public | `src/baraza/successor/service.py` |
-| Spans that carry a claim digest, never a quote | `src/baraza/telemetry.py` |
-| The CLI behind every demo target | `src/baraza/cli.py` |
-| Images, Firestore rules, Cloud Run and Scheduler manifests | `deploy/` |
+| **The approval gate — sole writer of `claim.committed`** | `src/baraza/interview/approval.py` |
+| Session HTTP surface, private, reads as owner | `src/baraza/interview/service.py` |
+| Dossier librarian and its refusal | `src/baraza/dossier/librarian.py` |
+| Dossier HTTP surface — the public one | `src/baraza/dossier/service.py` |
 | The one visibility predicate | `src/baraza/schema/visibility.py` |
 | Epoch normalization | `src/baraza/schema/temporal.py` |
 | Model pins, and only here | `src/baraza/schema/models.py` |
 | Every Gemini call, and the cassette replay path | `src/baraza/llm.py` |
+| ADK agent fleet, transfer-disabled | `src/baraza/agents.py` |
+| The CLI behind every demo target | `src/baraza/cli.py` |
+| Images, Firestore rules, Run and Scheduler manifests | `deploy/` |
+
+[`BUILD-LOG.md`](BUILD-LOG.md) is the authority on what has landed since this
+map was written.
 
 ---
 
@@ -287,67 +286,36 @@ counted as organic activity in any accounting, anywhere.
 | Surface | Runtime | Trigger |
 |---|---|---|
 | Ingestion | Cloud Run Job | Manual or on corpus drop |
-| `baraza-reconcile` | Cloud Run Job | Cloud Scheduler, nightly |
-| Interview | Cloud Run service | HTTP, interactive |
-| Successor | Cloud Run service | HTTP, interactive |
+| Reconcile | Cloud Run Job | Cloud Scheduler → `baraza-trigger` (OIDC) |
+| Session service | Cloud Run service | HTTP, private |
+| Dossier surface | Cloud Run service | HTTP, public, reads as `PUBLIC` |
 | Event log, sessions, entities | Firestore | — |
-| All model calls | Vertex AI | — |
+| All model calls | Vertex AI, location `global` | — |
 
-Service accounts are per stage. The extraction stage **cannot** write a
-`claim.committed` event, and it is worth being exact about what stops it, because
-an earlier revision of this document said "by IAM" and that was wrong. Firestore's
-IAM permissions are per-operation and carry no predicate over document contents, so
-IAM cannot express "may create documents whose `event_type` is `claim.asserted`" —
-`scripts/bootstrap_gcp.sh` binds the same `baraza_log_appender` role to the ingest,
-reconcile and interview accounts, and says so where it does it. What holds this
-boundary is the **code path** (`claim.committed` is constructed only in
-`interview/approval.py`; neither `baraza.ingest` nor `baraza.reconcile` imports it,
-and the reconcile Job's entrypoint never loads it — the ingest Job enters through
-`baraza.cli`, which does import `ApprovalFlow` for the demo flow, so on that one
-container the isolation is the path taken rather than the module being absent),
-**`deploy/firestore.rules`** (which denies the event type on `create` for
-every rules-governed caller, though not for service-account credentials, which
-bypass rules), and **a unit test** that asserts the negative. What IAM does enforce
-is the guarantee that matters most: append-only, create without update or delete,
-for every writer — plus the read-only successor. `deploy/README.md` carries the
-per-row matrix.
+Service accounts are per stage, and it is worth being exact about what holds the
+promotion boundary, because an earlier revision said "by IAM" and that was
+wrong: Firestore IAM is per-operation and carries no predicate over document
+contents. What holds it is the **code path** (`claim.committed` is constructed
+only in `interview/approval.py`, which the ingest and reconcile packages do not
+import), the **deployed rules** (which deny the event type on create for
+rules-governed callers), and a **unit test asserting the negative**. What IAM
+does enforce is the guarantee that matters most: append-only — create without
+update or delete — for every writer, plus the read-only public surface.
+`deploy/README.md` carries the per-row matrix.
 
-Only the approval path promotes a claim, and the promotion is a distinct event from
-the visibility choice so the boundary decision is auditable separately from the
-approval.
-
-A missing permission is a stop condition. It gets reported, not routed around, and
-never fixed by widening a scope or a key.
+A missing permission is a stop condition. It gets reported, not routed around,
+and never fixed by widening a scope or a key — a discipline the Scheduler 403
+vindicated: the widening experiment bought nothing, and the fix was
+architectural.
 
 ---
 
 ## Status
 
-This document describes the system as designed and, for the modules listed above, as
-implemented. It is not a deployment report.
-
-Observed on 2026-08-13, after a verification pass that ran each of these: every
-module in the file map exists and imports under Python 3.14 with no cloud
-credentials; `tests/unit` and `tests/property` pass in full (`make test` prints the
-count — it is not transcribed here, because a transcribed count is stale on the next
-commit and this document is not a place for numbers nobody re-ran); `make corpus`
-regenerates 13 artifacts and re-reads every one through `baraza.ingest.readers`;
-`make verify-manifest` finds 18 of 18 planted problems; `deploy/` carries the
-Firestore rules and the Cloud Run and Scheduler manifests.
-
-Not yet true: the Scheduler trigger has not produced a verified scheduled execution; `fixtures/cassettes/` holds no recordings, so
-the offline demo refuses to start and **no behaviour has been observed** —
-`verify-manifest` reports 0 of 17 behaviour probes and `verify-anchors` has no
-citations to resolve, both because there is no event log; no production module
-imports `baraza.agents`, so the ADK fleet is constructed and tested but not yet
-driving a live extraction loop; `make verify-models` has not run, so no model pin
-has been resolved against live Vertex; and every entry in `docs/metrics.json`
-reads `not yet measured`.
-
-ADK itself is no longer a gap: `src/baraza/agents.py` imports
-`google.adk.agents.LlmAgent` and `google.adk.tools.FunctionTool` and builds three
-real agents. What remains is wiring one of them onto the production call path.
-
-The README's status table carries the per-command exit codes, `docs/compliance.md`
-carries the framework row in full, and `docs/BUILD-LOG.md` is the authority on what
-has landed.
+This document describes the system as designed and, for every module in the map
+above, as implemented in the tree at the time of writing (2026-08-31; all unit,
+property and integration tests green — run `make test` for the count, which is
+not transcribed here because a transcribed count is stale on the next commit).
+It is not a deployment report: the README's status table carries observed
+per-command exit codes, `STOPPED-DEPLOY.md` carries the dated deploy evidence,
+and `docs/BUILD-LOG.md` is the authority on what has landed.

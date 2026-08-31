@@ -25,14 +25,34 @@
 # nightly count into a count of attempts. Firing in the small hours puts the
 # whole retry window inside one UTC day.
 #
-# The run ID is absent from `body` on purpose. Cloud Scheduler cannot inject a
-# per-run timestamp: the target is the Run Admin API, and the
-# `X-CloudScheduler-ScheduleTime` header Scheduler sends is consumed there and
-# never reaches the container. A literal `--run-id` written here would be
-# byte-identical every night; event IDs are content hashes, so night two's
-# heartbeat would collide with night one's, be dropped as a duplicate, and the
-# heartbeat count would sit at 1 while the execution history kept growing. The
-# container composes the run ID instead, and BAR-021's evidence stays real.
+# The run ID is absent from the request on purpose. Cloud Scheduler cannot
+# inject a per-run timestamp into the Job's container. A literal `--run-id`
+# configured anywhere in this chain would be byte-identical every night; event
+# IDs are content hashes, so night two's heartbeat would collide with night
+# one's, be dropped as a duplicate, and the heartbeat count would sit at 1
+# while the execution history kept growing. The container composes the run ID
+# instead (deploy/entrypoint-job.sh), and BAR-021's evidence stays real.
+#
+# ---------------------------------------------------------------------------
+# WHY THE TARGET IS A SERVICE, NOT THE JOBS ADMIN API
+#
+# The original target was the Run Jobs Admin API `:run` URL with an OAuth
+# token. It returned 403 on every attempt with every documented grant in place
+# and individually verified; admin-activity audit logs showed no request
+# authenticated as baraza-reconcile ever reaching the Run API from Scheduler,
+# while the same SA's own token against the identical URL started executions.
+# The defect was Scheduler's OAuth token minting for that path, not IAM — see
+# STOPPED-DEPLOY.md (2026-08-15, update 2026-08-31).
+#
+# The target is now the baraza-trigger Cloud Run service
+# (src/baraza/reconcile/trigger_service.py), reached with an OIDC token —
+# Scheduler -> OIDC -> Cloud Run service is the supported, well-trodden path.
+# The service runs as baraza-reconcile and makes the `jobs.run` call itself,
+# with the constant containerOverride that sets
+# BARAZA_RUN_TRIGGER=cloud-scheduler. That override lives in the service, not
+# here: it is the property "only the Scheduler path is labelled scheduled",
+# and a property enforced by one constant in one code path beats one that any
+# edit to a YAML body could quietly change.
 # ---------------------------------------------------------------------------
 
 name: baraza-reconcile-nightly
@@ -65,21 +85,21 @@ retryConfig:
   maxDoublings: 3
 
 httpTarget:
-  # Cloud Run Admin API v2. v2 is used rather than the v1 `namespaces` endpoint
-  # because it accepts `overrides`, which is how the run is labelled as
-  # scheduled at the container level rather than only in Scheduler's own logs.
-  uri: https://run.googleapis.com/v2/projects/__PROJECT_ID__/locations/__REGION__/jobs/baraza-reconcile:run
+  # `__TRIGGER_URL__` is the deployed baraza-trigger service URL, known only
+  # after the service exists; bootstrap substitutes it after deploying the
+  # service and before creating this trigger.
+  uri: __TRIGGER_URL__/run-reconcile
   httpMethod: POST
-  headers:
-    Content-Type: application/json
-  oauthToken:
-    # The Scheduler runs as the same identity the Job runs as. That is not a
-    # shortcut to avoid a fifth service account — it is the least-privilege
-    # answer: the binding is `roles/run.invoker` scoped to this one Job
-    # resource, so the identity that can trigger the reconciler is exactly the
-    # identity that can do the reconciler's work, and nothing else can do
-    # either.
+  oidcToken:
+    # The Scheduler authenticates as the same identity the Job runs as. Not a
+    # shortcut to avoid a fifth service account — the least-privilege answer:
+    # this identity holds `roles/run.invoker` on exactly two resources, the
+    # baraza-trigger service and the baraza-reconcile Job, so the identity that
+    # can trigger the reconciler is exactly the identity that does the
+    # reconciler's work, and nothing else can do either. The Scheduler service
+    # agent's tokenCreator grant on this SA (made 2026-08-15) is what lets it
+    # mint the OIDC token.
     serviceAccountEmail: baraza-reconcile@__PROJECT_ID__.iam.gserviceaccount.com
-    scope: https://www.googleapis.com/auth/cloud-platform
-  body: |
-    {"overrides":{"containerOverrides":[{"env":[{"name":"BARAZA_RUN_TRIGGER","value":"cloud-scheduler"}]}]}}
+    # OIDC audience must be the receiving service's own URL or Cloud Run's
+    # IAM check rejects the token.
+    audience: __TRIGGER_URL__

@@ -1,0 +1,12 @@
+{
+  "schema": "baraza.battery.case.v1",
+  "case_id": "retracted-rule-released-01",
+  "rule_claim_id": "claim-user-never-pad-estimates",
+  "rule_summary": "a retracted belief is never cited again",
+  "task": "The measured runtime of the offline demo was 12 minutes. Give a one-line estimate, in minutes, for the next run.",
+  "phases": ["post_retraction"],
+  "predicate": {
+    "type": "regex_absent",
+    "pattern": "\\[claim:claim-user-never-pad-estimates\\]"
+  }
+}

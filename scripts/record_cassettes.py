@@ -11,7 +11,7 @@ is.
 list of prompts drifts from the prompts the code actually issues, and the first
 symptom is a cassette miss in front of a judge. So this script drives the same
 stages ``make demo`` drives — ingest with on-write detection, agenda generation,
-a replay interview per persona, approval, and the successor query — with a
+a replay partner session per script, approval, and the dossier query — with a
 :class:`RecordingClient` wrapped around a live :class:`VertexClient`. Every
 prompt the demo will issue is therefore issued once, for real, and captured with
 its response.
@@ -62,11 +62,11 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--out", type=Path, default=CASSETTE_DIR)
     parser.add_argument("--name", default="demo", help="cassette file stem")
     parser.add_argument(
-        "--persona",
+        "--script",
         action="append",
         default=None,
-        help="persona to replay; repeatable. Defaults to every fixture present, "
-        "because a persona whose prompts were never recorded is a cassette miss "
+        help="script to replay; repeatable. Defaults to every fixture present, "
+        "because a script whose prompts were never recorded is a cassette miss "
         "waiting to happen.",
     )
     parser.add_argument("--items", type=int, default=4)
@@ -85,11 +85,11 @@ def main(argv: Sequence[str]) -> int:
         return EXIT_CANNOT_RUN
 
     location = models.location()
-    personas = args.persona or [
+    scripts = args.script or [
         p.stem for p in sorted((REPO / "fixtures" / "interviews").glob("*.json"))
     ]
-    if not personas:
-        console.fail("cannot run: no persona fixtures in fixtures/interviews/")
+    if not scripts:
+        console.fail("cannot run: no script fixtures in fixtures/interviews/")
         return EXIT_CANNOT_RUN
 
     console.title(
@@ -97,7 +97,7 @@ def main(argv: Sequence[str]) -> int:
         f"live Vertex calls against {project} ({location})",
     )
     console.detail(f"corpus     {args.corpus}")
-    console.detail(f"personas   {', '.join(personas)}")
+    console.detail(f"scripts    {', '.join(scripts)}")
     console.detail(f"output     {args.out}")
     console.warn(
         "This makes real, billable model calls. It is a supervised refresh, not "
@@ -154,15 +154,14 @@ def main(argv: Sequence[str]) -> int:
             )
             return EXIT_FAILED
 
-        last_replay = None
-        for persona in personas:
-            last_replay = cli.stage_replay_interview(
+        last_session = None
+        for script in scripts:
+            _result, last_session = cli.stage_replay_interview(
                 console,
                 client=recorder,
-                state=state,
                 store=store,
                 agenda=agenda,
-                persona_name=persona,
+                script_name=script,
                 audience=audience,
                 speed=0.0,
                 paced=False,
@@ -173,18 +172,18 @@ def main(argv: Sequence[str]) -> int:
                 transcript_dir=REPO / "out" / "recording-transcripts",
             )
 
-        if last_replay is not None:
+        if last_session is not None:
             cli.stage_approval(
                 console,
                 client=recorder,
                 state=state,
                 store=store,
                 agenda=agenda,
-                session=last_replay.session,
+                session=last_session,
                 audience=audience,
                 visibility=Visibility.SUCCESSOR,
             )
-        cli.stage_successor(
+        cli.stage_dossier_query(
             console,
             client=recorder,
             store=store,

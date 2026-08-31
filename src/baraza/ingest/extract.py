@@ -36,12 +36,27 @@ until it says it is done, bounded by a turn ceiling and a wall-clock timeout,
 with each rejection returned to the model as a structured refusal it can react
 to rather than as an exception. Which path runs is chosen by
 ``IngestionPipeline``; see its ``agent_extraction`` argument.
+
+**A third extraction path mines the user, not the corpus.**
+
+:func:`extract_beliefs` reads one user turn from a working session and returns
+belief claims — the operating rules the user states about how their work should
+be done. It targets *judgment shape*: conditions, thresholds, exceptions,
+scope. A bare style preference ("keep it concise") is instructed away and,
+when the model returns one anyway as an unconditional tone rule, gated away
+mechanically. The same three-gate discipline applies — the quote must appear
+verbatim in the turn (whitespace-normalized), the ``predicate_hint`` must come
+from the closed :data:`BELIEF_TAXONOMY`, and ``Claim.create`` enforces schema
+validity — and a candidate failing any gate is dropped with a named reason,
+never repaired.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import re
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -69,6 +84,12 @@ __all__ = [
     "AgentClaimExtractor",
     "build_claim",
     "EXTRACTION_SCHEMA_NAME",
+    "BELIEF_SCHEMA_NAME",
+    "BELIEF_TAXONOMY",
+    "USER_ENTITY_ID",
+    "BeliefExtractionResult",
+    "BeliefExtractor",
+    "extract_beliefs",
 ]
 
 EXTRACTION_SCHEMA_NAME = "claims.v1"
@@ -549,3 +570,318 @@ def _entity_key(name: str) -> str:
     """
     slug = "-".join(name.strip().lower().split())
     return f"ent:{slug}" if slug else "ent:unknown"
+
+
+# --------------------------------------------------------------- belief path
+
+USER_ENTITY_ID = "ent:user"
+"""The single subject every belief claim is written about.
+
+Defined once, here, because contradiction detection blocks on subject ∪
+``predicate_hint``: two belief claims written under two spellings of the user
+entity would never land in the same block, and the divergence moment — the
+product — would silently stop firing. Everything that mints or pools belief
+claims imports this constant instead of restating it.
+"""
+
+BELIEF_SCHEMA_NAME = "beliefs.v1"
+
+BELIEF_TAXONOMY = frozenset(
+    {
+        "citation policy",
+        "estimation policy",
+        "visibility policy",
+        "tone policy",
+        "routing policy",
+        "refusal policy",
+    }
+)
+"""The closed set of ``predicate_hint`` values a belief may carry.
+
+Closed for the same reason anchors are a closed set: the hint is the blocking
+key for contradiction detection, and a model free to invent hints would scatter
+related beliefs across blocks that never meet. A hint outside this set is a
+gate failure, not a new category.
+"""
+
+_BELIEF_SYSTEM = """\
+You extract the operating rules a person states about how their own work \
+should be done. You read one turn they wrote during a working session and \
+return the durable, judgment-shaped rules it asserts — about themselves, \
+addressed to whoever works for them next.
+
+A rule worth extracting has JUDGMENT SHAPE: it says what to do, and it carries \
+at least one of a condition, a threshold, an exception, or a scope. "Cite the \
+source before the number, unless the recipient is internal" is a rule. \
+"I like it concise" is a taste, and you SKIP it.
+
+Rules you never break:
+
+* Extract only what the turn actually states or unambiguously directs. Never \
+infer a rule the person did not assert.
+* SKIP pure style observations — tone, brevity, formality, phrasing taste — \
+unless the turn attaches a condition, threshold, scope, or exception to them. \
+A conditional style rule ("formal register when the recipient is external") \
+qualifies; a bare preference never does.
+* Every rule carries a quote copied VERBATIM from the turn. Do not paraphrase, \
+do not trim mid-word, do not fix spelling.
+* "rule" is one imperative sentence. "condition" is the stated condition or \
+scope, or null when the rule is unconditional — never invent one.
+* predicate_hint MUST be one of the categories you are given. If no category \
+fits, the statement is not a belief this system records; skip it.
+* An empty list is a valid and common answer. Most turns contain work, not \
+rules about work.
+"""
+
+_BELIEF_PROMPT = """\
+Extract every judgment-shaped operating rule the person asserts in the turn \
+below.
+
+Return JSON only, matching this shape exactly:
+
+{{
+  "beliefs": [
+    {{
+      "rule": "one imperative sentence stating what to do",
+      "condition": "the stated condition, scope, or exception — or null",
+      "predicate_hint": "exactly one of: {taxonomy}",
+      "quote": "verbatim text from the turn that asserts this rule"
+    }}
+  ]
+}}
+
+The turn:
+{text}
+"""
+
+
+@dataclass(slots=True)
+class BeliefExtractionResult:
+    """Belief claims from one turn, plus what was dropped and why.
+
+    The rejected list is not diagnostics garnish: a partner session that
+    surfaced only accepted beliefs would make a silently failing extractor look
+    like a turn that contained no rules, which is the same defect a silent drop
+    rate is in the corpus path.
+    """
+
+    claims: list[Claim] = field(default_factory=list)
+    rejected: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+    raw_returned: int = 0
+
+    def rejection_summary(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for reason, _ in self.rejected:
+            key = reason.split(":", 1)[0]
+            counts[key] = counts.get(key, 0) + 1
+        return dict(sorted(counts.items(), key=lambda kv: -kv[1]))
+
+
+def _normalize_ws(text: str) -> str:
+    """The comparison form for quote grounding.
+
+    Mirrors ``SourceRegistry.verify_quote``: collapse whitespace, strip, and
+    lowercase. Extraction reflows text; nothing else about the quote is
+    forgiven.
+    """
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+class BeliefExtractor:
+    """One extraction call per user turn, every result verified against it.
+
+    Belief claims come out at tier ``PENDING`` and visibility ``PRIVATE``, with
+    provenance ``INTERVIEW`` — the session-partner loop only surfaces them, and
+    nothing here can promote. Only the approval path writes ``committed``.
+    """
+
+    def __init__(self, client: LLMClient):
+        self.client = client
+
+    def extract_turn(
+        self,
+        turn_text: str,
+        *,
+        session_id: str,
+        turn_id: str,
+        observed_at: Any = None,
+    ) -> BeliefExtractionResult:
+        result = BeliefExtractionResult()
+        text = turn_text.strip()
+        if not text:
+            return result
+
+        prompt = _BELIEF_PROMPT.format(
+            taxonomy=", ".join(f"'{h}'" for h in sorted(BELIEF_TAXONOMY)),
+            text=text,
+        )
+        try:
+            response = self.client.generate(
+                # The reasoning model, not the fast one: judgment shape is a
+                # reading-comprehension problem, and a cheap extraction that
+                # returns preference fluff is worse than a slow one — the
+                # DECISION doc names a preference-list dossier as fatal.
+                role="reasoning",
+                prompt=prompt,
+                system=_BELIEF_SYSTEM,
+                schema_name=BELIEF_SCHEMA_NAME,
+                temperature=0.0,
+            )
+            payload = response.json()
+        except (json.JSONDecodeError, ValueError) as exc:
+            result.rejected.append(
+                ("unparseable-response", {"error": str(exc), "turn_id": turn_id})
+            )
+            return result
+
+        raw_beliefs = payload.get("beliefs") or []
+        result.raw_returned = len(raw_beliefs)
+
+        instant = (
+            observed_at if observed_at is not None else int(time.time() * 1000)
+        )
+        for raw in raw_beliefs:
+            claim, reason = build_belief_claim(
+                raw,
+                turn_text=text,
+                session_id=session_id,
+                turn_id=turn_id,
+                observed_at=instant,
+            )
+            if claim is None:
+                result.rejected.append((reason, raw if isinstance(raw, dict) else {}))
+            else:
+                result.claims.append(claim)
+        return result
+
+
+def build_belief_claim(
+    raw: dict[str, Any],
+    *,
+    turn_text: str,
+    session_id: str,
+    turn_id: str,
+    observed_at: Any,
+) -> tuple[Claim | None, str]:
+    """The belief gates, in order. The only place a belief claim is built.
+
+    Returns ``(claim, "")`` on acceptance and ``(None, reason)`` on rejection,
+    matching :func:`build_claim`'s contract so the partner session can surface
+    both kinds of drop through one shape.
+    """
+    if not isinstance(raw, dict):
+        return None, "belief-not-an-object: the model returned a non-object entry"
+
+    quote = str(raw.get("quote") or "").strip()
+    rule = str(raw.get("rule") or "").strip()
+    condition_raw = raw.get("condition")
+    condition = (
+        str(condition_raw).strip()
+        if condition_raw not in (None, "", "null")
+        else None
+    )
+    hint = str(raw.get("predicate_hint") or "").strip().lower()
+
+    # Gate 1 — quote grounding, against the turn itself. The turn is the source;
+    # a quote that is not in it is a fabricated citation, which is a stop
+    # condition for this claim, not a repair opportunity.
+    if not quote:
+        return None, "quote-not-in-turn: empty quote"
+    if _normalize_ws(quote) not in _normalize_ws(turn_text):
+        return None, (
+            f"quote-not-in-turn: {quote[:80]!r} does not appear in the turn "
+            "after whitespace normalization"
+        )
+
+    # Gate 2 — taxonomy membership. The hint is the blocking key for
+    # contradiction detection; an invented category would place this belief in
+    # a block no other belief can reach.
+    if hint not in BELIEF_TAXONOMY:
+        return None, (
+            f"hint-not-in-taxonomy: {hint!r} is not one of "
+            f"{sorted(BELIEF_TAXONOMY)}"
+        )
+
+    if not rule:
+        return None, "rule-missing: a belief with no imperative is not a rule"
+
+    # Gate 3 — judgment shape for style. An unconditional tone rule is a
+    # preference wearing rule clothing ("prefers concise"), and committing it
+    # is the exact failure that turns the dossier into a settings page. Tone
+    # survives only when the turn bound it to a condition or scope.
+    if hint == "tone policy" and condition is None:
+        return None, (
+            "style-without-condition: an unconditional tone rule is a style "
+            "preference, and the dossier records judgment, not taste"
+        )
+
+    # Gate 4 — schema validity, enforced by the constructor.
+    try:
+        claim = Claim.create(
+            subject_id=USER_ENTITY_ID,
+            predicate=rule,
+            predicate_hint=hint,
+            quote=quote,
+            anchor=Anchor(
+                source_id=f"interview:{session_id}",
+                locator=f"turn:{turn_id}",
+            ),
+            observed_at=observed_at,
+            # The object carries the full judgment — rule plus condition — so
+            # the contradiction adjudicator sees the scope, not just the verb.
+            object_literal=(rule if condition is None else f"{rule} — {condition}"),
+            # Belief claims are pending and private until the user ratifies
+            # them; nothing on this path can promote or widen visibility.
+            tier=Tier.PENDING,
+            visibility=Visibility.PRIVATE,
+            provenance=Provenance.INTERVIEW,
+            session_id=session_id,
+            extra={
+                "belief": True,
+                "turn_id": turn_id,
+                "condition": condition,
+                # The imperative wording the doctrine compiler renders. Authored
+                # here, at extraction, because the compiler never phrases
+                # anything — a claim arriving without this falls back to a
+                # mechanical "predicate: object" rendering, which is true but
+                # reads like a database row instead of a rule.
+                "rule_text": (
+                    rule if condition is None else f"{rule} ({condition})"
+                ),
+            },
+        )
+    except CitationError as exc:
+        return None, f"citation-invalid: {exc}"
+    except TemporalError as exc:
+        return None, f"temporal-invalid: {exc}"
+    except ValueError as exc:
+        return None, f"schema-invalid: {exc}"
+
+    return claim, ""
+
+
+def extract_beliefs(
+    turn_text: str,
+    session_id: str,
+    turn_id: str,
+    client: LLMClient,
+    *,
+    observed_at: Any = None,
+) -> list[Claim]:
+    """Mine one user turn for judgment-shaped belief claims.
+
+    Convenience wrapper over :class:`BeliefExtractor` for callers that only
+    want the accepted claims. Anything that needs to *report* — the partner
+    session surfacing drops, a test asserting a named rejection — uses
+    :meth:`BeliefExtractor.extract_turn` and reads the full result.
+    """
+    return (
+        BeliefExtractor(client)
+        .extract_turn(
+            turn_text,
+            session_id=session_id,
+            turn_id=turn_id,
+            observed_at=observed_at,
+        )
+        .claims
+    )

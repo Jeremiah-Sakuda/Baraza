@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1160" width="1300" height="1160" role="img" aria-labelledby="svg-title svg-desc">
-  <title id="svg-title">Baraza architecture</title>
-  <desc id="svg-desc">Corpus in four native formats flows into a Cloud Run ingestion Job: chunking, a Gemma relevance pre-filter, Gemini fast-role claim extraction, validation gates and an entity alias pass. Claims are appended to an append-only Firestore event log. Contradiction detection runs on write against a blocked, temporally gated set of at most twenty claims with a single Gemini reasoning-role call. The log folds into a graph state, which produces a disputed ledger and an interview agenda. The exit interview service on Cloud Run reaches the divergence turn, then approval promotes claims and records a visibility choice. Below a dashed visibility boundary, the successor service reads only claims that are committed and readable by the successor. Cloud Scheduler triggers the nightly reconcile Cloud Run Job, whose events are all marked as scheduled.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1420" width="1240" height="1420" role="img" aria-labelledby="svg-title svg-desc">
+  <title id="svg-title">Baraza architecture — memory with due process</title>
+  <desc id="svg-desc">The user's session turns (and a synthetic document corpus kept as an eval harness) flow into claim extraction: every preference, rule or judgment becomes a claim with a mandatory verbatim quote and a turn anchor selected from a closed set. Claims are appended to an append-only Firestore event log whose deployed rules reject update and delete. On each write, contradiction detection retrieves a blocked, temporally gated set of at most twenty claims about the same subject — the user — and adjudicates in one bounded call. A fold over the log produces the disputed ledger, the agenda, and the doctrine, which is compiled from committed beliefs only and carries rule-to-claim provenance. The partner session runs under the doctrine, agenda-led, and raises a divergence card when the user's statements collide. The approval gate — promotion-isolated, holding no model — is the sole writer of claim.committed; rejection retracts permanently. A dashed visibility boundary marks the one readable_by predicate in front of the public dossier surface. Cloud Scheduler fires the reconcile Job through the OIDC-guarded baraza-trigger hop; every scheduled event is labelled as scheduled.</desc>
 
   <style>
     /* Theme handling, and why it is written the long way.
@@ -41,225 +41,183 @@
     <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z"/>
     </marker>
-    <marker id="headdim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z"/>
-    </marker>
   </defs>
 
   <!-- ================================================================ header -->
-  <text class="h1" x="60" y="40">Baraza — architecture</text>
-  <text class="s"  x="60" y="62">append-only log → fold → graph · contradiction detection on write, never a sweep · one visibility predicate in front of every reader</text>
-  <text class="s"  x="60" y="80">Model roles, not model IDs — every Gemini and Gemma call runs on Vertex AI. Pins live in src/baraza/schema/models.py and nowhere else; no version is named here until make verify-models runs green.</text>
+  <text class="h1" x="60" y="40">Baraza — memory with due process</text>
+  <text class="s"  x="60" y="62">claim → append-only log → fold → doctrine · contradiction detection on write, on the user, never a sweep · no belief acts unratified</text>
+  <text class="s"  x="60" y="80">Model roles, not model IDs — pins live in src/baraza/schema/models.py and nowhere else; the README's Google Cloud table records the live-verified IDs once.</text>
 
-  <!-- ================================================================ corpus -->
-  <text class="lane" x="60" y="112">CORPUS · FOUR NATIVE FORMATS · FULLY SYNTHETIC</text>
+  <!-- ================================================================ sources -->
+  <text class="lane" x="60" y="112">SOURCES</text>
 
-  <rect class="box" x="60"  y="120" width="280" height="58" rx="4"/>
-  <text class="h2" x="76" y="141">Scanned PDF — constitution</text>
-  <text class="s"  x="76" y="157">skewed; dates carry no time of day</text>
-  <text class="s"  x="76" y="171">locators like p.4 ¶2</text>
+  <rect class="box" x="60" y="120" width="320" height="58" rx="4"/>
+  <text class="h2" x="76" y="141">Your session turns</text>
+  <text class="s"  x="76" y="158">anchor grammar turn:t-N · subject: the builder</text>
 
-  <rect class="box" x="360" y="120" width="280" height="58" rx="4"/>
-  <text class="h2" x="376" y="141">GroupMe JSON export</text>
-  <text class="s"  x="376" y="157">bare epoch-second timestamps</text>
-  <text class="s"  x="376" y="171">mixed UTC offsets — the planted trap</text>
+  <rect class="box" x="410" y="120" width="330" height="58" rx="4"/>
+  <text class="h2" x="426" y="141">Document corpus — eval harness</text>
+  <text class="s"  x="426" y="158">synthetic · chat export, scanned PDF, XLSX, DOCX</text>
 
-  <rect class="box" x="660" y="120" width="280" height="58" rx="4"/>
-  <text class="h2" x="676" y="141">Headerless XLSX budget</text>
-  <text class="s"  x="676" y="157">column meaning lost with the header row</text>
-  <text class="s"  x="676" y="171">locators like Sheet1!B14</text>
+  <!-- ================================================================ scheduler column -->
+  <text class="lane" x="790" y="112">SCHEDULED INITIATION</text>
 
-  <rect class="box" x="960" y="120" width="280" height="58" rx="4"/>
-  <text class="h2" x="976" y="141">DOCX meeting minutes</text>
-  <text class="s"  x="976" y="157">amendments never folded back</text>
-  <text class="s"  x="976" y="171">into the constitution</text>
+  <rect class="box" x="790" y="120" width="380" height="46" rx="4"/>
+  <text class="h2" x="806" y="140">Cloud Scheduler — nightly</text>
+  <text class="s"  x="806" y="156">fires on schedule; never counted as organic activity</text>
 
-  <!-- corpus collector -->
-  <path class="plain" d="M 200 178 V 196"/>
-  <path class="plain" d="M 500 178 V 196"/>
-  <path class="plain" d="M 800 178 V 196"/>
-  <path class="plain" d="M 1100 178 V 196"/>
-  <path class="plain" d="M 172 196 H 1100"/>
-  <path class="arw"   d="M 172 196 V 214"/>
+  <line class="arw" x1="980" y1="166" x2="980" y2="192"/>
+  <rect class="box" x="790" y="194" width="380" height="58" rx="4"/>
+  <text class="h2" x="806" y="215">baraza-trigger — Cloud Run service</text>
+  <text class="s"  x="806" y="231">OIDC-guarded hop: Scheduler → service → jobs.run</text>
+  <text class="s"  x="806" y="245">adopted after the direct path 403'd (STOPPED-DEPLOY.md)</text>
 
-  <!-- ============================================================= ingestion -->
-  <text class="lane" x="1240" y="206" text-anchor="end">1 · INGESTION — CLOUD RUN JOB, UNATTENDED, RETRY-SAFE</text>
+  <line class="arw" x1="980" y1="252" x2="980" y2="278"/>
+  <rect class="box" x="790" y="280" width="380" height="104" rx="4"/>
+  <text class="h2" x="806" y="301">reconcile Job — Cloud Run</text>
+  <text class="t"  x="806" y="319">re-detects over claims since its last recorded pass</text>
+  <text class="t"  x="806" y="334">regenerates the agenda · appends session.proposed</text>
+  <text class="t"  x="806" y="349">one outbound notification — the agent speaks first</text>
+  <text class="s"  x="806" y="366">every event marked scheduled=True — labelled, never organic</text>
 
-  <rect class="box" x="60"  y="214" width="216" height="80" rx="4"/>
-  <text class="h2" x="74" y="235">chunking</text>
-  <text class="s"  x="74" y="252">never crosses a source</text>
-  <text class="s"  x="74" y="266">every line tagged with</text>
-  <text class="s"  x="74" y="280">its own locator</text>
+  <path class="arw" d="M 790 332 C 740 332 730 356 712 356"/>
+  <text class="edge" x="716" y="346">appends</text>
 
-  <rect class="box" x="301" y="214" width="216" height="80" rx="4"/>
-  <text class="h2" x="315" y="235">relevance pre-filter</text>
-  <text class="s"  x="315" y="252">GEMMA · keep or drop</text>
-  <text class="s"  x="315" y="266">flag: stub or gemma</text>
-  <text class="s"  x="315" y="280">rate: not yet measured</text>
+  <!-- ================================================================ extraction -->
+  <line class="arw" x1="220" y1="178" x2="220" y2="206"/>
+  <line class="arw" x1="575" y1="178" x2="575" y2="206"/>
 
-  <rect class="box" x="542" y="214" width="216" height="80" rx="4"/>
-  <text class="h2" x="556" y="235">claim extraction</text>
-  <text class="s"  x="556" y="252">GEMINI · fast role</text>
-  <text class="s"  x="556" y="266">anchor SELECTED from a</text>
-  <text class="s"  x="556" y="280">closed set, never written</text>
+  <rect class="box" x="60" y="208" width="680" height="76" rx="4"/>
+  <text class="h2" x="76" y="230">1 · Claim extraction — MODEL: GEMINI fast role</text>
+  <text class="t"  x="76" y="248">every preference, rule and judgment becomes a Claim — quote mandatory, verbatim</text>
+  <text class="t"  x="76" y="263">anchor SELECTED from a closed set, never generated · fabricated anchor = stop condition</text>
+  <text class="s"  x="76" y="278">targets judgment shape: conditions, thresholds, exceptions — a way of thinking, not a tone slider</text>
 
-  <rect class="box" x="783" y="214" width="216" height="80" rx="4"/>
-  <text class="h2" x="797" y="235">three validation gates</text>
-  <text class="s"  x="797" y="252">anchor membership ·</text>
-  <text class="s"  x="797" y="266">quote grounding · schema</text>
-  <text class="s"  x="797" y="280">drops counted, with reasons</text>
+  <line class="arw" x1="400" y1="284" x2="400" y2="312"/>
+  <text class="edge" x="410" y="304">claim.asserted — visibility defaults private</text>
 
-  <rect class="box" x="1024" y="214" width="216" height="80" rx="4"/>
-  <text class="h2" x="1038" y="235">entity alias pass</text>
-  <text class="s"  x="1038" y="252">sameAs edges only,</text>
-  <text class="s"  x="1038" y="266">human-confirmed</text>
-  <text class="s"  x="1038" y="280">no destructive merges</text>
+  <!-- ================================================================ the log -->
+  <rect class="heavy" x="60" y="314" width="652" height="84" rx="4"/>
+  <text class="h2" x="76" y="337">APPEND-ONLY EVENT LOG · Firestore</text>
+  <text class="t"  x="76" y="355">create-only writes · deployed rules reject update and delete — verified live</text>
+  <text class="t"  x="76" y="370">event IDs are content hashes, so a retried Job appends nothing twice</text>
+  <text class="s"  x="76" y="386">fixing bad data means appending a superseding event, never editing one</text>
 
-  <path class="arw" d="M 276 254 H 301"/>
-  <path class="arw" d="M 517 254 H 542"/>
-  <path class="arw" d="M 758 254 H 783"/>
-  <path class="arw" d="M 999 254 H 1024"/>
+  <!-- ================================================================ detection + fold -->
+  <line class="arw" x1="220" y1="398" x2="220" y2="428"/>
+  <text class="edge" x="230" y="418">on each claim written</text>
+  <line class="arw" x1="560" y1="398" x2="560" y2="428"/>
 
-  <path class="arw" d="M 1132 294 V 330"/>
-  <text class="edge" x="1124" y="316" text-anchor="end">claim.asserted</text>
+  <rect class="box" x="60" y="430" width="380" height="168" rx="4"/>
+  <text class="h2" x="76" y="452">2 · Contradiction detection — on write, on YOU</text>
+  <text class="t"  x="76" y="472">block: subject ∪ object entities ∪ predicate_hint</text>
+  <text class="s"  x="76" y="486">subject = the user entity · aliases resolved at query time</text>
+  <text class="t"  x="76" y="506">temporal gate — epoch interval overlap, integers only</text>
+  <text class="t"  x="76" y="526">cap at MAX_RETRIEVED = 20</text>
+  <text class="t"  x="76" y="546">ONE bounded call — MODEL: GEMINI reasoning role</text>
+  <text class="s"  x="76" y="562">all-pairs at ~3,000 claims = 4,498,500 comparisons — refused;</text>
+  <text class="s"  x="76" y="576">on-write blocking makes it one bounded call per claim</text>
 
-  <!-- =================================================================== log -->
-  <rect class="heavy" x="60" y="330" width="1180" height="72" rx="4"/>
-  <text class="h2" x="76" y="354">APPEND-ONLY EVENT LOG — Firestore</text>
-  <text class="s"  x="76" y="371">create-only writes · security rules reject update and delete at the database level · event IDs are content hashes, so a retried Job appends nothing twice</text>
-  <text class="s"  x="76" y="389">claim.asserted · claim.adjudicated · contradiction.detected · claim.committed · claim.rejected · claim.visibility_set · entity.alias_linked · session.turn · heartbeat</text>
+  <path class="arw" d="M 60 470 C 30 470 30 380 58 380"/>
+  <text class="edge" x="52" y="466" transform="rotate(-90 52 466)">contradiction.detected</text>
 
-  <!-- ============================================================= detection -->
-  <text class="lane" x="300" y="438">2 · CONTRADICTION DETECTION — ON WRITE</text>
-  <text class="lane" x="880" y="438">THE FOLD</text>
+  <rect class="box" x="480" y="430" width="232" height="72" rx="4"/>
+  <text class="h2" x="496" y="452">fold over the log</text>
+  <text class="t"  x="496" y="470">ordered by (occurred_at_millis,</text>
+  <text class="t"  x="496" y="484">event_id) — integers, never strings</text>
 
-  <path class="arw" d="M 150 402 V 446"/>
-  <text class="edge" x="158" y="424">on each claim written</text>
+  <!-- fold outputs -->
+  <line class="arw" x1="560" y1="502" x2="560" y2="530"/>
+  <rect class="box" x="480" y="532" width="232" height="56" rx="4"/>
+  <text class="h2" x="496" y="553">disputed ledger</text>
+  <text class="s"  x="496" y="570">your statements that collide, both quoted</text>
 
-  <rect class="box" x="60" y="446" width="180" height="76" rx="4"/>
-  <text class="h2" x="74" y="467">blocking</text>
-  <text class="s"  x="74" y="484">subject ∪ object entities</text>
-  <text class="s"  x="74" y="498">∪ predicate_hint</text>
-  <text class="s"  x="74" y="512">block size: single digits</text>
+  <line class="arw" x1="560" y1="588" x2="560" y2="616"/>
+  <rect class="box" x="480" y="618" width="232" height="70" rx="4"/>
+  <text class="h2" x="496" y="639">agenda — no human wrote it</text>
+  <text class="s"  x="496" y="656">each item cites its ledger entry</text>
+  <text class="s"  x="496" y="670">resolved items retire themselves</text>
 
-  <rect class="box" x="260" y="446" width="180" height="76" rx="4"/>
-  <text class="h2" x="274" y="467">temporal gate</text>
-  <text class="s"  x="274" y="484">epoch interval overlap</text>
-  <text class="s"  x="274" y="498">consecutive fiscal years</text>
-  <text class="s"  x="274" y="512">cannot conflict</text>
+  <path class="arw" d="M 712 466 C 960 466 980 500 980 528"/>
+  <rect class="heavy" x="790" y="530" width="380" height="118" rx="4"/>
+  <text class="h2" x="806" y="553">DOCTRINE — the operating policy</text>
+  <text class="t"  x="806" y="571">compiled from COMMITTED beliefs only</text>
+  <text class="t"  x="806" y="586">rule ← claim provenance on every rule: same doctrine,</text>
+  <text class="t"  x="806" y="600">every rule cited · compilation replays byte-identically</text>
+  <text class="t"  x="806" y="618">refuses to pick between conflicting committed rules —</text>
+  <text class="t"  x="806" y="632">a conflict becomes a divergence card, never a silent overwrite</text>
 
-  <rect class="box" x="460" y="446" width="180" height="76" rx="4"/>
-  <text class="h2" x="474" y="467">cap</text>
-  <text class="s"  x="474" y="484">MAX_RETRIEVED = 20</text>
-  <text class="s"  x="474" y="498">ranked by recency</text>
-  <text class="s"  x="474" y="512">and confidence</text>
+  <!-- ================================================================ session -->
+  <line class="arw" x1="596" y1="688" x2="596" y2="726"/>
+  <path class="arw" d="M 980 648 C 980 700 780 700 720 726"/>
+  <text class="edge" x="792" y="694">the session runs under the doctrine</text>
 
-  <rect class="box" x="660" y="446" width="180" height="76" rx="4"/>
-  <text class="h2" x="674" y="467">adjudication</text>
-  <text class="s"  x="674" y="484">ONE call, about 3k tokens</text>
-  <text class="s"  x="674" y="498">GEMINI · reasoning role</text>
-  <text class="s"  x="674" y="512">which of these conflict?</text>
+  <rect class="box" x="470" y="728" width="440" height="168" rx="4"/>
+  <text class="h2" x="486" y="750">3 · Partner session — Cloud Run service, private</text>
+  <text class="t"  x="486" y="768">agenda-led working session: drafting interleaved with elicitation</text>
+  <text class="s"  x="486" y="783">session N+1 is shorter than session N — retirement events link them</text>
 
-  <path class="arw" d="M 240 484 H 260"/>
-  <path class="arw" d="M 440 484 H 460"/>
-  <path class="arw" d="M 640 484 H 660"/>
+  <rect class="heavy" x="486" y="796" width="408" height="86" rx="4"/>
+  <text class="h2" x="502" y="818">THE DIVERGENCE CARD</text>
+  <text class="t"  x="502" y="836">"On turn t-14 you said 'never send before I've seen it' [quote].</text>
+  <text class="t"  x="502" y="850">Just now: 'just send the routine ones' [quote]. Which governs?"</text>
+  <text class="s"  x="502" y="866">refuses to silently overwrite the old rule until adjudicated</text>
 
-  <path class="arw" d="M 750 446 V 402"/>
-  <text class="edge" x="758" y="424">contradiction.detected</text>
+  <path class="arw" d="M 470 760 C 30 760 24 352 56 352"/>
+  <text class="edge" x="36" y="740" transform="rotate(-90 36 740)">session.turn appended BEFORE the next turn is solicited</text>
 
-  <rect class="note" x="60" y="534" width="780" height="44" rx="4"/>
-  <text class="t" x="74" y="553">All-pairs at the 3,000-claim design assumption: 3000 × 2999 / 2 = 4,498,500 comparisons. Refused, not deferred.</text>
-  <text class="s" x="74" y="569">On write and blocked: one bounded call per claim, at most 20 retrieved. Cost per write does not grow with the corpus.</text>
+  <!-- ================================================================ approval -->
+  <line class="arw" x1="690" y1="896" x2="690" y2="928"/>
+  <rect class="heavy" x="470" y="930" width="440" height="118" rx="4"/>
+  <text class="h2" x="486" y="953">APPROVAL GATE — no model, not an agent</text>
+  <text class="t"  x="486" y="971">the ONLY writer of claim.committed · batch ratification at session end</text>
+  <text class="t"  x="486" y="986">rejection retracts permanently: retrieval, ledger, agenda, next doctrine</text>
+  <text class="t"  x="486" y="1001">visibility chosen explicitly — the default stays private</text>
+  <text class="s"  x="486" y="1018">promotion and the visibility choice are distinct events,</text>
+  <text class="s"  x="486" y="1032">so the disclosure decision is auditable separately</text>
 
-  <rect class="box" x="880" y="446" width="360" height="60" rx="4"/>
-  <text class="h2" x="894" y="467">fold over the log → GraphState</text>
-  <text class="s"  x="894" y="484">ordered by occurred_at_millis, then event_id</text>
-  <text class="s"  x="894" y="498">integers, never ISO strings</text>
+  <rect class="note" x="930" y="930" width="240" height="118" rx="4"/>
+  <text class="h2" x="946" y="953">promotion-isolated</text>
+  <text class="s"  x="946" y="971">ingest and reconcile never import</text>
+  <text class="s"  x="946" y="985">the approval module · deployed rules</text>
+  <text class="s"  x="946" y="999">deny the event type on create ·</text>
+  <text class="s"  x="946" y="1013">a unit test asserts the negative ·</text>
+  <text class="s"  x="946" y="1027">agent fleet has transfer disabled —</text>
+  <text class="s"  x="946" y="1041">no agent can hand work to it</text>
 
-  <rect class="box" x="880" y="520" width="360" height="60" rx="4"/>
-  <text class="h2" x="894" y="541">graph state</text>
-  <text class="s"  x="894" y="558">claims · open contradictions · alias map</text>
-  <text class="s"  x="894" y="572">heartbeats held apart from organic activity</text>
+  <path class="arw" d="M 470 989 C 8 989 8 368 56 368"/>
+  <text class="edge" x="18" y="960" transform="rotate(-90 18 960)">claim.committed · claim.visibility_set · contradiction.resolved → next fold → next doctrine</text>
 
-  <path class="arw" d="M 1060 402 V 446"/>
-  <path class="arw" d="M 1060 506 V 520"/>
-  <path class="arw" d="M 1060 580 V 590 H 200 V 606"/>
+  <!-- ================================================================ boundary -->
+  <rect class="bound" x="60" y="1090" width="1110" height="280" rx="6"/>
+  <text class="lane" x="80" y="1118">THE VISIBILITY BOUNDARY — beliefs about you are private by default</text>
 
-  <!-- =================================================== ledger to divergence -->
-  <text class="lane" x="1240" y="602" text-anchor="end">3 · LEDGER → AGENDA → EXIT INTERVIEW</text>
+  <line class="arw" x1="455" y1="398" x2="455" y2="1136"/>
+  <text class="edge" x="463" y="1076">every read path</text>
 
-  <rect class="box" x="60" y="606" width="280" height="80" rx="4"/>
-  <text class="h2" x="76" y="627">disputed ledger</text>
-  <text class="s"  x="76" y="644">ranked: confidence · stakes ·</text>
-  <text class="s"  x="76" y="658">recency · spread</text>
-  <text class="s"  x="76" y="672">every component printed with the row</text>
+  <rect class="box" x="90" y="1140" width="480" height="180" rx="4"/>
+  <text class="h2" x="106" y="1163">readable_by(claim, audience)</text>
+  <text class="t"  x="106" y="1183">defined ONCE — src/baraza/schema/visibility.py</text>
+  <text class="t"  x="106" y="1198">the quote is reachable only through quote_for(audience);</text>
+  <text class="t"  x="106" y="1212">the raw field raises at the access site, and the build</text>
+  <text class="t"  x="106" y="1226">fails if it is named outside the schema package</text>
+  <text class="t"  x="106" y="1246">fails CLOSED on unknown audience or visibility</text>
+  <text class="s"  x="106" y="1266">an unreadable claim may be COUNTED toward a contradiction,</text>
+  <text class="s"  x="106" y="1280">never quoted · RedactedClaim is the only thing that crosses</text>
+  <text class="s"  x="106" y="1294">an item with unreadable sides is downgraded, never dropped</text>
 
-  <rect class="box" x="360" y="606" width="280" height="80" rx="4"/>
-  <text class="h2" x="376" y="627">interview agenda</text>
-  <text class="s"  x="376" y="644">questions no human wrote</text>
-  <text class="s"  x="376" y="658">GEMINI · reasoning role</text>
-  <text class="s"  x="376" y="672">unreadable sides downgrade, never drop</text>
+  <line class="arw" x1="570" y1="1218" x2="628" y2="1218"/>
 
-  <rect class="box" x="660" y="606" width="280" height="80" rx="4"/>
-  <text class="h2" x="676" y="627">exit interview — Cloud Run</text>
-  <text class="s"  x="676" y="644">agenda-led, clarifying follow-ups</text>
-  <text class="s"  x="676" y="658">GEMINI · fast role per turn</text>
-  <text class="s"  x="676" y="672">every turn appended before the next</text>
+  <rect class="box" x="630" y="1140" width="510" height="180" rx="4"/>
+  <text class="h2" x="646" y="1163">dossier surface — Cloud Run, the public route</text>
+  <text class="t"  x="646" y="1183">reads only claims committed AND readable by the asking audience</text>
+  <text class="t"  x="646" y="1198">committed is the retraction axis; visibility is the disclosure axis</text>
+  <text class="t"  x="646" y="1218">the Dossier view: every belief, its quote, the moment it was learned,</text>
+  <text class="t"  x="646" y="1232">one click to reject — the retraction is itself an append-only event</text>
+  <text class="t"  x="646" y="1252">uncited synthesis → refusal, with its own acceptance criterion</text>
+  <text class="s"  x="646" y="1272">withheld counts are honest; withheld contents are not disclosed</text>
+  <text class="s"  x="646" y="1292">a fresh deployment shows a logged-out judge nothing at all —</text>
+  <text class="s"  x="646" y="1306">that is the boundary working, not an empty database</text>
 
-  <rect class="heavy" x="960" y="606" width="280" height="80" rx="4"/>
-  <text class="h2" x="976" y="627">THE DIVERGENCE TURN</text>
-  <text class="s"  x="976" y="644">testimony against record,</text>
-  <text class="s"  x="976" y="658">both citations, in the moment</text>
-  <text class="s"  x="976" y="672">GEMINI · reasoning role</text>
-
-  <path class="arw" d="M 340 646 H 360"/>
-  <path class="arw" d="M 640 646 H 660"/>
-  <path class="arw" d="M 940 646 H 960"/>
-
-  <!-- =============================================================== approval -->
-  <path class="arw" d="M 1100 686 V 712"/>
-
-  <rect class="box" x="660" y="712" width="580" height="68" rx="4"/>
-  <text class="h2" x="676" y="733">approval — the only writer of claim.committed</text>
-  <text class="s"  x="676" y="750">visibility chosen explicitly; the default stays private · rejection retracts, permanently</text>
-  <text class="s"  x="676" y="766">appends claim.committed · claim.visibility_set · contradiction.resolved — and the next agenda is shorter</text>
-
-  <!-- approval writes back to the log, on the right margin -->
-  <path class="arw" d="M 1240 746 H 1268 V 366 H 1240"/>
-  <text class="edge" transform="rotate(-90 1284 556)" x="1284" y="556" text-anchor="middle">appended to the log</text>
-
-  <!-- ====================================================== visibility boundary -->
-  <path class="arw" d="M 950 780 V 812"/>
-
-  <rect class="bound" x="60" y="812" width="1180" height="80" rx="4"/>
-  <text class="h2" x="76" y="836">THE VISIBILITY BOUNDARY — readable_by(claim, audience), defined once, in src/baraza/schema/visibility.py</text>
-  <text class="s"  x="76" y="855">the quote is reachable only through quote_for(audience) · visibility defaults to private at append time · the predicate fails CLOSED on an unknown audience or visibility</text>
-  <text class="s"  x="76" y="873">every reader above and below crosses this line: ledger · agenda · question renderer · graph view · successor. The reconciler may COUNT an unreadable claim; it may never quote it.</text>
-
-  <path class="arw" d="M 950 892 V 922"/>
-
-  <rect class="box" x="560" y="922" width="680" height="80" rx="4"/>
-  <text class="h2" x="576" y="943">successor service — Cloud Run</text>
-  <text class="s"  x="576" y="960">reads only claims that are committed AND readable by the asking audience — successor in handover, PUBLIC on the hosted instance</text>
-  <text class="s"  x="576" y="974">every sentence carries a citation; nothing is synthesized across claims it cannot cite</text>
-  <text class="s"  x="576" y="990">when the readable committed record cannot support an answer: refusal — with its own acceptance criterion</text>
-
-  <!-- ============================================================== scheduler -->
-  <text class="lane" x="360" y="1024">4 · AUTONOMY — SCHEDULED, AND LABELLED AS SCHEDULED</text>
-
-  <rect class="box" x="360" y="1032" width="280" height="68" rx="4"/>
-  <text class="h2" x="376" y="1053">Cloud Scheduler — nightly</text>
-  <text class="s"  x="376" y="1070">deployed early, stubbed, so execution</text>
-  <text class="s"  x="376" y="1086">history accumulates in real time</text>
-
-  <rect class="box" x="680" y="1032" width="560" height="68" rx="4"/>
-  <text class="h2" x="696" y="1053">baraza-reconcile — Cloud Run Job</text>
-  <text class="s"  x="696" y="1070">re-folds the log · re-detects over claims not yet adjudicated · snapshots the ledger</text>
-  <text class="s"  x="696" y="1086">and diffs it against last night, rebuilt from the log: what was added, what was retired</text>
-
-  <path class="arw" d="M 640 1066 H 680"/>
-
-  <!-- the nightly job writes back to the log, on the left margin -->
-  <path class="arw" d="M 680 1100 V 1120 H 28 V 384 H 60"/>
-  <text class="s" x="60" y="1140">Every event this Job appends is marked scheduled=True. A scheduled run is never counted as organic activity, in any accounting, anywhere.</text>
+  <text class="s" x="60" y="1400">Doctrine compilation is the deterministic part; model compliance with a cited rule is a measured number with provenance (docs/metrics.json), never an assertion.</text>
 </svg>

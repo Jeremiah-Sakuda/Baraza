@@ -57,6 +57,7 @@ readonly JOB_INGEST="baraza-ingest"
 readonly JOB_RECONCILE="baraza-reconcile"
 readonly SVC_INTERVIEW="baraza-interview"
 readonly SVC_SUCCESSOR="baraza-successor"
+readonly SVC_TRIGGER="baraza-trigger"
 
 readonly RULES_FILE="deploy/firestore.rules"
 readonly SCHEDULER_FILE="deploy/scheduler.yaml"
@@ -146,6 +147,7 @@ ok "project reachable"
 
 [ -f "$RULES_FILE" ]     || stop "preflight" "${RULES_FILE} is missing."
 [ -f "$SCHEDULER_FILE" ] || stop "preflight" "${SCHEDULER_FILE} is missing."
+[ -f deploy/service-trigger.yaml ] || stop "preflight" "deploy/service-trigger.yaml is missing."
 
 # The ingest Job's entrypoint lives in baraza.cli, which the ingestion lane
 # owns. Its absence is reported, not routed around, and it does not block the
@@ -578,7 +580,8 @@ $(grep -n '__' "$target")"
 
 render_service deploy/service-interview.yaml "${RENDER_DIR}/interview.yaml"
 render_service deploy/service-successor.yaml "${RENDER_DIR}/successor.yaml"
-ok "rendered both service manifests"
+render_service deploy/service-trigger.yaml "${RENDER_DIR}/trigger.yaml"
+ok "rendered all three service manifests"
 
 run "deploy ${SVC_INTERVIEW}" gcloud run services replace "${RENDER_DIR}/interview.yaml" \
   --region="$REGION" --project="$PROJECT" --quiet
@@ -587,6 +590,36 @@ ok "${SVC_INTERVIEW} deployed (no allUsers binding — authenticated access only
 run "deploy ${SVC_SUCCESSOR}" gcloud run services replace "${RENDER_DIR}/successor.yaml" \
   --region="$REGION" --project="$PROJECT" --quiet
 ok "${SVC_SUCCESSOR} deployed"
+
+# The Scheduler-facing trigger service. Same image as the other services
+# (BARAZA_APP selects the app), running as baraza-reconcile — the SA whose
+# job-scoped run.invoker was proven able to start executions on 2026-08-15.
+run "deploy ${SVC_TRIGGER}" gcloud run services replace "${RENDER_DIR}/trigger.yaml" \
+  --region="$REGION" --project="$PROJECT" --quiet
+ok "${SVC_TRIGGER} deployed (no allUsers binding — Scheduler's OIDC identity only)"
+
+# The ONE new grant this architecture needs: the Scheduler's OIDC identity
+# (baraza-reconcile, per deploy/scheduler.yaml) gets run.invoker on the trigger
+# SERVICE. This replaces the direct Jobs-Admin-API OAuth path, which failed
+# with every documented grant in place and verified — audit logs showed no
+# request authenticated as baraza-reconcile ever reached the Run API from
+# Scheduler, while the SA's own token against the identical URL started
+# executions (STOPPED-DEPLOY.md, 2026-08-15 and the 2026-08-31 update; a
+# project-level invoker widening was tried, bought nothing, and was reverted).
+# Scheduler -> OIDC -> Cloud Run service is the supported path, and the
+# service's runtime credentials make the jobs.run call that is already proven
+# to work. Nothing is widened: same SA, same capability, one hop later.
+run "trigger invoker" gcloud run services add-iam-policy-binding "$SVC_TRIGGER" \
+  --region="$REGION" \
+  --member="serviceAccount:${EMAIL_RECONCILE}" \
+  --role="roles/run.invoker" \
+  --project="$PROJECT" --quiet
+ok "run.invoker on ${SVC_TRIGGER} scoped to ${SA_RECONCILE} (the Scheduler OIDC identity)"
+
+TRIGGER_URL="$(gcloud run services describe "$SVC_TRIGGER" \
+  --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)"
+[ -n "$TRIGGER_URL" ] \
+  || stop "trigger url" "${SVC_TRIGGER} deployed but its URL could not be read; the Scheduler target and OIDC audience cannot be composed without it."
 
 # The one public binding in the system. It is safe because of what the service
 # can read, not because of what the service is: baraza-successor holds the
@@ -623,7 +656,6 @@ say "Cloud Scheduler (BAR-021 nightly reconcile)"
 # than duplicated, so changing the schedule means changing a committed file.
 yaml_top()    { sed -n -E "s/^${2}:[[:space:]]*\"?([^\"#]*[^\" #])\"?[[:space:]]*$/\1/p" "$1" | head -n1; }
 yaml_nested() { sed -n -E "s/^[[:space:]]+${2}:[[:space:]]*\"?([^\"#]*[^\" #])\"?[[:space:]]*$/\1/p" "$1" | head -n1; }
-yaml_body()   { awk '/^[[:space:]]+body:[[:space:]]*\|/{getline; sub(/^[[:space:]]+/,""); print; exit}' "$1"; }
 
 SCHED_NAME="$(yaml_top "$SCHEDULER_FILE" name)"
 SCHED_CRON="$(yaml_top "$SCHEDULER_FILE" schedule)"
@@ -633,23 +665,46 @@ SCHED_RETRIES="$(yaml_nested "$SCHEDULER_FILE" retryCount)"
 SCHED_MINBACK="$(yaml_nested "$SCHEDULER_FILE" minBackoffDuration)"
 SCHED_MAXBACK="$(yaml_nested "$SCHEDULER_FILE" maxBackoffDuration)"
 SCHED_MAXDUR="$(yaml_nested "$SCHEDULER_FILE" maxRetryDuration)"
-SCHED_URI="$(yaml_nested "$SCHEDULER_FILE" uri | sed -e "s|__PROJECT_ID__|${PROJECT}|g" -e "s|__REGION__|${REGION}|g")"
-SCHED_BODY="$(yaml_body "$SCHEDULER_FILE")"
+# The target and audience carry __TRIGGER_URL__, known only after the trigger
+# service deployed above; substituted here, never hardcoded in the file.
+SCHED_URI="$(yaml_nested "$SCHEDULER_FILE" uri | sed -e "s|__TRIGGER_URL__|${TRIGGER_URL}|g" -e "s|__PROJECT_ID__|${PROJECT}|g" -e "s|__REGION__|${REGION}|g")"
+SCHED_OIDC_SA="$(yaml_nested "$SCHEDULER_FILE" serviceAccountEmail | sed -e "s|__PROJECT_ID__|${PROJECT}|g")"
+SCHED_AUDIENCE="$(yaml_nested "$SCHEDULER_FILE" audience | sed -e "s|__TRIGGER_URL__|${TRIGGER_URL}|g")"
 
 for pair in "name:$SCHED_NAME" "schedule:$SCHED_CRON" "timeZone:$SCHED_TZ" \
-            "attemptDeadline:$SCHED_DEADLINE" "uri:$SCHED_URI" "body:$SCHED_BODY"; do
+            "attemptDeadline:$SCHED_DEADLINE" "uri:$SCHED_URI" \
+            "serviceAccountEmail:$SCHED_OIDC_SA" "audience:$SCHED_AUDIENCE"; do
   [ -n "${pair#*:}" ] || stop "scheduler config" "could not read '${pair%%:*}' from ${SCHEDULER_FILE}."
 done
+case "$SCHED_URI" in
+  *__*) stop "scheduler config" "unsubstituted placeholder in scheduler uri: ${SCHED_URI}" ;;
+esac
 
 info "name      ${SCHED_NAME}"
 info "schedule  ${SCHED_CRON} (${SCHED_TZ})"
-info "target    ${SCHED_URI}"
+info "target    ${SCHED_URI} (OIDC, audience ${SCHED_AUDIENCE})"
 
+# OIDC toward the trigger service, replacing the OAuth-toward-Jobs-API target
+# that 403'd with every documented grant in place (STOPPED-DEPLOY.md). A
+# leftover OAuth-configured job is deleted rather than updated: gcloud treats
+# the two token blocks as alternatives, and updating across them has been
+# observed to leave stale auth config behind — and the 2026-08-31 root-cause
+# note is explicit that a job of that exact shape can never succeed. Deleting
+# it discards nothing: execution history lives on the Cloud Run Job, not here.
 SCHED_VERB=create
 if gcloud scheduler jobs describe "$SCHED_NAME" \
      --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
-  SCHED_VERB=update
-  info "updating existing trigger in place"
+  EXISTING_OAUTH_SA="$(gcloud scheduler jobs describe "$SCHED_NAME" \
+    --location="$REGION" --project="$PROJECT" \
+    --format='value(httpTarget.oauthToken.serviceAccountEmail)' 2>/dev/null || true)"
+  if [ -n "$EXISTING_OAUTH_SA" ]; then
+    info "existing trigger uses the dead OAuth->Jobs-API path; deleting it"
+    run "scheduler delete (oauth path)" gcloud scheduler jobs delete "$SCHED_NAME" \
+      --location="$REGION" --project="$PROJECT" --quiet
+  else
+    SCHED_VERB=update
+    info "updating existing trigger in place"
+  fi
 fi
 
 run "scheduler ${SCHED_VERB}" gcloud scheduler jobs "$SCHED_VERB" http "$SCHED_NAME" \
@@ -658,15 +713,14 @@ run "scheduler ${SCHED_VERB}" gcloud scheduler jobs "$SCHED_VERB" http "$SCHED_N
   --time-zone="$SCHED_TZ" \
   --uri="$SCHED_URI" \
   --http-method=POST \
-  --headers="Content-Type=application/json" \
-  --message-body="$SCHED_BODY" \
-  --oauth-service-account-email="$EMAIL_RECONCILE" \
+  --oidc-service-account-email="$SCHED_OIDC_SA" \
+  --oidc-token-audience="$SCHED_AUDIENCE" \
   --attempt-deadline="$SCHED_DEADLINE" \
   --max-retry-attempts="${SCHED_RETRIES:-3}" \
   --min-backoff="${SCHED_MINBACK:-30s}" \
   --max-backoff="${SCHED_MAXBACK:-300s}" \
   --max-retry-duration="${SCHED_MAXDUR:-3600s}" \
-  --description="BAR-021 nightly reconcile. Scheduled runs are labelled scheduled and are never counted as organic activity." \
+  --description="BAR-021 nightly reconcile via the baraza-trigger service. Scheduled runs are labelled scheduled and are never counted as organic activity." \
   --project="$PROJECT" --quiet
 ok "trigger ${SCHED_VERB}d"
 
@@ -714,10 +768,15 @@ cat <<EOF
                           ${JOB_INGEST}${INGEST_NOTE}
      services             ${SVC_INTERVIEW}   ${INTERVIEW_URL:-<no url>}
                           ${SVC_SUCCESSOR}   ${SUCCESSOR_URL:-<no url>}
+                          ${SVC_TRIGGER}   ${TRIGGER_URL:-<no url>}
      scheduler            ${SCHED_NAME}  ${SCHED_CRON} ${SCHED_TZ}
+                          -> OIDC -> ${SVC_TRIGGER} -> jobs.run ${JOB_RECONCILE}
 
      service accounts     ${SA_INGEST}     append-only
-                          ${SA_RECONCILE}  append-only + run.invoker on its own Job
+                          ${SA_RECONCILE}  append-only + run.invoker on its own
+                                           Job and on ${SVC_TRIGGER} (it is both
+                                           the trigger service's runtime identity
+                                           and the Scheduler's OIDC identity)
                           ${SA_INTERVIEW}  append-only
                           ${SA_SUCCESSOR}  read only
 

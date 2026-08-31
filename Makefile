@@ -33,7 +33,7 @@ compliance: ## BAR-007: PRD ID audit + invariant lints; nonzero on any finding
 	@$(PY) scripts/compliance.py
 
 .PHONY: demo
-demo: ## Offline end-to-end: ingest -> agenda -> replay interview -> successor query
+demo: ## Offline end-to-end: ingest -> agenda -> replay session -> dossier query
 	@$(PY) -m baraza.cli demo --offline
 
 .PHONY: demo-agenda
@@ -41,8 +41,8 @@ demo-agenda: ## Cold ingest -> disputed ledger + interview agenda, unattended
 	@$(PY) -m baraza.cli demo-agenda --offline
 
 .PHONY: demo-interview
-demo-interview: ## Interview loop. Add REPLAY=1 to feed canned answers on a timer
-	@$(PY) -m baraza.cli demo-interview --offline $(if $(REPLAY),--replay,) $(if $(PERSONA),--persona $(PERSONA),)
+demo-interview: ## Partner session loop. Add REPLAY=1 to feed canned turns on a timer
+	@$(PY) -m baraza.cli demo-interview --offline $(if $(REPLAY),--replay,) $(if $(SCRIPT),--script $(SCRIPT),)
 
 .PHONY: verify-manifest
 verify-manifest: ## Prints "found N of N planted problems" AND the misses
@@ -53,11 +53,18 @@ verify-anchors: ## Resolves every citation anchor against its registered source
 	@$(PY) scripts/verify_anchors.py
 
 .PHONY: adaptation-metric
-adaptation-metric: ## BAR-330: standalone scorer over fixtures/transcripts/
-	@$(PY) scripts/adaptation_metric.py fixtures/transcripts
+adaptation-metric: ## The two honest numbers: determinism replay + compliance battery; no application imports
+	@$(PY) scripts/adaptation_metric.py
 
 # ------------------------------------------------------- supporting targets
 # Not part of the seven. Listed separately so the contract stays legible.
+
+.PHONY: battery-run
+battery-run: ## Record raw battery outputs to out/battery_outputs.json for the scorer
+	@echo "battery-run: not implemented — owed by the demo-staging workstream." >&2
+	@echo "It must run each fixtures/battery/ task per phase and record raw" >&2
+	@echo "outputs (schema baraza.battery.outputs.v1) to out/battery_outputs.json." >&2
+	@exit 1
 
 .PHONY: install
 install: ## Create the venv and install from requirements.lock (ranges if absent)
@@ -131,5 +138,5 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "supporting:"
-	@grep -E '^(install|install-latest|test|lint|test-emulator|test-all|verify-models|corpus|bootstrap|teardown|gate|help):.*?## .*$$' $(MAKEFILE_LIST) \
+	@grep -E '^(install|install-latest|test|lint|test-emulator|test-all|verify-models|corpus|battery-run|bootstrap|teardown|gate|help):.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'

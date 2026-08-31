@@ -32,7 +32,12 @@ boundary; showing nothing would be a lie by omission.
 The service account behind this surface holds a read-only Firestore role. Even
 if a request path here were wrong, it could not append, promote, or publish
 anything — `deploy/README.md` carries the matrix of which layer enforces which
-row, including the rows IAM cannot express.
+row, including the rows IAM cannot express. The one deliberate exception is the
+dossier's Reject control, which routes through :class:`ApprovalFlow` (the only
+module that may construct promotion events; rejection retracts, it never
+promotes) and can only target a claim this audience already reads. Deployed
+under the read-only role that append is refused by the store, and the endpoint
+reports the refusal honestly instead of pretending the retraction happened.
 """
 
 from __future__ import annotations
@@ -48,14 +53,17 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from baraza import telemetry
+from baraza.dossier.librarian import Librarian
 from baraza.fold.graph import GraphState, fold
 from baraza.fold.store import EventStore, open_store
+from baraza.interview.approval import ApprovalFlow, ApprovalRequest, Decision
 from baraza.llm import LLMClient, open_client
 from baraza.reconcile.ledger import DisputedLedger, LedgerRow
-from baraza.schema.claim import Claim
-from baraza.schema.temporal import to_iso
-from baraza.schema.visibility import Audience
-from baraza.dossier.librarian import Librarian
+from baraza.schema.claim import Claim, Tier
+from baraza.schema.temporal import to_epoch_millis, to_iso
+from baraza.schema.visibility import Audience, readable_by
+from baraza.web import views
+from baraza.web.defensive import call_tolerant, resolve_symbol
 
 __all__ = ["app", "create_app", "public_audience"]
 
@@ -112,11 +120,15 @@ class _Runtime:
             self._client = open_client()
         return self._client
 
-    def state(self) -> GraphState:
-        if self._state is None or (time.monotonic() - self._state_at) > STATE_TTL_SECONDS:
+    def state(self, *, force: bool = False) -> GraphState:
+        if force or self._state is None or (time.monotonic() - self._state_at) > STATE_TTL_SECONDS:
             self._state = fold(self.store.read_all())
             self._state_at = time.monotonic()
         return self._state
+
+    def invalidate(self) -> None:
+        """Drop the folded state after the one write this surface can make."""
+        self._state = None
 
 
 _runtime = _Runtime()
@@ -197,7 +209,7 @@ def _render_page(state: GraphState) -> str:
             "<h2>Nothing has been published yet.</h2>"
             "<p>This is not an error and it is not an empty database. Every claim "
             "in this system is created <strong>private</strong>. A claim becomes "
-            "visible here only when a departing officer approved it "
+            "visible here only when its owner ratified it "
             "<em>and</em> chose to publish it — two separate decisions, recorded "
             "as two separate events.</p>"
             "<p>Until someone makes both decisions, this page shows nothing. "
@@ -373,8 +385,10 @@ _PAGE = """<!doctype html>
 </style></head><body><main>
 
 <h1>The published record</h1>
-<p class="lede">Everything below was approved by a departing officer and
-explicitly published by them. Nothing here was published by default.</p>
+<p class="lede">Everything below was ratified by its owner and explicitly
+published by them. Nothing here was published by default.
+See also <a href="/dossier">the dossier</a> and <a href="/doctrine">the
+compiled doctrine</a>.</p>
 
 <div class="stats">
   <div class="stat"><b>{published}</b><span>published records</span></div>
@@ -443,6 +457,154 @@ body {{ max-width:52rem; margin:0 auto; padding:2rem 1.25rem 4rem; font:16px/1.6
 </main></body></html>"""
 
 
+# ------------------------------------------------------- dossier and doctrine
+
+
+class RejectRequest(BaseModel):
+    claim_id: str = Field(min_length=1, max_length=128)
+
+
+def _belief_rows(state: GraphState) -> list[dict[str, Any]]:
+    """The dossier's rows: committed AND readable by this audience, nothing else.
+
+    Same predicate as everything on this surface. ``learned_at`` is rendered as
+    ISO for display only; the sort key is the integer instant.
+    """
+    rows = []
+    for claim in _public_claims(state):
+        quote = claim.quote_for(AUDIENCE)
+        if not quote:
+            # Unreachable if the predicate and the filter agree — checked anyway
+            # so a disagreement produces a dropped row, never an empty citation.
+            continue
+        rows.append(
+            {
+                "claim_id": claim.claim_id,
+                "rule": claim.predicate_hint or claim.predicate,
+                "quote": quote,
+                "anchor": claim.anchor.key(),
+                "learned_at_iso": to_iso(claim.observed_at),
+                "tier": claim.tier.value,
+                "visibility": claim.visibility.value,
+            }
+        )
+    return rows
+
+
+_DOCTRINE_UNAVAILABLE = (
+    "The doctrine compiler (baraza.doctrine) is not present in this build. The "
+    "compiled policy exists only where the compiler produced it from ratified "
+    "beliefs, with a rule-to-claim provenance map."
+)
+
+
+def _resolve_doctrine(state: GraphState) -> tuple[list[dict[str, Any]] | None, str]:
+    """Compile the doctrine via the doctrine lane's module, resolved defensively.
+
+    Returns ``(rules, reason)`` where ``rules`` is ``None`` when the compiler is
+    absent or failed — the view renders the reason instead of a substitute
+    policy. Each rendered rule's quote is re-read here through
+    ``quote_for(AUDIENCE)`` by claim ID: the compiler's output is trusted for
+    rule text and provenance IDs, never for what this audience may read.
+    """
+    compile_fn = resolve_symbol(
+        "baraza.doctrine.compiler", "compile_doctrine", "compile_policy", "compile"
+    ) or resolve_symbol(
+        "baraza.doctrine", "compile_doctrine", "compile_policy", "compile"
+    )
+    if compile_fn is None:
+        return None, _DOCTRINE_UNAVAILABLE
+    try:
+        doctrine = call_tolerant(
+            compile_fn,
+            state=state,
+            audience=AUDIENCE,
+            claims=state.readable_claims(AUDIENCE),
+        )
+    except Exception as exc:  # noqa: BLE001 — degrade honestly, never invent
+        return None, f"the doctrine compiler failed on this fold: {type(exc).__name__}"
+
+    raw_rules = (
+        doctrine.get("rules") if isinstance(doctrine, dict) else getattr(doctrine, "rules", None)
+    )
+    if raw_rules is None:
+        return None, (
+            "the doctrine compiler returned a shape without rules; nothing is "
+            "rendered in its place."
+        )
+
+    rules: list[dict[str, Any]] = []
+    for raw in raw_rules:
+        get = raw.get if isinstance(raw, dict) else lambda k, _r=raw: getattr(_r, k, None)
+        claim_id = get("claim_id") or ""
+        claim = state.claims.get(claim_id)
+        readable = claim is not None and readable_by(claim, AUDIENCE)
+        rules.append(
+            {
+                "text": get("text") or get("rule") or "",
+                "claim_id": claim_id,
+                "anchor": claim.anchor.key() if claim is not None else (get("anchor") or ""),
+                # The boundary decision: quotes come from the fold through the
+                # predicate, never from the compiler's payload.
+                "quote": claim.quote_for(AUDIENCE) if readable else None,
+            }
+        )
+    return rules, ""
+
+
+def _resolve_doctrine_diff(state: GraphState) -> dict[str, Any] | None:
+    """The diff between the last two doctrine epochs, if the diff lane exists.
+
+    An epoch boundary is the most recent ``session.opened`` event: the old
+    doctrine is compiled from everything before it, the new from the full log,
+    and the two are handed to the doctrine lane's ``diff``. ``None`` means "no
+    diff available" — module absent, no epoch boundary yet, or a failure — and
+    the view says so rather than inventing an empty diff.
+    """
+    diff_fn = resolve_symbol(
+        "baraza.doctrine.diff", "diff_last_epochs", "latest_diff", "doctrine_diff", "diff"
+    )
+    compile_fn = resolve_symbol(
+        "baraza.doctrine.compiler", "compile_doctrine", "compile_policy", "compile"
+    )
+    if diff_fn is None or compile_fn is None:
+        return None
+    try:
+        events = _runtime.store.read_all()
+        boundaries = [
+            e.order_key
+            for e in events
+            if e.event_type.value == "session.opened"
+        ]
+        if not boundaries:
+            return None
+        boundary = max(boundaries)
+        old_state = fold(e for e in events if e.order_key < boundary)
+        old_doc = call_tolerant(compile_fn, state=old_state, audience=AUDIENCE)
+        new_doc = call_tolerant(compile_fn, state=state, audience=AUDIENCE)
+        result = diff_fn(old_doc, new_doc)
+    except Exception:  # noqa: BLE001 — degrade to "no diff", never to a made-up one
+        return None
+    if result is None:
+        return None
+
+    def _entry(item: Any) -> dict[str, Any]:
+        """Project one diff entry: its own cited rendering plus the causal claim."""
+        render = getattr(item, "render", None)
+        rule = getattr(item, "rule", None) or getattr(item, "new", None)
+        return {
+            "text": render() if callable(render) else str(item),
+            "claim_id": getattr(item, "causal_claim_id", "")
+            or getattr(rule, "claim_id", ""),
+        }
+
+    return {
+        "added": [_entry(i) for i in (getattr(result, "added", None) or [])],
+        "removed": [_entry(i) for i in (getattr(result, "removed", None) or [])],
+        "changed": [_entry(i) for i in (getattr(result, "changed", None) or [])],
+    }
+
+
 # ------------------------------------------------------------------------ app
 
 
@@ -489,6 +651,99 @@ def create_app() -> FastAPI:
             active.set_attribute("baraza.published_count", summary["published"])
             body = _render_page(state)
         return HTMLResponse(body)
+
+    @application.get("/dossier", response_class=HTMLResponse)
+    def dossier() -> HTMLResponse:
+        """Every belief the agent holds that this audience may read.
+
+        The public-demo surface. Readable logged out; every row passed the
+        ``readable_by(Audience.PUBLIC)`` predicate, the withheld count is a live
+        query, and the empty state names the boundary as the reason — an empty
+        dossier is the private-by-default default working, not a broken page.
+        """
+        with telemetry.span("dossier.page") as active:
+            state = _runtime.state()
+            summary = _record_summary(state)
+            telemetry.record_audience(active, AUDIENCE, withheld=summary["withheld"])
+            body = views.render_dossier_view(
+                beliefs=_belief_rows(state),
+                withheld=summary["withheld"],
+                can_reject=True,
+            )
+        return HTMLResponse(body)
+
+    @application.get("/api/dossier")
+    def dossier_json() -> dict[str, Any]:
+        """The dossier as JSON, for polling. Same rows, same predicate."""
+        state = _runtime.state()
+        summary = _record_summary(state)
+        return {
+            "audience": AUDIENCE.value,
+            "beliefs": _belief_rows(state),
+            "withheld": summary["withheld"],
+        }
+
+    @application.post("/api/dossier/reject")
+    def dossier_reject(body: RejectRequest) -> dict[str, Any]:
+        """Retract one belief. Appends ``claim.rejected`` via the approval flow.
+
+        Two boundaries hold here. Target: only a claim this audience already
+        reads can be rejected from this surface — a logged-out request must not
+        be able to probe or retract records it cannot see, so an unreadable
+        claim answers exactly like a nonexistent one. Mechanism: the retraction
+        is an ``ApprovalFlow`` rejection, so this module still constructs no
+        promotion event of any kind.
+        """
+        state = _runtime.state(force=True)
+        claim = state.claims.get(body.claim_id)
+        if claim is None or claim.tier is not Tier.COMMITTED or not readable_by(claim, AUDIENCE):
+            raise HTTPException(status_code=404, detail="no such belief on this surface")
+
+        occurred_at = to_epoch_millis(time.time(), field="dossier.reject")
+        try:
+            result = ApprovalFlow(_runtime.store).submit(
+                [
+                    ApprovalRequest(
+                        claim=claim,
+                        decision=Decision.REJECT,
+                        approver_id="dossier-owner",
+                        note="rejected from the dossier view",
+                    )
+                ],
+                occurred_at=occurred_at,
+            )
+        except Exception as exc:  # noqa: BLE001 — a refused append is reported, not masked
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "the event store refused the append, so the retraction did "
+                    "NOT happen. Deployed, this surface holds read-only "
+                    "credentials; retract from the owner console instead."
+                ),
+            ) from exc
+        _runtime.invalidate()
+        return {
+            "rejected": result.rejected,
+            "events_appended": result.events_appended,
+        }
+
+    @application.get("/doctrine", response_class=HTMLResponse)
+    def doctrine() -> HTMLResponse:
+        """The compiled operating policy — same doctrine, every rule cited.
+
+        Rule text and provenance IDs come from the doctrine lane's compiler,
+        resolved defensively; every rendered quote is re-read from the fold
+        through ``quote_for(AUDIENCE)``. When the compiler or diff module is
+        absent, the page says so instead of substituting a policy.
+        """
+        state = _runtime.state()
+        rules, reason = _resolve_doctrine(state)
+        diff = _resolve_doctrine_diff(state)
+        return HTMLResponse(
+            views.render_doctrine_view(
+                rules=rules, diff=diff, unavailable_reason=reason
+            )
+        )
 
     @application.get("/ledger", response_class=HTMLResponse)
     def ledger() -> HTMLResponse:

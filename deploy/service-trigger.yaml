@@ -1,0 +1,102 @@
+# Cloud Run service — the Scheduler-facing reconcile trigger (BAR-021, BAR-410).
+#
+# Applied declaratively by scripts/bootstrap_gcp.sh:
+#   gcloud run services replace <rendered copy> --region <region>
+#
+# The double-underscore tokens below are substituted by the bootstrap script
+# into a temporary rendered copy; this file stays free of project identifiers.
+# The bootstrap refuses to deploy a rendered file that still contains one, so
+# no other double-underscore token may appear here — including in a comment.
+#
+# WHY THIS SERVICE EXISTS AT ALL
+#
+# Cloud Scheduler's OAuth token path against the Run Jobs Admin API failed with
+# every documented grant in place; audit logs showed the SA's identity never
+# reached the API from Scheduler, while the SA's own token against the same URL
+# started executions (STOPPED-DEPLOY.md, updates of 2026-08-15 / 2026-08-31).
+# Scheduler -> OIDC -> Cloud Run *service* is the supported path, so this thin
+# service receives the OIDC-authenticated POST and makes the Jobs API call
+# itself, as its runtime identity — the call already proven to work.
+#
+# Three deliberate choices worth stating:
+#
+# **It runs as baraza-reconcile.** Not a fifth service account. The identity
+# that can trigger the reconciler is exactly the identity that does the
+# reconciler's work, and that SA already holds job-scoped run.invoker. A new SA
+# would need a new grant for a capability an existing SA already has.
+#
+# **It is not public.** No allUsers binding. The only principal bootstrap
+# grants run.invoker on this service is the Scheduler's OIDC identity, which is
+# what keeps "only the Scheduler path sets BARAZA_RUN_TRIGGER=cloud-scheduler"
+# a property of the deployment rather than a convention.
+#
+# **maxScale is 1.** The service exists to receive one POST per night. A scale
+# ceiling of one bounds what a retry storm can amplify into Job executions.
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: baraza-trigger
+  namespace: __PROJECT_ID__
+  labels:
+    baraza-lane: trigger
+    baraza-managed-by: bootstrap
+  annotations:
+    # Access control is the invoker binding (Scheduler's OIDC identity only),
+    # not the network edge; `all` keeps the OIDC handshake ordinary.
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      labels:
+        baraza-lane: trigger
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "1"
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: baraza-reconcile@__PROJECT_ID__.iam.gserviceaccount.com
+      containerConcurrency: 4
+      # The handler makes one bounded Jobs API POST; a minute is generous and
+      # anything longer would just hold Scheduler's attempt open.
+      timeoutSeconds: 60
+      containers:
+        - name: trigger
+          image: __SERVICE_IMAGE__
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: BARAZA_APP
+              value: baraza.reconcile.trigger_service:app
+            - name: BARAZA_PROJECT_ID
+              value: __PROJECT_ID__
+            # The Cloud Run region the reconcile Job lives in. Distinct from
+            # the Vertex model location on purpose — this service never calls
+            # Vertex at all.
+            - name: BARAZA_JOB_REGION
+              value: __REGION__
+            - name: BARAZA_RECONCILE_JOB
+              value: baraza-reconcile
+          resources:
+            limits:
+              cpu: "1"
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /healthz
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+  traffic:
+    - percent: 100
+      latestRevision: true

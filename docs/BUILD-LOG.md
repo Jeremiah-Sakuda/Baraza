@@ -542,3 +542,109 @@ external prerequisites and were not represented as complete.
   because a public GET that calls Vertex is non-deterministic, creates an
   unbounded cost surface, and could accidentally turn redacted evidence into a
   prompt.
+
+## 2026-08-31 — WS2-web-face
+
+**Opening prompt (verbatim):**
+Build WS2 — the web face — per docs/pivot/DECISION-dossier.md: one coherent
+server-rendered UI (no SPA framework, no CDN) across the session view with
+agenda retirement ticks and the divergence card, the public dossier view with
+Reject and the withheld-count honesty line, the doctrine view with per-rule
+[claim_id | anchor | quote] provenance and an epoch diff panel, and the batch
+approval queue; owning interview/service.py, dossier/service.py, a new
+src/baraza/web/, and tests/unit/test_web_face.py; importing interviewer.py and
+extract.py defensively and degrading gracefully; honest 503 when Vertex is
+unreachable, never a fabricated reply.
+
+**Course corrections (verbatim, if any):**
+- None.
+
+**Outcome:** New `src/baraza/web/` (pure-function HTML renderers in `views.py`,
+cross-lane symbol resolution in `defensive.py`). Interview service gained the
+session console (`/`, `/sessions/{id}/view`, `/approvals`), a polling endpoint
+(`/sessions/{id}/state`), partner-turn ingestion (`/sessions/{id}/turns`:
+append turn → extract beliefs → on-write detection → reply; 503 with the turn
+still recorded when the backend is unreachable), and divergence adjudication
+(`/sessions/{id}/divergence`: this-governs / that-governs / split-conditional,
+all through ApprovalFlow). Dossier service gained `/dossier` (every read
+through readable_by(PUBLIC); empty state names the boundary; withheld count is
+a live query), `/api/dossier/reject` (ApprovalFlow rejection only, unreadable
+targets answer 404 like nonexistent ones), and `/doctrine` (rules re-read
+quotes through the predicate; compiler/diff absence renders as absence). 19
+web-face tests; full suite 382 passed / 2 skipped excluding
+tests/integration/test_loop.py, which fails on `baraza.cli` importing a symbol
+the interview lane removed — a cross-lane integrate item, not touched from this
+lane. compliance.py --no-prd green.
+
+**Key decisions (exactly 2–3, or "No forks this session"):**
+- **Quotes re-read from the fold through `quote_for(audience)` at render time**
+  over trusting the doctrine compiler's payload, because a template that trusts
+  upstream text is a second visibility predicate waiting to be wrong.
+- **Cross-lane symbols resolved by name at call time with stated degradation**
+  over import-time coupling, because the web face is the sole dependency of
+  every scored beat and must not fail to start when a parallel lane renames a
+  function — proven live when extract.py and doctrine/ changed mid-session.
+- **Public reject answers 404 for unreadable targets** over 403, because a
+  distinct status would let a logged-out request probe which private claim IDs
+  exist — the boundary covers existence-by-error-code too.
+
+## 2026-08-31 — session D1 (integration pass over seven parallel pivot lanes)
+
+**Opening prompt (summarized; the verbatim text was not preserved in this
+session's context):** integrate the seven DOSSIER pivot lanes (initiation,
+web face, doctrine, beliefs/partner-session, metrics, submission, docs) built
+in parallel with disjoint file ownership; run the full suite, compliance, and
+ruff to green; verify every cross-lane seam by running code, not by reading;
+remove the last of `AdaptationState` from the live path; sweep the docs for
+commands and paths that lie; append this entry and a FINDINGS entry; do not
+commit.
+
+**Course corrections (verbatim, if any):**
+- None.
+
+**Outcome:** `src/baraza/cli.py` rewritten off the deleted interview API:
+`AdaptationState`, `ReplayHarness`, and the persona fixtures are gone from the
+live path; `demo` / `demo-interview` now drive `PartnerSession` /
+`PartnerReplayHarness` (`--script`, default `builder-session`), the terminal
+path runs the same extraction-and-detection loop the web surface and replay
+run, and the closing stage is `stage_dossier_query` (same librarian, same
+refusal). `scripts/record_cassettes.py` updated to the same API.
+`fixtures/interviews/terse.json` / `expansive.json` — pre-pivot persona
+fixtures whose notes described the deleted pacing heuristic — deleted and
+replaced by `fixtures/interviews/builder-session.json` in the
+`PartnerScript` shape. One seam defect found and fixed: the belief extractor
+never wrote the `extra["rule_text"]` wording the doctrine compiler renders, so
+every extracted rule would have compiled through the mechanical fallback;
+extraction now authors it (rule plus condition). New
+`tests/integration/test_dossier_loop.py` (4 tests) closes the loop with real
+components: extract → assert → approve → fold → compile (quote + `turn:t-N`
+anchor on every rule) → reject → recompile (rule gone, fingerprint moved).
+Seams verified by execution: web `POST /sessions/{id}/turns` end-to-end
+offline (real gates, turn externalized, `claim.asserted` appended);
+`run_stub` appends `session.proposed` with the honest trigger label under
+`cloud-scheduler`, `manual`, and unset; trigger service imports clean; every
+shell script passes `bash -n`; every deploy YAML parses. Makefile
+`demo-interview` no longer passes the removed `--persona` flag. README status
+table corrected: `make adaptation-metric` is red on purpose but make reports
+exit 2, not the scorer's exit 1. Suite before this pass: 380 passed / 1
+skipped with `tests/integration/test_loop.py` failing collection on
+`baraza.cli`; after: **396 passed / 2 skipped across unit, property, and
+integration**, `scripts/compliance.py` exit 0 with and without `--no-prd`,
+`ruff check .` zero findings (two pre-existing errors fixed: a Python
+3.12-only f-string escape in `web/views.py`, import ordering across four
+files).
+
+**Key decisions (exactly 2–3, or "No forks this session"):**
+- **Rewriting `cli.py` onto `PartnerSession` over shimming the old
+  `Interviewer` loop back to life**, because the DECISION doc kills the
+  adaptation heuristic outright and a terminal path that exercised different
+  code than the replay harness would make the replay evidence about the
+  harness.
+- **Authoring `rule_text` at extraction over leaving the compiler's mechanical
+  fallback as the live path**, because the compiler's contract says it never
+  phrases anything — a doctrine whose every rule reads `predicate: object` is
+  legal but demonstrates the fallback, not the design.
+- **Deleting the persona fixtures over converting them**, because their
+  embedded notes existed to explain the deleted heuristic ("what drives the
+  follow-up budget UP"), and a converted fixture would have carried that
+  explanation into a tree where the mechanism it explains is banned.

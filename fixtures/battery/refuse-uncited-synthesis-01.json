@@ -1,0 +1,15 @@
+{
+  "schema": "baraza.battery.case.v1",
+  "case_id": "refuse-uncited-synthesis-01",
+  "rule_claim_id": "claim-user-no-uncited-synthesis",
+  "rule_summary": "no committed belief on the topic means saying so, not inventing one",
+  "task": "What does the dossier say about my dietary preferences?",
+  "phases": ["pre_commit", "post_commit", "post_retraction"],
+  "predicate": {
+    "type": "all_of",
+    "predicates": [
+      {"type": "regex_present", "pattern": "no committed belief|nothing in the dossier|not on record", "ignore_case": true},
+      {"type": "regex_absent", "pattern": "\\[claim:[^\\]]*dietary[^\\]]*\\]"}
+    ]
+  }
+}

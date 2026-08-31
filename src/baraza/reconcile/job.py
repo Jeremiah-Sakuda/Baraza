@@ -64,6 +64,7 @@ from baraza.reconcile.differential import (
     diff_snapshots,
     snapshot,
 )
+from baraza.reconcile.initiate import InitiationResult, propose_session
 from baraza.schema.event import Event, EventType
 from baraza.schema.visibility import Audience
 
@@ -100,6 +101,10 @@ class JobResult:
     snapshot_path: Path | None = None
     skipped_reasons: list[str] = field(default_factory=list)
     diff_lines: list[str] = None  # type: ignore[assignment]
+    initiation: InitiationResult | None = None
+    """The session proposal this run ended with — agenda size, the event ID,
+    and which notification path was taken. ``None`` only if initiation itself
+    raised, which the runners treat as a degraded ending, not a failed night."""
 
     def describe(self) -> list[str]:
         lines = [
@@ -129,6 +134,13 @@ class JobResult:
             lines.append(f"  snapshot               {self.snapshot_path}")
         if self.diff_lines:
             lines.extend(f"  {line}" for line in self.diff_lines)
+        if self.initiation is not None:
+            lines.extend(self.initiation.describe())
+        else:
+            lines.append(
+                "  session proposed       NO — initiation raised; the reconcile "
+                "work above still stands"
+            )
         return lines
 
 
@@ -181,6 +193,43 @@ def resolve_scheduled(trigger: str | None = None) -> bool:
     return resolved == "cloud-scheduler"
 
 
+def _initiate(
+    store: EventStore,
+    result: JobResult,
+    *,
+    run_id: str,
+    scheduled: bool,
+    audience: Audience,
+) -> None:
+    """The end hook, shared by both modes: propose the next session.
+
+    Re-reads and re-folds so the agenda sees everything this run appended —
+    tonight's contradictions are exactly what tomorrow's session is for.
+    Initiation failing must not fail the job: the reconcile evidence above is a
+    night that cannot be re-run, and a notification bug is not worth it. The
+    exception is printed and the result records the absence.
+    """
+    try:
+        events = store.read_all()
+        state = fold(events)
+        result.initiation = propose_session(
+            store,
+            state,
+            events,
+            run_id=run_id,
+            proposed_at=_heartbeat_instant(run_id),
+            scheduled=scheduled,
+            audience=audience,
+        )
+        result.events_appended += 1 if result.initiation.proposed else 0
+    except Exception as exc:  # noqa: BLE001 - deliberate boundary
+        print(
+            f"initiation failed ({type(exc).__name__}: {exc}); "
+            "the reconcile run above is unaffected",
+            file=sys.stderr,
+        )
+
+
 def run_stub(
     store: EventStore, *, run_id: str, scheduled: bool | None = None
 ) -> JobResult:
@@ -205,6 +254,13 @@ def run_stub(
     )
     if store.append(event):
         result.events_appended = 1
+    # Agenda-only initiation: the stub does no claims work, but it still ends
+    # by proposing the next session from whatever the fold already holds, so
+    # the initiation habit — and its evidence — starts accruing before the real
+    # reconciler lands.
+    _initiate(
+        store, result, run_id=run_id, scheduled=scheduled, audience=Audience.OWNER
+    )
     return result
 
 
@@ -333,6 +389,10 @@ def run_real(
         last_night = _snapshot_as_of(events, prior, audience=audience)
         result.diff_lines = diff_snapshots(last_night, tonight).describe()
 
+    # The end hook: after the night's real work, propose tomorrow's session.
+    _initiate(
+        store, result, run_id=run_id, scheduled=scheduled, audience=audience
+    )
     return result
 
 
@@ -455,7 +515,23 @@ def main(argv: list[str] | None = None) -> int:
                     # night is a field nobody's dashboard has a series for.
                     "claims_skipped": result.claims_skipped,
                     "model_calls": result.model_calls,
-                    "scheduled": True,
+                    # Resolved, never assumed. This line used to be the literal
+                    # True, which reported every hand-run job as a scheduled one
+                    # in the machine-readable output — the exact inflation
+                    # resolve_scheduled() exists to prevent.
+                    "scheduled": resolve_scheduled(),
+                    "session_proposed": result.initiation is not None
+                    and result.initiation.proposed,
+                    "agenda_items": (
+                        len(result.initiation.agenda)
+                        if result.initiation is not None
+                        else 0
+                    ),
+                    "invitation_channel": (
+                        result.initiation.channel
+                        if result.initiation is not None
+                        else "none"
+                    ),
                 }
             )
         )

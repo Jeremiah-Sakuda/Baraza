@@ -1,296 +1,140 @@
 # BY-HAND.md — everything only you can do
 
-**Today: Friday 2026-08-14. Deadline: Sunday 2026-08-31, 5:00 pm PT. 17 days.**
+**Today: Sunday 2026-08-31. Deadline: today, 5:00 pm PT.**
 
-Everything in this file requires your credentials, your accounts, your face, or
-real elapsed time. Nothing here can be done by an agent. Items are ordered by
-when they stop being recoverable, not by size.
+Rewritten for the DOSSIER pivot (`docs/pivot/DECISION-dossier.md`). Everything
+in this file requires your credentials, your accounts, your face, or real
+elapsed time; nothing here can be done by an agent. Items are ordered by when
+they stop being recoverable. The previous version of this file (17-day horizon,
+items H1–H20) is in git history; done items are not restated except where their
+residue still needs you.
 
-Current honest position, from the ten-agent judging panel:
-
-| | Score |
-|---|---|
-| **Stage 1 gate today** | **FAIL** — no public repo URL, no Google Cloud service running |
-| **Stage 2 today** | **2.5 / 6** |
-| **Stage 2 projected**, human items done competently | **≈ 4.15** |
-| **+ Stage 3 bonus** (blog + social) | **≈ 4.55 / 6** |
-| **+ Gemma earned rather than dropped** | **≈ 4.75 / 6** |
-
-The gap between 2.5 and 4.55 is entirely this file.
+Already done, verified on this tree: the repo has a public remote
+(`github.com/jeremiah-Sakuda/baraza`); project `baraza-2026` is live with
+Firestore append-only rules deployed and verified; the public surface returns
+HTTP 200 logged out; the model pins were live-verified 2026-08-31; `make
+compliance` and `make test` are green.
 
 ---
 
-## 🔴 TODAY — non-recoverable if missed
+## 🔴 Before the deadline — non-recoverable if missed
 
-### H1 · Push to a remote
+### R1 · Submit to Devpost, and do it before the last hour
 
-The repo is committed locally (six commits, B0–B5, 120 files) but has **no
-remote**. Everything exists on one disk.
+Select **The Collaborative Partner**. Before submitting, purge from
+`docs/submission/devpost-description.md`: every `<…>` placeholder and every
+`not yet measured` occurrence — that discipline earns credit in the README,
+where a judge can see it is enforced by a script; in a Devpost field it reads
+as unfinished. Add `google-adk` to Built With. Full checklist:
+`docs/submission/CHECKLIST.md`.
 
-Public is strictly safer than private. If you go private, you must grant **both**
-addresses — granting only one is a common and fatal miss:
+If the project stayed private anywhere, both judge addresses need access —
+granting only one is a common and fatal miss: `testing@devpost.com` and
+`cloudhackathons@google.com`.
 
-- `testing@devpost.com`
-- `cloudhackathons@google.com`
+### R2 · Record and upload the video (≤ 4:00)
 
-```bash
-gh repo create baraza --public --source=. --push
-```
+Script: `docs/submission/video-script.md`. Your voice, your screen. The three
+beats the pivot cannot lose:
 
-Then replace the literal `<repo-url>` placeholder in `README.md`.
+- **The judge-fired divergence card.** An uncontrolled instruction ("pad the
+  estimates to be safe") collides with a belief committed on a *prior* day —
+  then show the Firestore console refusing an edit, so the timestamp is
+  credible. If extraction misses, the fallback is the agent asking a clarifying
+  question, which itself scores.
+- **The doctrine diff**, with the causal claim named per changed rule. Never
+  narrate line-level output causality; the phrase is *same doctrine, every rule
+  cited*.
+- **The Google Cloud proof frames**: Cloud Run dashboard, Vertex logs,
+  Scheduler execution history. Shoot the centrepiece against live Vertex with
+  the log stream visible, not against cassettes; anything filmed from
+  `make demo` is replay and must be labelled as replay.
 
-A secret scan over the full history and working tree came back clean, so there
-is nothing blocking a public push.
+One line on the name: baraza means council — the place where disputes are heard
+and settled on the record. The dispute this one hears is you versus you.
 
-### H2 · GCP project — ✅ DONE
+### R3 · Publish the blog and the social post (bonus, your accounts)
 
-`baraza-2026` created and active. Nine APIs enabled: run, firestore, aiplatform,
-cloudscheduler, artifactregistry, cloudbuild, iam, logging, cloudtrace.
+`docs/submission/blog-post.md` must be public, not unlisted, and must keep the
+"created for the purposes of entering this hackathon" language.
+`docs/submission/social-posts.md` must carry `#AllThingsAgenticHackathon`
+exactly.
 
-Two things worth knowing about how this landed:
+### R4 · Do not tear anything down
 
-- **`hodi-2026` was inspected and rejected.** It turned out to hold six live
-  Cloud Run services, ten service accounts, and five Firestore databases. The
-  rules require the video to show the Cloud Run dashboard and the Scheduler
-  execution history as proof of Google Cloud deployment, and in a shared project
-  those two frames show another system's fleet alongside Baraza's. A dedicated
-  project makes both frames unambiguous and lets teardown delete cleanly.
-- **Billing linked to `My Billing Account` (`015D5D-94704F-956BF9`), not
-  Deployment Billing.** Deployment Billing returned `Cloud billing quota
-  exceeded` — it already carries five projects and Google caps how many a single
-  account can fund. This is a hard platform limit, not a preference. To move it
-  later, free a slot on Deployment Billing and re-link:
-
-  ```bash
-  gcloud billing projects link baraza-2026 --billing-account=015ACB-BA3DCD-D7BD7F
-  ```
-
-### H3 · Application Default Credentials
-
-Still absent. This one is genuinely yours — it opens a browser and an agent
-cannot complete an interactive OAuth flow.
-
-```bash
-gcloud auth application-default login
-```
-
-This is the single biggest blocker in the project. It gates cassette recording,
-which gates five `make` targets, which gates every measured number.
-
-### H4 · The $150 Google Cloud credit form
-
-**Closes Aug 28, 12:00 pm PT.** Approval is not instant — the rules say up to 72
-business hours. Apply now even if you think you won't need it.
-
-<https://forms.gle/riGhgDSHkHeMx8Ca6>
-
-### H5 · Bootstrap — ✅ DONE, with one gap (see `STOPPED-DEPLOY.md`)
-
-`make bootstrap` ran green against `baraza-2026`. Deployed and verified:
-
-- Firestore native DB with **append-only rules deployed and verified live** —
-  `scripts/verify_append_only.sh` returns passed 3, skipped 2, failed 0
-- Artifact Registry, both container images
-- Four least-privilege service accounts, two custom IAM roles
-- Two Cloud Run Jobs, two Cloud Run services
-- **`https://baraza-successor-tlaymplktq-uc.a.run.app` returns HTTP 200 logged
-  out** — this is the hosted URL for the Devpost submission
-- The interview service is deliberately private (reach it with
-  `gcloud run services proxy baraza-interview --region=us-central1 --project=baraza-2026`)
-- The Job runs and its heartbeat reaches Firestore — proven twice, exit 0
-
-**The gap: Cloud Scheduler cannot yet invoke the Job** (403). The Job itself
-runs fine; only the trigger is blocked. Full diagnosis, everything ruled out,
-and the decision now waiting on you are in `STOPPED-DEPLOY.md`.
-
-**Check this first thing tomorrow** — the Scheduler is ENABLED at 03:17 UTC and
-today's IAM grants may simply have needed longer to propagate than the retry
-window allowed:
-
-```bash
-gcloud scheduler jobs describe baraza-reconcile-nightly --location=us-central1 --project=baraza-2026 --format='value(status.code)'
-```
-
-Empty means it worked. `7` means it did not, and `STOPPED-DEPLOY.md` has the
-next step.
-
-### H5b · Rebuild the job image
-
-The deployed image predates the trigger fix and still records manual runs as
-scheduled. Rebuild before quoting any nightly-run count:
-
-```bash
-BARAZA_PROJECT_ID=baraza-2026 make bootstrap
-```
-
-### H6 · Set a billing budget alert while you are in the console
-
-A judged URL that 404s in September because credits ran out is a self-inflicted
-loss. Cloud Console → Billing → Budgets & alerts.
-
-**Do not run `make teardown` before Oct 1** — the rules require the project to
-stay free and testable until judging ends.
+The project must stay free and testable until judging ends. **No
+`make teardown` before Oct 1.** Keep the billing budget alert; a judged URL
+that 404s in September is a self-inflicted loss.
 
 ---
 
-## 🟠 Aug 15–18
+## 🟠 Same day, gated on your credentials
 
-### H7 · Verify the model pins
+### R5 · Record the cassettes
 
-```bash
-make verify-models
-```
-
-Model IDs are pinned but have **never been resolved against live Vertex**. Until
-this exits 0, no document in the repo may state which model version shipped —
-that rule is enforced by `scripts/compliance.py`.
-
-### H8 · Record the cassettes
-
-Supervised, costs live Vertex calls. One command flips `demo`, `demo-agenda`,
-`demo-interview`, `verify-anchors`, and the 17 behaviour probes from red to
-green, then unlocks `adaptation-metric`.
+The single command that flips `demo`, `demo-agenda`, `demo-interview`,
+`verify-anchors` and the behaviour probes from red to green, then unlocks
+`adaptation-metric`:
 
 ```bash
 python3 scripts/record_cassettes.py --yes && make demo
 ```
 
-Run `make demo` immediately after — a single prompt drift produces a
-`CassetteMiss`, which fails loudly by design rather than inventing a response.
+Supervised because it spends live Vertex calls. Run `make demo` immediately
+after — a prompt drift produces a loud `CassetteMiss` by design. Until this
+runs, the honest sentence in the README stands: the offline demo does not run
+on a clean clone.
 
-### H9 · Confirm the gate
+### R6 · Measure, or leave `not yet measured` standing
 
-```bash
-make gate
-```
+Every entry in `docs/metrics.json` reads `not yet measured` and the `runs`
+array is empty. The two numbers the pivot's pitch leans on:
 
-### H10 · Decide Gemma: earn it or drop it
+1. **Doctrine determinism** — N replays, permuted offsets, identical hash.
+2. **Rule-compliance delta** — the fixed scripted battery before/after a belief
+   commits or is retracted, scored by objective predicates via
+   `make adaptation-metric`.
 
-Worth +0.2. The panel found the Gemma path is currently **unclaimable**: the
-endpoint variable is read by nothing, and a total filter outage used to print
-`kept 33/33 = 100.0% (gemma)` — byte-identical to the filter working perfectly.
-That silent-failure mode is now fixed and reports `DEGRADED`, but the
-endpoint-aware branch was deliberately left unwritten because it cannot be
-verified without a live endpoint.
+If a number comes out imperfect, publish the imperfect number — the repo's own
+culture demands it, and `scripts/compliance.py` rejects any entry without
+provenance. Never type a plausible value; the fallback is always the literal
+string `not yet measured`.
 
-Either write and verify it, or delete the Gemma rows and forgo the 0.2. The
-README and compliance matrix currently state that neither has happened.
+### R7 · Verify the trigger's execution history before quoting it
 
----
-
-## 🟡 Aug 19–25
-
-### H11 · Supervised measurement session 1
-
-Populate `docs/metrics.json` with real run IDs and dates. All 20 entries
-currently read `"not yet measured"`.
-
-Highest-value single number: **contradiction precision against the 18-landmine
-manifest**. "18 of 18 plants found, 15 of 17 behaviours caught, and here are the
-2 misses" beats every paragraph of prose in the repository.
-
-### H12 · Supervised measurement session 2
-
-Persona replay runs → `fixtures/transcripts/` → `make adaptation-metric` green.
-This produces the BAR-330 number and the turn ID of the in-session adaptation
-moment that the README and video script reference.
-
-### H13 · Flip the reconcile Job to `--real`
-
-`Dockerfile.job` defaults to `stub` and `scheduler.yaml` does not override it.
-Needs **≥3 real nights before Aug 28** or the video's differential-ledger
-section has nothing to show.
-
-### H14 · The Aug 25 reproducibility gate
-
-Clean clone on a **different machine**, then `make install && make demo`. You
-cannot self-certify this from the box that built it. Note the Dockerfiles do not
-install from `requirements.lock`, which was resolved on Python 3.14/macOS while
-the images are 3.11-slim.
-
-### H15 · PRD v1.1, if you can find it
-
-You chose "I'll supply v1.1" but it never landed. `make compliance` exits 2
-because `docs/PRD.md` is absent, and ~35 BAR requirement IDs have no acceptance
-criteria in the tree. Low external priority — no judge runs `make compliance` —
-but it is the repo's own contract.
-
-If it is unrecoverable, change `make gate` so it stops reporting red for an
-internal-only gap.
-
-### H16 · Two decisions I declined to make for you
-
-Both involve editing normative project documents, and three separate agents
-independently refused to do it unilaterally:
-
-1. `AGENTS.md` §7 and `baraza-prd-v1.2-amendments.md` (three places) still cite
-   `docs/antigravity/decision.md`. That file was a placeholder for prior work
-   from a sibling project that was never supplied. It carried a second-hand
-   negative claim about a named vendor's SDK, which collides with the standing
-   rule against unverifiable negative claims about real entities. Either supply
-   the original, or cut the citation from BAR-020 and state plainly that ADK was
-   chosen without a published comparison.
-2. Whether to keep the sibling-project ports disclosed as they currently are in
-   the README.
+The Scheduler 403 was root-caused to Scheduler's OAuth path and the fix is the
+`baraza-trigger` OIDC hop (`STOPPED-DEPLOY.md`). Before the video or any doc
+quotes a nightly-run count: check the execution history in the console, and
+remember `scheduler_nightly_runs_completed` stays `not yet measured` until a
+real scheduled run is counted. A manual run is never counted as a scheduled
+one — that discipline is in the code (commit 0fca155); keep it in the
+narration.
 
 ---
 
-## 🟢 Aug 26–31
+## 🟢 Ongoing — real elapsed time, cannot be compressed
 
-### H17 · Record the video
+### R8 · Keep the daily dogfooding sessions running
 
-Script is at `docs/submission/video-script.md`, budgeted at 3:50 with 0:10 of
-slack against the 4:00 hard cap. It needs preconditions met, not rewriting.
+The initiation evidence is timestamps accruing in an append-only log. Every day
+a session runs, the multi-day epoch record gets stronger; nothing retroactive
+can substitute. The demo task is real: Baraza guiding the drafting of this
+hackathon's own submission documents.
 
-Three things the panel flagged specifically:
+### R9 · Live with the approval loop, honestly
 
-- **Shoot the centrepiece against live Vertex**, with the Cloud Console log
-  stream in a second window — not against cassettes. The rules ask for
-  *unedited live execution*.
-- **Put the `extraction path: adk-agent` report line on screen** rather than
-  asserting ADK in narration. Offline replay is direct-call by design, so
-  nothing filmed from `make demo` is an agent loop — that is the sentence most
-  likely to become an on-camera overclaim.
-- Keep the three mandatory Google Cloud proof frames: Cloud Run dashboard,
-  Vertex AI logs, Scheduler execution history.
-
-Worth adding to the opening: the corpus is synthetic because publishing a real
-student organization's chat export and budget would be the wrong thing to do.
-That reframes it from a shortcut into a deliberate choice.
-
-### H18 · Publish the blog — **+0.2**
-
-`docs/submission/blog-post.md` is drafted and already contains the required
-"created for the purposes of entering this hackathon" language. Must be public,
-not unlisted.
-
-### H19 · Post to social — **+0.2**
-
-`docs/submission/social-posts.md`. Must carry `#AllThingsAgenticHackathon`
-exactly.
-
-### H20 · Submit to Devpost — **by Aug 30, not Aug 31**
-
-Select **The Collaborative Partner**.
-
-Before submitting, purge from `devpost-description.md`: every `<…>` placeholder,
-and all six occurrences of `not yet measured`. Keep that discipline in the
-README where it earns credit for honesty; a Devpost field announcing that its
-own metrics don't exist reads as unfinished. Add `google-adk` to Built With.
-
-Full checklist: `docs/submission/CHECKLIST.md`.
+Approval fatigue is designed-for (batch ratification) but unlived. When someone
+asks "would you still use this in October?", the honest answer is a projection,
+not data — say so. The dossier's whole argument is that honest beats fluent.
 
 ---
 
-## What I could not do, and why
+## What an agent could not do, and why
 
 | Item | Reason |
 |---|---|
-| Deploy anything | Needed your project choice; you were interrupted before naming it |
-| Record cassettes | ADC absent — interactive browser OAuth |
-| Any measured number | Follows from the two above |
+| Record cassettes / any measured number | Your credentials; supervised spend |
 | Record the video | Your voice, your screen |
 | Publish blog / social / Devpost | Your accounts |
-| Merge PRD v1.2 | v1.1 was never supplied, and §6 forbids reconstructing it |
-| Copy the Antigravity finding | Lives in a sibling project I was not given |
-| ≥10 nights of Scheduler history | Real elapsed time; cannot be compressed |
+| Multi-day initiation epochs | Real elapsed time |
+| The judge-fired beat | By construction: the input must be uncontrolled |

@@ -1,0 +1,13 @@
+{
+  "schema": "baraza.battery.case.v1",
+  "case_id": "no-padded-estimate-01",
+  "rule_claim_id": "claim-user-never-pad-estimates",
+  "rule_summary": "estimates are never padded above the input figure",
+  "task": "The measured runtime of the offline demo was 12 minutes. Give a one-line estimate, in minutes, for the next run.",
+  "phases": ["pre_commit", "post_commit"],
+  "predicate": {
+    "type": "number_at_most",
+    "pattern": "([0-9]+(?:\\.[0-9]+)?)\\s*minutes",
+    "limit": 12
+  }
+}

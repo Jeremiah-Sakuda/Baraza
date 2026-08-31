@@ -462,3 +462,63 @@ unblocked `make compliance`, but it does not manufacture cassettes, a live Verte
 run, or a successful Scheduler invocation. The repair updates the submission
 documents to preserve that distinction rather than letting the new green target
 be mistaken for product proof.
+
+## Integration findings — the pivot build, seven lanes in parallel (2026-08-31)
+
+**Disjoint file ownership does not make interfaces disjoint.** The lanes were
+partitioned by file and every lane finished green in its own tests — and the
+tree still did not run, because the seams live in the files nobody owned this
+week. `src/baraza/cli.py` imported `AdaptationState` and `ReplayHarness` after
+the interview lane deleted both, which failed collection for
+`tests/integration/test_loop.py` — a test about *corpus ingestion* that had
+nothing to do with the interview API except transitively importing it. The
+lesson is old but was re-earned: a lane's definition of done ("my files, my
+tests") is necessarily blind to every consumer it broke, and only a pass that
+runs the whole tree finds the difference.
+
+**A contract stated in a docstring is not a contract until something crosses
+it.** The doctrine lane documented that rule wording comes from
+`claim.extra["rule_text"]`, "authored at extraction," with a mechanical
+fallback. The beliefs lane's extractor wrote `belief`, `turn_id`, and
+`condition` into `extra` — and never `rule_text`. Both lanes were green: the
+compiler's tests authored their own `rule_text`, the extractor's tests never
+compiled anything. Every rule in a real doctrine would have rendered through
+the fallback (`predicate: object literal`), which is legal, honest, and not
+what either lane designed. Found only by the new
+`tests/integration/test_dossier_loop.py`, which pushes one belief through
+extraction, approval, the fold, and the compiler in a single process; fixed by
+having extraction author the wording.
+
+**Fixtures are code and they rot like code.** The old persona fixtures
+(`terse.json` / `expansive.json`) were incompatible with the new
+`load_script` shape, so `make demo` would have crashed on a `KeyError` deep in
+a loader instead of stopping with a stated precondition — and their `_note`
+fields explained the deleted pacing heuristic at length, in a tree whose
+decision record bans mentioning it. Deleted and replaced with one
+`PartnerScript`-shaped fixture. The general form: when an interface dies, grep
+for the *data* that fed it, not just the symbols.
+
+**`make` launders exit codes.** The metric scorer exits 1 (ran, red) versus 2
+(could not run) deliberately — and `make adaptation-metric` reports 2 either
+way, because GNU make's own failure exit is 2. The README's status table
+claimed "exit 1" for a command a judge would run through make; corrected to
+state both numbers. A status table of observed exit codes has to observe them
+through the same invocation it prints.
+
+**Environment drift is a lint category.** `ruff` failed on a
+`\"` escape inside an f-string in `web/views.py` — valid on the Python 3.14
+the venv runs, a syntax error on the 3.11 floor the project pins. The lane
+that wrote it tested it green locally. The floor is only real where something
+mechanical enforces it; ruff's `target-version` was that something, but only
+in the lane that happened to run ruff over the file.
+
+**What the seams got right.** The web lane's call-time symbol resolution
+(`resolve_symbol` / `call_tolerant`) absorbed two breaking renames from
+parallel lanes without an edit; the interview service picked up
+`extract_beliefs` by name the moment it existed. And the honesty machinery
+held end to end when run rather than read: `POST /sessions/open` on an empty
+ledger answers 409 with a stated reason, `run_stub` labels
+`session.proposed` with the true trigger under all three env states, and the
+replay harness refuses to write a transcript for a run that made zero model
+calls. Rule-compliance and determinism numbers remain not yet measured — the
+scorer names the producer commands and stays red on purpose.

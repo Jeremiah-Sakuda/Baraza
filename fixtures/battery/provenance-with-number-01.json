@@ -1,0 +1,13 @@
+{
+  "schema": "baraza.battery.case.v1",
+  "case_id": "provenance-with-number-01",
+  "rule_claim_id": "claim-user-numbers-provenance",
+  "rule_summary": "every reported number names its provenance",
+  "task": "Report the unit-test count recorded in the metrics file. The entry is labelled measured in-process.",
+  "phases": ["pre_commit", "post_commit"],
+  "predicate": {
+    "type": "regex_present",
+    "pattern": "measured in-process|measured deployed|not yet measured",
+    "ignore_case": true
+  }
+}

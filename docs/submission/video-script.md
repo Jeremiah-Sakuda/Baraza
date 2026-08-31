@@ -1,540 +1,359 @@
-# Video script — Baraza (BAR-601–608)
+# Video script — Baraza: memory with due process
 
-**Hard cap 4:00.** This script is budgeted to land the final frame at **3:50**,
-leaving **0:10 of slack**. Slack is not a place to add a shot. It is there
-because narration runs long when you are tired and the cap is a disqualification
-line, not a guideline.
+**Hard cap: 4:00. This script is budgeted to 3:50** — narration ends at 3:50,
+leaving 0:10 of slack for breath and cuts. Verify the final duration in the
+editor's timeline, not by estimate.
 
-**Read before recording:**
+**Recording rules, non-negotiable:**
 
-- Narration below is **verbatim**. Word counts and the resulting speaking rate
-  are given per shot. Anything above ~2.6 words/second sounds rushed on a
-  laptop mic; anything the script marks "leave dead air" is deliberate — the
-  terminal doing visible work is more persuasive than a voice describing it.
-- The centrepiece (section C) is **one continuous unedited take**. If the take
-  does not fit the budget, shrink the corpus or the agenda size and record
-  again. Do **not** cut, speed-ramp, or jump-cut inside C. The claim being made
-  is "this actually ran", and an edit inside the take forfeits it.
-- Every shot lists **PRECONDITION** — what must be true beforehand. A shot whose
-  precondition is unmet is not recorded with a stand-in. It is cut, and the cut
-  is noted in `docs/BUILD-LOG.md`.
-- Shots marked **⏳ REAL ELAPSED TIME** cannot be produced on recording day.
-  They depend on nights that have to actually pass.
+- The centrepiece (Shot 3) is **one unedited take** — no cuts, no speed ramps.
+  If the model misbehaves mid-take, keep rolling: the fallback beats are scripted
+  below and each of them still scores.
+- Every visible string in every frame is synthetic or the builder's own. Freeze
+  and read each frame before locking the cut.
+- No unmeasured number is spoken or captioned. Appendix B is the checklist.
+- Narration is verbatim as written. The phrases in it were chosen against a
+  hostile-judge review; improvising around them is how banned sentences get
+  spoken on camera.
 
----
-
-## Timecode budget
-
-| § | Beat | In | Out | Dur |
-|---|---|---|---|---|
-| A | The friction | 0:00 | 0:25 | 0:25 |
-| B | What it is, and the architecture in one breath | 0:25 | 0:48 | 0:23 |
-| C | **Centrepiece — unedited live terminal** | 0:48 | 2:08 | 1:20 |
-| D | Approval, successor, and the refusal | 2:08 | 2:38 | 0:30 |
-| E | Google Cloud proof frames | 2:38 | 3:12 | 0:34 |
-| F | The differential ledger | 3:12 | 3:38 | 0:26 |
-| G | Close | 3:38 | 3:50 | 0:12 |
-| — | **Slack against the 4:00 cap** | 3:50 | 4:00 | **0:10** |
+**How to read a shot block:** ON SCREEN is what the recording shows. NARRATION
+is spoken verbatim. PRECONDITIONS are what must already be true before the take;
+each is flagged **[agent-verified]** (verified mechanically in the tree or
+against the live project as of 2026-08-31, evidence named) or **[user-must-do]**
+(requires your credentials, your browser, or a sibling work-stream landing —
+confirm it yourself on recording day).
 
 ---
 
-## A — The friction (0:00–0:25)
+## Global preconditions (check once, before any take)
 
-### A1 · 0:00–0:08 (8s)
-
-**ON SCREEN.** Black. One line of white type, centred, no logo, no music sting:
-`Every May, thousands of organizations forget everything.` Hold the type for a
-beat after the line is spoken.
-
-**NARRATION (15 words, 1.9 w/s).**
-> "Every May, thousands of organizations forget everything. The officers
-> graduate. The knowledge leaves with them."
-
-**PRECONDITION.** None. Record this last — it is the only shot that cannot fail.
-
----
-
-### A2 · 0:08–0:17 (9s)
-
-**ON SCREEN.** Screen recording of a file browser over the synthetic corpus
-directory: folders in a native mess — a PDF whose scan is visibly skewed, two
-spreadsheets with no header row, a chat export, meeting minutes in `.docx`.
-Scroll slowly. Do not open anything.
-
-**NARRATION (21 words, 2.3 w/s).**
-> "The handover is a shared drive: four folders named final, a constitution
-> scanned crooked, three years of chat nobody will read."
-
-**PRECONDITION.** `fixtures/corpus/` is generated from `fixtures/corpus/BIBLE.md`
-per `fixtures/MANIFEST.md` and contains real files in the four native formats.
-Every name visible on screen — org, people, filenames — is synthetic. Freeze the
-frame and read every visible string before this take is kept. **Not yet
-generated as of this writing.**
+- **[user-must-do]** The dossier web face (claim panel, agenda rail, divergence
+  card, dossier list, doctrine view, approval queue) is deployed and reachable.
+  This is the WS2 surface; every shot below renders in it. Confirm by loading
+  the public URL logged out, in a private window.
+- **[user-must-do]** The hosted `.run.app` URL you will read aloud in Shot 5 is
+  the same URL entered on the Devpost form. The last URL verified live (HTTP 200
+  logged out, 2026-08-15) was `https://baraza-successor-tlaymplktq-uc.a.run.app`;
+  if the rename redeployed the public service under the dossier name, use the
+  new URL everywhere and retire the old one.
+- **[user-must-do]** Application Default Credentials present; live Vertex calls
+  work from this machine. The centrepiece is shot against **live Vertex**, never
+  against cassettes.
+- **[user-must-do]** At least several days of real dogfooding sessions exist in
+  the Firestore event log, so the timestamps in Shots 3–6 predate recording day.
+  Elapsed time cannot be faked and cannot be compressed.
+- **[agent-verified]** Model pins resolve against live Vertex:
+  `gemini-3.7-flash` (reasoning), `gemini-3.5-flash` (fast), location `global`
+  — live-verified 2026-08-31 against project `baraza-2026`, recorded in
+  `src/baraza/schema/models.py`.
+- **[agent-verified]** Firestore append-only rules are deployed and were
+  verified live: `scripts/verify_append_only.sh` → passed 3, skipped 2,
+  failed 0 (2026-08-15, `STOPPED-DEPLOY.md`). Re-run it on recording day anyway — Shot 2
+  depends on the refusal happening on camera.
 
 ---
 
-### A3 · 0:17–0:25 (8s)
+## Shot 1 — The friction (0:00–0:20)
 
-**ON SCREEN.** Cut to a plain text prompt on dark background, typed live, one
-line: `who can actually sign a cheque?` Cursor blinks. Nothing answers it.
+**ON SCREEN:** A generic chat application's memory pane — a flat list of
+paraphrased "memories" with no sources, no dates, no way to see why any of them
+exists. (Use a mock or the builder's own account with only synthetic content
+visible; no product logo needs to be legible and no vendor is named.) At 0:12,
+hard cut to the Baraza dossier view: a list of beliefs, each with a verbatim
+quote, a turn anchor, and a timestamp.
 
-**NARRATION (19 words, 2.4 w/s).**
-> "So the incoming treasurer asks the only question that matters — who can
-> actually sign a cheque — and nobody knows."
+**NARRATION (verbatim):**
 
-**PRECONDITION.** None. This is a typed prompt, not a running system. Do not
-imply it is a product surface; it is a title card that happens to be a cursor.
+> "Every AI product is bolting on memory, and every one of them is an opaque
+> blob. It paraphrases you, it can't say where a belief came from, and you can't
+> correct it. This is Baraza's answer: a dossier. Every belief about me is a
+> claim, with my exact words, and the moment I said them."
 
----
+**PRECONDITIONS:**
 
-## B — What it is (0:25–0:48)
-
-### B1 · 0:25–0:35 (10s)
-
-**ON SCREEN.** Static architecture diagram (BAR-505), full frame. Held still —
-no build animation, no pans.
-
-**NARRATION (20 words, 2.0 w/s).**
-> "Baraza reads that mess unattended, asks the corpus what it disagrees with,
-> and interviews the departing officer about the disagreements."
-
-**PRECONDITION.** The diagram exists and **displays no unmeasured number**. Per
-`docs/metrics.json`, every metric is currently the literal string
-`not yet measured`; the diagram may show the pipeline and nothing numeric until
-a measurement run has happened. **Diagram not yet created.**
+- **[user-must-do]** A memory pane to film that contains no real third-party
+  data — a mock is fine and safer.
+- **[user-must-do]** The dossier view holds real beliefs from prior dogfooding
+  sessions (WS2 + WS3 landed; sessions run).
 
 ---
 
-### B2 · 0:35–0:48 (13s)
+## Shot 2 — Pitch, architecture, and the log that refuses (0:20–0:45)
 
-**ON SCREEN.** Same diagram, with the Google Cloud surfaces highlighted in
-sequence as each is named: Cloud Run Jobs → Firestore → Cloud Scheduler →
-Vertex AI. Highlight only; no motion graphics.
+**ON SCREEN:** 0:20–0:32 the architecture diagram (`docs/architecture.svg`):
+ingest → claims → append-only Firestore log → fold → doctrine, with the
+approval gate marked as the only writer of `committed`. 0:32–0:45 the Firestore
+console, live: open an event document in the `events` collection, attempt to
+edit a field, click save — **the rules refuse the write on camera**. Hold on
+the error.
 
-**NARRATION (30 words, 2.3 w/s).**
-> "Cloud Run Jobs ingest and reconcile. Firestore holds an append-only
-> claim-event log — every graph is a fold over it. Cloud Scheduler runs it
-> nightly. Gemini on Vertex does the reasoning."
+**NARRATION (verbatim):**
 
-**PRECONDITION — now met, with one limit.** The import exists:
-`src/baraza/agents.py` imports `google.adk.agents.LlmAgent` and
-`google.adk.tools.FunctionTool`, and `tests/unit/test_agents.py` asserts the
-built objects are genuinely ADK instances. The framework may therefore be named.
+> "Under it: every belief is appended to a log whose deployed rules reject
+> update and delete — watch me try to edit one in the console. Refused. A log
+> that cannot be quietly rewritten. Beliefs only act after I ratify them, and
+> the doctrine the agent runs under cites, for every rule, the claim that put
+> it there."
 
-Append this, which is true today:
-> "— the agent fleet is built on Google's ADK, separated by what each agent is
-> allowed to write."
+**PRECONDITIONS:**
 
-Do **not** say "four agents on ADK." Two reasons, both checkable on camera by a
-judge who opens the file: there are **three** `LlmAgent`s (extractor, reconciler,
-interviewer), and the fourth role — the approver — is deliberately **not** an
-agent and has no model, which is the single most interesting design decision in
-that file. If there is room, that is the better sentence:
-> "Three reasoning agents on ADK. The fourth role, the one that promotes a claim,
-> has no model at all — promotion is never a model's judgement call."
-
-**What may now be said, and the trap in it.** The extractor *is* on the live
-extraction path: `baraza.ingest.extract.AgentClaimExtractor` drives it through an
-ADK `Runner`. But `IngestionPipeline` selects the ADK path only when the run is
-**not offline**, because an ADK `Runner` bypasses the cassette client. So:
-
-- If the take is recorded against **live Vertex** (`--no-offline`), the ingest you
-  are filming is a real ADK agent loop and you may say so.
-- If the take is recorded from **cassettes** (`make demo`), it is the direct
-  `llm.py` path and you must **not** call it an agent loop. The report line the
-  run prints — `extraction path: adk-agent` vs `direct` — is the check; put it on
-  screen rather than asserting it in narration.
-
-Either way the reconciler and interviewer agents are built but not driven, so
-"the whole fleet is executing" is not a sentence this repository can back.
-
-Otherwise say nothing about the framework here and let the Devpost text carry the
-accurate version. Do not read the pinned model IDs aloud in any shot:
-`make verify-models` has not been run green, and until it has, no artifact in
-this repository may state which model version shipped.
+- **[agent-verified]** `docs/architecture.svg` exists in the tree, self-contained,
+  legible in light and dark. **[user-must-do]** Confirm it reflects the dossier
+  framing (WS7 rewrite) before filming it.
+- **[agent-verified]** Append-only rules deployed (see global preconditions).
+- **[user-must-do]** Firestore console open, logged in, on the `events`
+  collection of `baraza-2026`, with an event doc selected before the take
+  starts. Rehearse the edit-refusal click path once off camera.
 
 ---
 
-## C — Centrepiece: unedited live terminal (0:48–2:08)
+## Shot 3 — THE CENTREPIECE: one unedited take (0:45–2:10)
 
-**One take. One terminal. No cuts inside this section.** Font large enough to
-read at 720p. Clear scrollback immediately before rolling, on camera.
+**ON SCREEN:** The working-session view, live against Vertex. The builder is
+drafting a real document (this submission's own materials — dogfooding on
+camera). The claim panel is visible at all times. The sequence, in one take:
 
-### C1 · 0:48–1:05 (17s) — cold ingest
+1. (~0:45) The builder types a rule into the session: *"Never state a number in
+   a submission doc unless it traces to a metrics entry."*
+2. (~0:55) The belief appears in the claim panel: verbatim quote, anchor
+   `turn:t-N`, status `proposed`.
+3. (~1:10) Drafting continues; a second, colliding instruction is typed:
+   *"Just put a rough number in for now, we'll fix it later."*
+4. (~1:20) **The divergence card fires**, both quotes on screen with their turn
+   anchors: the earlier rule and the sentence just typed. The agent asks which
+   governs and refuses to silently overwrite the old rule.
+5. (~1:35) The builder adjudicates by splitting it into a conditional: numbers
+   must trace to metrics in submitted artifacts; drafts may carry a marked
+   placeholder. A new, judgment-shaped belief is proposed.
+6. (~1:50) The approval queue: the builder ratifies the split. The doctrine
+   view updates — the new rule visible **with the claim ID and quote that put
+   it there**.
+7. (~2:00) The next draft paragraph visibly follows the new rule.
 
-**ON SCREEN.** Terminal. Visible in order: `ls fixtures/corpus/`, then the
-event-log count showing zero, then `make demo-agenda`. Output scrolls: documents
-read, chunks, pre-filter keep/drop, claims extracted, contradictions detected
-on write.
+**NARRATION (verbatim, paced over the take):**
 
-**NARRATION (36 words, 2.1 w/s — leave dead air while the log scrolls).**
-> "Nothing here is primed. Empty log, a corpus of native files — a skewed PDF
-> scan, headerless spreadsheets, a chat export, minutes. One command."
->
-> *(pause, let it scroll)*
->
-> "Chunk, pre-filter, extract, detect on write. No sweep — one bounded call per
-> claim."
+> "This is live and unedited. I'm drafting this submission with Baraza. I state
+> a rule — and it lands in the claim panel as my exact words with a turn anchor,
+> not a paraphrase. Later I contradict myself — and it catches me. Both quotes,
+> both moments, on screen. It won't silently keep the newer one; I have to
+> decide. I split it into a conditional — that's a judgment, not a preference.
+> I ratify it in the approval queue, because no belief acts on my behalf until
+> I've signed it. And there it is in the doctrine: the new rule, citing the
+> exact claim — my exact sentence — that created it. The next draft follows it."
 
-**PRECONDITION.** (1) `make demo-agenda` exits 0 — it currently does not. The CLI
-exists and the target reaches its model layer, then exits 2 because
-`fixtures/cassettes/` holds no recordings. (2) The run uses the recorded-cassette
-client so it is reproducible offline and needs no credentials mid-take. (3) The
-pre-filter mode visible in the output matches what `docs/metrics.json` records.
-(4) **The wall-clock runtime of a cold ingest is `not yet measured`.** Time it
-before assuming it fits in 17 seconds. If it overruns, shrink the corpus for the
-take — do not cut the take, and do not present a shrunken corpus as the full one.
+**FALLBACK (keep rolling, still scores):** if extraction misses the rule or the
+divergence card does not fire, the agent asks a clarifying question about the
+under-specified rule instead. Narrate honestly: *"It didn't catch that one —
+so it asks. A question here only exists because two of my own statements
+collide, or a rule is too vague to compile."* Do not re-take dishonestly; a
+visible ask is the same machinery.
 
----
+**PRECONDITIONS:**
 
-### C2 · 1:05–1:18 (13s) — the disputed ledger
-
-**ON SCREEN.** Same terminal, continuing. The ledger prints: ranked rows, each
-with the two conflicting claim IDs and their anchors.
-
-**NARRATION (20 words, 1.5 w/s).**
-> "This is the disputed ledger. Not errors — disagreements. Ranked by how much
-> they'd cost the next person to get wrong."
-
-**PRECONDITION.** Ledger rendering routes through the audience predicate, and at
-least one row on screen is a genuinely planted manifest landmine. Do **not** say
-a row count out loud; `contradictions_detected_total` is `not yet measured`. If
-a count is visible in the output, that is fine — it came from the run. Saying a
-number the run did not print is not.
-
----
-
-### C3 · 1:18–1:31 (13s) — the agenda no human wrote
-
-**ON SCREEN.** Continuing. The generated interview agenda prints. Each item
-shows the contradiction it descends from.
-
-**NARRATION (18 words, 1.4 w/s).**
-> "And this is the interview agenda. No human wrote it. Every question traces
-> to two records that disagree."
-
-**PRECONDITION.** The agenda is generated in this same run, from the ledger
-produced seconds earlier on screen. Nothing is loaded from a file authored by
-hand. If any agenda item is downgraded because its underlying claims are
-unreadable to this audience, that item renders as an open-ended prompt with no
-quotes — that is correct behaviour, not a bug to hide from frame.
+- **[user-must-do]** WS2 session view + WS3 extraction and doctrine compiler +
+  WS4 divergence retarget all landed and smoke-tested end to end at least once
+  before the take.
+- **[user-must-do]** Live Vertex from this machine; a second window with the
+  Cloud Console log stream visible if the frame allows — live proof beats
+  assertion.
+- **[user-must-do]** The earlier rule in step 1 is genuinely new in this take,
+  or already committed from a prior session — either is honest; do not pre-seed
+  and pretend it is new.
 
 ---
 
-### C4 · 1:31–1:45 (14s) — the replay interview opens
+## Shot 4 — The dossier: reject and rerun (2:10–2:40)
 
-**ON SCREEN.** Continuing. `make demo-interview REPLAY=1 PERSONA=<persona-id>`.
-The first question streams token by token, with its citation. The canned persona
-answer arrives on a timer.
+**ON SCREEN:** The dossier view — the full file the agent keeps on the builder:
+every belief, quote, anchor, timestamp, status. The builder clicks **Reject**
+on one committed belief; the retraction appends as its own event. Rerun the
+same fixed drafting task. The output differs. Open the **doctrine diff**: the
+changed rule, with the retracted claim named as its source.
 
-**NARRATION (16 words, 1.1 w/s — deliberately sparse; let the stream be visible).**
-> "Replay mode feeds a canned persona so this is reproducible. First question,
-> cited. The officer answers."
+**NARRATION (verbatim):**
 
-**PRECONDITION.** (1) The replay harness works and the persona is one of the two
-committed fixture personas. (2) Do **not** say "under a second to first token" —
-`interview_first_token_ms_replay` is `not yet measured`, and a replayed timing is
-in any case not a deployed measurement. If the stream is visibly fast, the viewer
-can see that for themselves.
+> "This is the file it keeps on me, and I can open it. Every belief, my quote,
+> the moment it was learned. I reject one — the retraction is itself an
+> append-only event, not an edit. I rerun the same task. The output changes,
+> and the doctrine diff names exactly which rule changed and which claim of
+> mine it came from. Same doctrine, every rule cited. Compiling my beliefs into
+> policy is replayable byte for byte; what the model does with that policy is
+> honest work, and we measure it instead of promising it."
 
----
+**PRECONDITIONS:**
 
-### C5 · 1:45–2:08 (23s) — **THE DIVERGENCE MOMENT**
-
-**ON SCREEN.** The persona's answer lands. The agent's next turn renders the
-divergence: `That differs from what the records say. <anchor> reads: "<quote>".
-<rationale>` — **both citations visible in frame at the same time**: the
-testimony turn and the conflicting corpus claim with its anchor. Do not scroll
-away from it. Hold until the narration ends. The turn ID is visible on screen
-(e.g. `t-14`) and is quoted by ID in the README and the Devpost text so a judge
-can locate this exact exchange in the committed transcript.
-
-**NARRATION (45 words, 2.0 w/s).**
-> "Watch this line. The officer says one thing. The record says another. And the
-> agent says so — in the moment, with both citations on screen. It doesn't call
-> anyone a liar. It surfaces the divergence and asks which one is right. That is
-> the product."
-
-**PRECONDITION.** (1) The divergence fires deterministically for this persona on
-this corpus — verify across at least three consecutive dry runs before the take,
-because a centrepiece that fires probabilistically will fail on camera. (2) Both
-anchors on screen resolve under `make verify-anchors`. (3) The conflicting claim
-is readable by this audience — if it were not, the correct render is the redacted
-placeholder, which is a fine thing to show but is a *different* shot and needs
-different narration. (4) The turn ID visible here matches the ID cited in every
-other artifact. **`make verify-anchors` does not yet exist.**
+- **[user-must-do]** WS5 doctrine diff (`src/baraza/doctrine/diff.py`) landed;
+  reject-and-rerun path smoke-tested.
+- **[user-must-do]** A committed belief exists whose rejection visibly changes
+  the fixed task's output — rehearse the pair off camera to pick a belief where
+  the difference is legible in one glance.
 
 ---
 
-## D — Approval, successor, and the refusal (2:08–2:38)
+## Shot 5 — Google Cloud proof (2:40–3:15)
 
-### D1 · 2:08–2:19 (11s) — approval with the visibility choice
+**ON SCREEN, in order:**
 
-**ON SCREEN.** The approval surface. The answer is promoted to committed, and
-the visibility selector is used **on camera** — the pointer moves from the
-default `private` to `successor`. The emitted events are visible: the approval
-event and the separate visibility event.
+1. (2:40) Cloud Run dashboard for `baraza-2026`: the deployed services and the
+   two jobs (`baraza-reconcile`, `baraza-ingest`), all green.
+2. (2:52) Vertex AI request logs showing live calls to `gemini-3.7-flash` and
+   `gemini-3.5-flash`.
+3. (3:02) Cloud Scheduler execution history, plus the most recent
+   agent-initiated session invitation in the log — the `session.proposed` event
+   with its honest `scheduled` label visible in the payload.
+4. (3:10) The browser address bar on the public URL. Cursor rests on it.
 
-**NARRATION (22 words, 2.0 w/s).**
-> "Approval is the only path to committed memory — and it carries the visibility
-> choice. Default is private. Declining to choose never publishes."
+**NARRATION (verbatim):**
 
-**PRECONDITION.** The default really is `private` in the running build (it is —
-`schema/visibility.py`), and the visibility decision is emitted as its own event
-so it is auditable separately from the approval. Show the default state before
-changing it; changing it off-camera loses the whole point of the shot.
+> "All of it runs on Google Cloud: Cloud Run services and jobs, Firestore with
+> those append-only rules, Vertex AI serving Gemini 3.7 Flash and 3.5 Flash,
+> and Cloud Scheduler starting the loop — every scheduled run labelled
+> 'scheduled' in the log, never passed off as organic. It's live at
+> `<READ THE VERIFIED PUBLIC URL ALOUD, e.g. baraza-successor-tlaymplktq-uc.a.run.app>`."
 
----
+**PRECONDITIONS:**
 
-### D2 · 2:19–2:28 (9s) — the successor query
-
-**ON SCREEN.** Successor mode. A question is typed; the answer streams with an
-inline citation on every sentence.
-
-**NARRATION (19 words, 2.1 w/s).**
-> "Now the successor. New officer, new question. Answered only from committed
-> claims they're allowed to read, every sentence cited."
-
-**PRECONDITION.** The claim answered here is one committed during the interview
-minutes earlier in the same recording, so the loop visibly closes. A private
-claim must be in the retrieval pool and must **not** appear — worth choosing the
-question so this is true, even though it is invisible.
-
----
-
-### D3 · 2:28–2:38 (10s) — **THE REFUSAL**
-
-**ON SCREEN.** A second question, on something the committed record genuinely
-does not cover. The refusal renders in full. Hold on it — do not cut early, the
-length of the hold is what signals this is intended.
-
-**NARRATION (23 words, 2.3 w/s).**
-> "Now ask something the record doesn't cover. It refuses. A confident wrong
-> answer about who can sign a cheque is worse than silence."
-
-**PRECONDITION.** The refusal is deterministic for this question — verify across
-three dry runs. The refusal text on screen is the one in
-`src/baraza/successor/librarian.py`, unedited. Sell it as a designed property
-with its own acceptance criterion; do not apologise for it, and do not let the
-edit imply the system "couldn't" answer.
+- **[user-must-do]** The Scheduler trigger fix (WS1, OIDC-via-service per
+  `STOPPED-DEPLOY.md`'s 2026-08-31 update) is deployed and the execution
+  history shows real successful runs. **As of 2026-08-31 the direct trigger
+  403s and history shows failures — do not film the history until it is
+  green.** If it is not fixed by recording day, film the Cloud Run *job*
+  execution list (real, successful, timestamped) instead and say "scheduled
+  initiation is deployed behind a trigger fix documented in the repo" — honest
+  and verifiable.
+- **[user-must-do]** The `.run.app` URL filmed, spoken, and submitted are the
+  same string.
+- **[agent-verified]** The `scheduled` honesty flag exists in the code path
+  (`reconcile/differential.py`, commit `0fca155`). **[user-must-do]** The
+  deployed job image postdates that commit — rebuild before filming any run
+  history (`BARAZA_PROJECT_ID=baraza-2026 make bootstrap`).
 
 ---
 
-## E — Google Cloud proof frames (2:38–3:12)
+## Shot 6 — Leads the way: the closed loop (3:15–3:45)
 
-**Mandatory per the rules.** Three real console frames, not slides. Screen
-recording of the actual console, project name visible, no mock-ups. Blur or
-scrub nothing except the project ID if the entrant chooses to.
+**ON SCREEN:** The morning invitation — the outbound notification (email or
+log entry) generated by the scheduled reconcile job: a numbered agenda, each
+item citing the ledger entry that spawned it. Then the session-length evidence:
+the agenda rail of session N beside session N+1, N+1 visibly shorter, with the
+retirement events linking resolved items in the log.
 
-### E1 · 2:38–2:50 (12s) — Cloud Run
+**NARRATION (verbatim):**
 
-**ON SCREEN.** Cloud Run console, services and jobs list, showing the ingest
-Job, the reconcile Job, the interview service, and the successor service. The
-`.run.app` URL is visible in frame; the cursor rests on it.
+> "And it leads. Every morning the scheduled job reads the log, finds the open
+> contradictions and stale beliefs, and invites me to a session with a numbered
+> agenda — each item citing the ledger entry that raised it. When an item is
+> resolved, it retires itself, on the record. So the next session is visibly
+> shorter than the last. That's the loop closing: it asks, I answer, it stops
+> asking."
 
-**NARRATION (23 words plus the spoken URL, 1.9 w/s before the URL — budget ~2s
-to read the URL slowly enough that a judge can write it down).**
-> "This is running on Google Cloud. Cloud Run: the ingest and reconcile Jobs,
-> the interview and successor services. The live URL is
-> `<READ THE VERIFIED URL — e.g. baraza-interview-XXXXXXXX-uc.a.run.app>`."
+**PRECONDITIONS:**
 
-**PRECONDITION — currently unmet and blocking.** (1) Nothing is deployed. The
-manifests, both Dockerfiles, the Firestore rules and `scripts/bootstrap_gcp.sh`
-all exist and are syntax-clean; none has been run against a project. (2) The URL
-read aloud must be the URL that was verified **logged out**, in a private
-window, on the day of recording. Never read a URL that has not been loaded
-logged-out. Never read a placeholder aloud and fix it in post. (3) If the deploy
-does not happen, this shot cannot be replaced with a diagram — the rules require
-Google Cloud proof, so an undeployed project is a submission-level failure, not
-an editing problem.
-
----
-
-### E2 · 2:50–3:00 (10s) — Vertex AI
-
-**ON SCREEN.** Cloud Logging filtered to Vertex AI requests from the reconcile
-Job, showing real request entries with timestamps. Expand one entry so the model
-field is visible **on screen** — visible, not spoken.
-
-**NARRATION (14 words, 1.4 w/s).**
-> "Vertex AI logs — every reasoning call, Gemini only, model IDs pinned in one
-> module."
-
-**PRECONDITION.** ⏳ **Requires real prior calls.** Logs only exist if the
-deployed Jobs have actually run against Vertex. Do not read a model ID aloud
-(see B2). Do not state a call count, a token count, or a cost — none is measured.
+- **[user-must-do]** WS1 initiation (`reconcile/initiate.py`, the
+  `session.proposed` event, one outbound channel) landed and has produced at
+  least two consecutive real sessions, so N and N+1 both exist with genuine
+  timestamps.
+- **[user-must-do]** The two agenda rails to film actually differ in length
+  because items were genuinely resolved — pick the pair from the real log, do
+  not stage it.
 
 ---
 
-### E3 · 3:00–3:12 (12s) — Cloud Scheduler
+## Shot 7 — Close (3:45–3:50)
 
-**ON SCREEN.** Cloud Scheduler execution history for the nightly reconcile
-trigger, scrolled so **multiple consecutive nightly runs** are visible with their
-dates. If the stub-to-real replacement date is identifiable in the history, put
-the cursor on that row.
+**ON SCREEN:** The dossier view, held. One line of caption: *Baraza — memory
+with due process.*
 
-**NARRATION (25 words, 2.1 w/s).**
-> "And Cloud Scheduler. These are nightly reconcile runs — the agent working with
-> nobody watching. Scheduled runs, labelled as scheduled; I don't count them as
-> traffic."
+**NARRATION (verbatim):**
 
-**PRECONDITION.** ⏳ **REAL ELAPSED TIME — cannot be manufactured.** BAR-410
-requires **≥10 nightly runs** in the execution history before recording, which
-requires the stub Job + Scheduler (BAR-021) to have been live for at least ten
-nights. Neither exists yet. Count the visible rows on the frame and say a number
-only if you are reading it off the screen; otherwise say "nightly runs" and let
-the history speak. `scheduler_nightly_runs_completed` is `not yet measured`.
+> "Adaptation with due process. Open the file it keeps on you."
+
+*(Narration ends at 3:50. Hold the frame to 3:55 max; total ≤ 4:00.)*
+
+**PRECONDITIONS:** none beyond Shot 4's.
 
 ---
 
-## F — The differential ledger (3:12–3:38)
+## Timecode budget check
 
-### F1 · 3:12–3:25 (13s)
-
-**ON SCREEN.** Two ledger snapshot files side by side, their `taken_at` dates
-visibly different and their `scheduled: true` flags visible. Then the document
-that landed between them, highlighted in the corpus listing.
-
-**NARRATION (17 words, 1.3 w/s).**
-> "Two ledger snapshots, two different nights. Between them, a document landed
-> that didn't exist on night one."
-
-**PRECONDITION.** ⏳ **REAL ELAPSED TIME.** Per BAR-323 the choreography is
-night 1 → artifact drop → night 2 → diff, and it cannot be compressed
-retroactively. Both snapshots must carry `scheduled: true`; a snapshot taken by
-hand during a demo is never presented as autonomy evidence. The dates on screen
-must be different calendar days, and the viewer must be able to read them.
+| Shot | Start | End | Duration |
+|---|---|---|---|
+| 1 Friction | 0:00 | 0:20 | 0:20 |
+| 2 Pitch + refusal | 0:20 | 0:45 | 0:25 |
+| 3 Centrepiece | 0:45 | 2:10 | 1:25 |
+| 4 Dossier reject/rerun | 2:10 | 2:40 | 0:30 |
+| 5 Google Cloud proof | 2:40 | 3:15 | 0:35 |
+| 6 Leads the way | 3:15 | 3:45 | 0:30 |
+| 7 Close | 3:45 | 3:50 | 0:05 |
+| **Total** | | | **3:50** |
 
 ---
 
-### F2 · 3:25–3:38 (13s)
+## Appendix A — judge-participation variant (live judging only)
 
-**ON SCREEN.** The computed diff: contradictions added, contradictions retracted
-because the new document settled them, rank movements. Colour-coded, held still.
+If judging is live and a judge can be handed the keyboard, replace Shot 3's
+step 3 with the judge-fired beat. Nothing else in the script changes; the
+timing holds because the beat replaces, not extends, the self-contradiction.
 
-**NARRATION (23 words, 1.8 w/s).**
-> "The diff is what the agent found while nobody watched: contradictions added,
-> contradictions retracted because the new document settled them, rankings that
-> moved."
+**Setup (before the session, honestly):** the belief "never pad estimates" was
+committed in a genuinely prior logged session — its timestamp predates demo
+day in a log that rejects edits. Do not commit it the morning of and imply
+otherwise; the whole point is that the console can be checked.
 
-**PRECONDITION.** ⏳ **REAL ELAPSED TIME.** The diff is computed by
-`baraza.reconcile.differential` from the two committed snapshots, on camera or
-from committed files a judge can open. Say no totals aloud — read them off the
-screen or omit them.
+**The beat:** the judge types an instruction of their choosing; if it collides
+with any committed belief — e.g. "pad the estimates to be safe" — the
+divergence card fires with both quotes: the judge's sentence and the builder's
+committed rule with its turn anchor and date. Invite the judge to open the
+Firestore console and read the old belief's timestamp. Adjudicate on stage:
+split into a conditional ("never internally; pad client-facing"), ratify,
+watch the doctrine update and the next draft change.
 
----
+**Spoken framing (verbatim):**
 
-## G — Close (3:38–3:50)
+> "You typed that; I didn't. The machinery that caught it is the same
+> contradiction detector that catches me — and you can check the console: that
+> belief predates today, in a log that refuses edits."
 
-### G1 · 3:38–3:50 (12s)
-
-**ON SCREEN.** Back to black. The opening line returns, then is replaced:
-`Every May, thousands of organizations forget everything.` → `This September,
-mine won't.` Then a single card: repo URL and hosted URL, both readable, held
-for the last three seconds in silence.
-
-**NARRATION (11 words, 0.9 w/s — slow, with a beat before the second line).**
-> "Every May, thousands of organizations forget everything."
->
-> *(beat)*
->
-> "This September, mine won't."
-
-**PRECONDITION.** Both URLs on the end card have been loaded **logged out** on
-the day of recording. The end card is the last thing a judge sees; a dead link
-there is worse than no card.
+**Fallback:** if the judge's instruction collides with nothing, the agent
+either extracts it as a new proposed belief (show the quote + anchor landing in
+the panel) or asks a clarifying question because the rule is under-specified.
+Both are scripted product behavior; narrate them as such.
 
 ---
 
-## Shots that require real elapsed time
+## Appendix B — what must NOT be claimed (freeze-frame checklist)
 
-These cannot be produced on recording day and gate the recording date itself:
+Read this against the locked cut, frame by frame and word by word.
 
-| Shot | What must have already happened | Earliest possible |
-|---|---|---|
-| E3 — Scheduler history | ≥10 nightly runs of the reconcile Job (BAR-021 → BAR-410) | 10 nights after the stub Job + Scheduler go live. **Not yet deployed.** |
-| E2 — Vertex logs | Real deployed calls, retained in Cloud Logging | After first deployed run |
-| F1 — two snapshots | Night 1 run → artifact drop → night 2 run (BAR-323) | 2 nights after the first scheduled run |
-| F2 — the diff | Both snapshots committed and `scheduled: true` | Same |
+**Numbers.** Every one of these is currently `not yet measured` and must not be
+spoken, captioned, or shown until it carries a run ID in `docs/metrics.json`:
 
-Everything else in the script is recordable in one sitting **once** the offline
-demo path exits 0.
+- the doctrine determinism replay count and hash result
+- the rule-compliance delta (before/after battery)
+- any belief count, session count, or nightly-run count presented as a total
+- any latency, cost, or extraction-accuracy figure
+- any acceptance-rate or improvement-curve percentage — this number was
+  explicitly killed in review and does not exist
 
----
+If a number has been measured by recording day, it may be used only as
+measured — including if it is unflattering. An imperfect real number on screen
+is the project's culture; a smooth invented one is disqualifying.
 
-## What must NOT be claimed
+**Banned sentences and framings, with prejudice:**
 
-Every entry below is a number or assertion that is **not measured** as of this
-writing. `docs/metrics.json` carries the literal string `not yet measured` for
-all of them. None may be spoken, captioned, overlaid, or written into a frame.
-
-**Counts and rates — all `not yet measured`:**
-
-- number of documents, chunks, or claims ingested
-- number of claims committed
-- number of contradictions detected, or contradiction precision
-- how many planted manifest landmines were found
-- agenda items generated, or agenda items retired after an interview
-- pre-filter survival rate, and which pre-filter mode ran
-- entity resolution precision or recall (the ≥83% scorecard is a **gate
-  threshold**, not a result — never state it as an achieved number)
-- number of nightly Scheduler runs (read it off the console frame or say nothing)
-
-**Timings — all `not yet measured`, and additionally governed by provenance:**
-
-- first-token latency on the interview path. A replayed cassette timing is a
-  *replayed* measurement and an in-process timing is never reported as a deployed
-  one, so even once measured, the phrasing must carry its provenance.
-- ingest wall-clock, reconcile wall-clock, any per-call latency
-
-**Assertions that are not yet backed by the code:**
-
-- **"Four agents on ADK."** There are three `LlmAgent`s; the approver is
-  deliberately not an agent and holds no model. "Built on ADK" *is* backed —
-  `src/baraza/agents.py` imports it and builds the fleet — and "the extractor runs
-  on ADK" is backed too, on a live (`--no-offline`) run only. What is **not**
-  backed: the count of four; "the fleet is executing" (the reconciler and
-  interviewer are built, not driven); and any agent-loop narration over a
-  cassette-replayed take, which runs the direct `llm.py` path by design.
-- **Any pinned model ID, spoken or captioned.** `make verify-models` has not run
-  green. A pinned literal nobody checked is a plausible value where a verified
-  one belongs.
-- **Any claim about the deployed system.** Nothing is deployed. No uptime, no
-  region, no scale, no cost.
-- **Antigravity, or any other framework that was not chosen.** Not claimed, not
-  mentioned, and — this is the part that changed — not criticized either. The
-  Aug 8 finding that used to justify the choice was never in this repository and
-  its placeholder has been deleted. Say ADK is the framework; do not say anything
-  about what it was picked over, because there is nothing on record to back it.
-- **"Kill-survival" / "resumes at the same turn."** The rig is not built; the
-  resumed turn index is `not yet measured`. Do not demonstrate or assert it.
-- **Adaptation.** Mean follow-up depth per persona is `not yet measured` and the
-  in-session change turn ID is unassigned. The video may show the interviewer
-  asking a follow-up; it may not state that adaptation was measured, and it may
-  not cite a turn ID that does not exist in a committed transcript.
-- **Anything about real organizations or real people.** The corpus is synthetic.
-  No real entity appears, and no real entity is characterised as having lost
-  records or mishandled anything.
-- **Scheduled runs as organic activity.** If any traffic or usage figure ever
-  appears on screen, Scheduler runs are labelled as scheduled and excluded.
-
-**The rule for record day:** if a number is not visible on screen because a
-command just printed it, it does not get said. Reading a number off a live
-terminal is evidence. Saying one from memory is the defect class this project
-exists to avoid.
-
----
-
-## Pre-record checklist
-
-- [ ] `make gate` green *(agent-runnable once the scripts exist)*
-- [ ] `make demo` green on a clean clone, offline *(agent-runnable)*
-- [ ] Divergence shot fires 3/3 dry runs *(agent-runnable)*
-- [ ] Refusal shot fires 3/3 dry runs *(agent-runnable)*
-- [ ] Every visible string in the corpus frames is synthetic *(human review)*
-- [ ] Hosted URL loaded in a logged-out private window, today *(human-only)*
-- [ ] Console frames captured with the real project *(human-only)*
-- [ ] Scheduler history shows ≥10 nightly runs *(human-only; time-gated)*
-- [ ] Final cut duration ≤ 4:00, verified in the editor's timeline *(human-only)*
-- [ ] Uploaded public, not unlisted-only if the rules require public *(human-only —
-      confirm against the live rules page)*
+- "deterministic" predicating *behavior*, in any wording. What is replayable
+  byte-for-byte is the fold → doctrine compilation. Model compliance with the
+  doctrine is probabilistic. The approved phrasing is **"same doctrine, every
+  rule cited"** — never "same behavior", never "replay the fold and get the
+  same behavior."
+- Any claim of line-level output causality — never say or show that a specific
+  output line was caused by a specific claim. The honest artifact is the
+  **doctrine diff** (rule ← claim provenance) plus before/after outputs on a
+  fixed task, presented side by side without causal annotation of lines.
+- Any mention or defense of the previous adaptation mechanism. It is gone.
+- Scheduled runs presented as organic activity — the `scheduled` label stays
+  visible whenever run history is on screen.
+- Any model version claim not matching the live-verified pins in
+  `src/baraza/schema/models.py`.
+- Any real person, company, or organization named as an example or bad actor.
+  The only human in this story is the builder.

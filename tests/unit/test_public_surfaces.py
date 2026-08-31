@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from baraza.dossier.service import _render_agenda_page, _render_ledger_page
 from baraza.fold.graph import fold
 from baraza.reconcile.ledger import DisputedLedger
 from baraza.schema.contradiction import Contradiction
 from baraza.schema.visibility import Audience, Visibility
-from baraza.dossier.service import _render_agenda_page, _render_ledger_page
 from baraza_testkit import asserted, claim, committed, detected, ms, visibility_set
 
 

@@ -61,13 +61,23 @@ class EventStore(ABC):
         return [e for e in self.read_all() if e.event_type in wanted]
 
     def count_scheduled(self) -> int:
-        """Nightly Scheduler runs.
+        """Nightly Scheduler runs — a count of nights, not of events.
+
+        Counts scheduled **heartbeats** only. A single scheduled run appends
+        several ``scheduled=True`` events (adjudications, tonight's findings,
+        the session proposal), but exactly one heartbeat; counting every
+        scheduled event would report one night as five runs, which is the same
+        inflation defect the flag itself exists to prevent, one level up.
 
         Kept as its own accessor so that any figure derived from it is
         obviously a count of *scheduled* runs. A scheduled job is never counted
         as organic activity.
         """
-        return sum(1 for e in self.read_all() if e.scheduled)
+        return sum(
+            1
+            for e in self.read_all()
+            if e.scheduled and e.event_type is EventType.HEARTBEAT
+        )
 
     # Explicitly absent: update(), delete(), overwrite(). If you find yourself
     # wanting one, the answer is a superseding event.

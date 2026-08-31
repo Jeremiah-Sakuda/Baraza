@@ -24,6 +24,7 @@ from dataclasses import asdict
 
 import pytest
 
+from baraza.dossier.librarian import REFUSAL_TEXT, Librarian
 from baraza.fold.graph import fold
 from baraza.schema.claim import Claim, Tier
 from baraza.schema.contradiction import Contradiction
@@ -34,7 +35,6 @@ from baraza.schema.visibility import (
     readable_by,
     redacted_for,
 )
-from baraza.dossier.librarian import REFUSAL_TEXT, Librarian
 from baraza_testkit import FakeLLMClient, asserted, claim, committed, ms, visibility_set
 
 PRIVATE_QUOTE = "The reserve account password was shared with the outgoing chair."

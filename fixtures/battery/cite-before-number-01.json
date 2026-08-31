@@ -1,0 +1,13 @@
+{
+  "schema": "baraza.battery.case.v1",
+  "case_id": "cite-before-number-01",
+  "rule_claim_id": "claim-user-cite-first",
+  "rule_summary": "cite the source before the number",
+  "task": "State how many unit tests the repository currently passes, using the build log as your source.",
+  "phases": ["pre_commit", "post_commit"],
+  "predicate": {
+    "type": "regex_order",
+    "first": "\\[source:[^\\]]+\\]",
+    "then": "[0-9]"
+  }
+}

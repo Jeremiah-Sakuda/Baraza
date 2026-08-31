@@ -243,9 +243,13 @@ def _apply(state: GraphState, event: Event) -> None:
         EventType.SESSION_OPENED,
         EventType.SESSION_TURN,
         EventType.SESSION_CLOSED,
+        EventType.SESSION_PROPOSED,
     ):
         # Session events are part of the same append-only log — that is what
         # makes a mid-stream kill survivable — but they do not shape the graph.
+        # `session.proposed` in particular is evidence (who initiated, when,
+        # with what agenda), not graph state: the agenda it carries was derived
+        # from the fold, and folding it back in would make the fold circular.
         return
 
     raise UnknownEventType(
