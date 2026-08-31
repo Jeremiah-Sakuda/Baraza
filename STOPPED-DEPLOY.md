@@ -154,3 +154,28 @@ the old image and is labelled `scheduled=True`. It is wrong, and the log is
 append-only, so it cannot be edited. Either accept a nightly count that is one
 too high and say so, or delete the `events` collection now while it holds exactly
 one test artifact and no real history.
+
+---
+
+## Update 2026-08-31 — root cause narrowed, fix identified
+
+Three further hypotheses tested against the live project:
+
+1. **Project-level `roles/run.invoker`** — granted, still 403, **reverted**. The
+   earlier decision to stop rather than widen is vindicated: widening bought
+   nothing.
+2. **Stale Scheduler auth config** — the job was deleted and recreated with
+   identical config after all grants were in place. Still 403.
+3. **The audit log** — the discriminating result. Admin-activity audit logs show
+   **no request authenticated as `baraza-reconcile` ever reaching the Run API**
+   from Scheduler. The SA's own token calls the identical URL successfully. The
+   failure is therefore in Scheduler's OAuth token path for this SA, not in any
+   IAM binding on the Job — every documented grant is present and verified.
+
+**Recommended fix (architecture, not permissions):** stop having Scheduler call
+the Run Admin API directly. Add a trigger endpoint to the interview service
+(`POST /internal/run-reconcile`, OIDC-guarded, invoker = the scheduler SA) that
+calls `jobs.run` itself using its runtime identity. Scheduler→OIDC→Cloud Run
+*service* is the well-trodden path; the service's own credentials already work
+against the Jobs API (proven by the impersonation test). No scope is widened —
+the same SA does the same thing, one hop later.
