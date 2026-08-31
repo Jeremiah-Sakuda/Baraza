@@ -1,0 +1,336 @@
+{
+  "entries": [
+    {
+      "key": "25feb18e3fd4a2e4f491045b1b1b8354aecfd107",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"the constitution\",\n      \"predicate\": \"was approved by\",\n      \"predicate_hint\": \"constitution approval\",\n      \"object\": \"student activities\",\n      \"quote\": \"student activities approved the constitution today, filed 14 sept\",\n      \"anchor\": \"[msg:1474409040]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"15 a semester\",\n      \"quote\": \"dues are 15 a semester\",\n      \"anchor\": \"[msg:1474409220]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"anything over 250\",\n      \"predicate\": \"requires signatures from\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"both me and corvid.ash\",\n      \"quote\": \"anything over 250 needs both me and corvid.ash to sign\",\n      \"anchor\": \"[msg:1478128320]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"15\",\n      \"quote\": \"dues still 15\",\n      \"anchor\": \"[msg:1520370120]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"archive box\",\n      \"predicate\": \"is located in\",\n      \"predicate_hint\": \"archive location\",\n      \"object\": \"the office closet\",\n      \"quote\": \"archive box is in the office closet\",\n      \"anchor\": \"[msg:1524168900]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"assistant treasurer\",\n      \"predicate\": \"helps with books and does not sign according to\",\n      \"predicate_hint\": \"officer duties\",\n      \"object\": \"the 2019 amendment\",\n      \"quote\": \"the 2019 amendment says i help with the books and do not sign\",\n      \"anchor\": \"[msg:1570573800]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"increased to\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"20\",\n      \"quote\": \"dues went to 20 this year\",\n      \"anchor\": \"[msg:1573766280]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"treasurer\",\n      \"predicate\": \"can sign alone up to\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"1000\",\n      \"quote\": \"treasurer can sign alone up to 1000\",\n      \"anchor\": \"[msg:1636494000]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"25 a semester\",\n      \"quote\": \"dues are 25 a semester for 23-24\",\n      \"anchor\": \"[msg:1694563080]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"increase to\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"40 for spring\",\n      \"quote\": \"dues go to 40 for spring\",\n      \"anchor\": \"[msg:1696980600]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are set at\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"25 for fall, 40 for spring\",\n      \"quote\": \"25 for fall, 40 for spring\",\n      \"anchor\": \"[msg:1697036940]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"25 this semester\",\n      \"quote\": \"dues are still 25 this semester\",\n      \"anchor\": \"[msg:1700001660]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"sablewick\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"archivist\",\n      \"quote\": \"still archivist\",\n      \"anchor\": \"[msg:1724083320]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are due by\",\n      \"predicate_hint\": \"dues deadline\",\n      \"object\": \"the end of the second week of term\",\n      \"quote\": \"dues are due by the end of the second week of term\",\n      \"anchor\": \"[msg:1725368400]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"lantern series line\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"budget allocation\",\n      \"object\": \"2400 for the year\",\n      \"quote\": \"lantern series line is 2400 for the year\",\n      \"anchor\": \"[msg:1729021620000]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"kestrel9\",\n      \"predicate\": \"holds\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"the books\",\n      \"quote\": \"kestrel9 has the books\",\n      \"anchor\": \"[msg:1750777920]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"officer transition paperwork\",\n      \"predicate\": \"is due to student activities by\",\n      \"predicate_hint\": \"administrative deadline\",\n      \"object\": \"15 May\",\n      \"quote\": \"officer transition paperwork is due to student activities by 15 May\",\n      \"anchor\": \"[msg:1777312800]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the rule\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"i sign up to 1000\",\n      \"quote\": \"the rule is i sign up to 1000\",\n      \"anchor\": \"[msg:1777684140]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the sender\",\n      \"predicate\": \"has\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"the treasurer job next year\",\n      \"quote\": \"i have the treasurer job next year\",\n      \"anchor\": \"[msg:1777689000]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"archive box\",\n      \"predicate\": \"is located in\",\n      \"predicate_hint\": \"archive location\",\n      \"object\": \"the office closet\",\n      \"quote\": \"archive box is still in the office closet\",\n      \"anchor\": \"[msg:1777731300]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "35960117ae3867886abaa4b0b7856d9301810839",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"was set at\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"40\",\n      \"quote\": \"40\",\n      \"anchor\": \"[Sheet1!B3]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"was set at\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"25\",\n      \"quote\": \"25\",\n      \"anchor\": \"[Sheet1!B12]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"was set at\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"20\",\n      \"quote\": \"20\",\n      \"anchor\": \"[Sheet1 (2)!B3]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"signing authority\",\n      \"predicate\": \"is designated to\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"treasurer only per nov motion\",\n      \"quote\": \"treasurer only per nov motion\",\n      \"anchor\": \"[Sheet1 (2)!B8]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "129a3bf29fabd08d4fd7e551bea2145a6de9f3a7",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"The name of this organization\",\n      \"predicate\": \"shall be\",\n      \"predicate_hint\": \"organization name\",\n      \"object\": \"The Meridian Society of Ashgrove Polytechnic Institute\",\n      \"quote\": \"The name of this organization shall be The Meridian\\nSociety of Ashgrove Polytechnic Institute, hereinafter the Society.\",\n      \"anchor\": \"[p.2 \u00b62]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The purpose of the Society\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"organization purpose\",\n      \"object\": \"to convene the Lantern Lecture Series, to conduct an annual Spring Appeal in support of that series, and to maintain an equipment lending library for the use of the Society and of other recognized student organizations\",\n      \"quote\": \"The purpose of the Society is to convene the Lantern\\nLecture Series, to conduct an annual Spring Appeal in support of\\nthat series, and to maintain an equipment lending library for the\\nuse of the Society and of other recognized student organizations.\",\n      \"anchor\": \"[p.2 \u00b63]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Membership\",\n      \"predicate\": \"is open to\",\n      \"predicate_hint\": \"membership eligibility\",\n      \"object\": \"any enrolled student of the Institute upon payment of dues for the current semester\",\n      \"quote\": \"Membership is open to any enrolled student of the\\nInstitute upon payment of dues for the current semester.\",\n      \"anchor\": \"[p.2 \u00b65]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Only members in good standing\",\n      \"predicate\": \"may vote\",\n      \"predicate_hint\": \"voting rights\",\n      \"object\": \"vote\",\n      \"quote\": \"Only members in good standing\\nmay vote.\",\n      \"anchor\": \"[p.2 \u00b66]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The officers of the Society\",\n      \"predicate\": \"shall be\",\n      \"predicate_hint\": \"officer positions\",\n      \"object\": \"a President, a Vice President, a Treasurer, a Secretary, and an Archivist\",\n      \"quote\": \"The officers of the Society shall be a President, a\\nVice President, a Treasurer, a Secretary, and an Archivist.\",\n      \"anchor\": \"[p.3 \u00b62]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The President\",\n      \"predicate\": \"shall be a signatory on\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"every account of the Society\",\n      \"quote\": \"The President shall preside at all meetings and shall\\nbe a signatory on every account of the Society.\",\n      \"anchor\": \"[p.3 \u00b63]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The Treasurer\",\n      \"predicate\": \"shall be a signatory on\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"every account of the Society\",\n      \"quote\": \"The Treasurer shall keep the accounts of the Society,\\nshall report the balance of every account at each regular meeting,\\nand shall be a signatory on every account of the Society.\",\n      \"anchor\": \"[p.3 \u00b64]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The Assistant Treasurer\",\n      \"predicate\": \"shall not be a signatory on\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"any account\",\n      \"quote\": \"The Assistant\\nTreasurer shall hold no independent authority to disburse funds of\\nthe Society and shall not be a signatory on any account.\",\n      \"anchor\": \"[p.3 \u00b65]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Officers\",\n      \"predicate\": \"shall take office on\",\n      \"predicate_hint\": \"officer term\",\n      \"object\": \"the first day of July following, serving until the thirtieth day of June next after\",\n      \"quote\": \"Officers shall be elected at the last regular meeting\\nof the spring term and shall take office on the first day of July\\nfollowing, serving until the thirtieth day of June next after.\",\n      \"anchor\": \"[p.4 \u00b62]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"No officer\",\n      \"predicate\": \"shall serve more than\",\n      \"predicate_hint\": \"term limit\",\n      \"object\": \"two consecutive terms in the same office\",\n      \"quote\": \"No officer shall serve more than two consecutive terms\\nin the same office.\",\n      \"anchor\": \"[p.4 \u00b63]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Regular meetings\",\n      \"predicate\": \"shall be held not less than\",\n      \"predicate_hint\": \"meeting frequency\",\n      \"object\": \"once each month of the academic term\",\n      \"quote\": \"Regular meetings shall be held not less than once each\\nmonth of the academic term.\",\n      \"anchor\": \"[p.4 \u00b65]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"One third of the members in good standing\",\n      \"predicate\": \"shall constitute\",\n      \"predicate_hint\": \"quorum requirement\",\n      \"object\": \"a quorum for the transaction of business\",\n      \"quote\": \"One third of the members in good standing shall\\nconstitute a quorum for the transaction of business.\",\n      \"anchor\": \"[p.4 \u00b66]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The President\",\n      \"predicate\": \"may appoint\",\n      \"predicate_hint\": \"committee appointment\",\n      \"object\": \"such committees as the business of the Society requires\",\n      \"quote\": \"The President may appoint such committees as the\\nbusiness of the Society requires.\",\n      \"anchor\": \"[p.4 \u00b68]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"No committee\",\n      \"predicate\": \"shall incur an obligation on behalf of the Society without\",\n      \"predicate_hint\": \"committee authority\",\n      \"object\": \"the prior approval of the membership\",\n      \"quote\": \"No committee shall incur an\\nobligation on behalf of the Society without the prior approval of\\nthe membership.\",\n      \"anchor\": \"[p.4 \u00b68]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Dues\",\n      \"predicate\": \"shall be fixed by\",\n      \"predicate_hint\": \"dues setting\",\n      \"object\": \"a two-thirds vote of the members in good standing at the first regular meeting of the fall term\",\n      \"quote\": \"Dues shall be fixed by a two-thirds vote of the members\\nin good standing at the first regular meeting of the fall term,\\nand shall not be altered during the year then in progress.\",\n      \"anchor\": \"[p.5 \u00b62]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The Society\",\n      \"predicate\": \"shall maintain\",\n      \"predicate_hint\": \"bank accounts\",\n      \"object\": \"an operating account and a restricted Spring Appeal Fund\",\n      \"quote\": \"The Society shall maintain an operating account and a\\nrestricted Spring Appeal Fund.\",\n      \"anchor\": \"[p.5 \u00b63]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"No disbursement in excess of two hundred fifty dollars ($250)\",\n      \"predicate\": \"shall issue without\",\n      \"predicate_hint\": \"disbursement authority\",\n      \"object\": \"the signatures of both the President and the Treasurer\",\n      \"quote\": \"No disbursement in excess of two hundred fifty dollars\\n($250) shall issue without the signatures of both the President\\nand the Treasurer.\",\n      \"anchor\": \"[p.5 \u00b64]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"A disbursement of two hundred fifty dollars or less\",\n      \"predicate\": \"may issue on\",\n      \"predicate_hint\": \"disbursement authority\",\n      \"object\": \"the signature of the Treasurer alone\",\n      \"quote\": \"A disbursement of two hundred fifty dollars or\\nless may issue on the signature of the Treasurer alone.\",\n      \"anchor\": \"[p.5 \u00b64]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"The books of the Society\",\n      \"predicate\": \"shall be presented for review by\",\n      \"predicate_hint\": \"financial review\",\n      \"object\": \"the outgoing Treasurer to the incoming Treasurer before the first day of July in each year\",\n      \"quote\": \"The books of the Society shall be presented for review\\nby the outgoing Treasurer to the incoming Treasurer before the\\nfirst day of July in each year.\",\n      \"anchor\": \"[p.5 \u00b65]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"This Constitution\",\n      \"predicate\": \"may be amended by\",\n      \"predicate_hint\": \"constitutional amendment\",\n      \"object\": \"a two-thirds vote of the members in good standing at a regular meeting, provided that the text of the proposed amendment has been circulated in writing not less than fourteen days before that meeting\",\n      \"quote\": \"This Constitution may be amended by a two-thirds vote\\nof the members in good standing at a regular meeting, provided\\nthat the text of the proposed amendment has been circulated in\\nwriting not less than fourteen days before that meeting.\",\n      \"anchor\": \"[p.6 \u00b62]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "e0aa10c272c4f9ab4add9aea76949af60884cd22",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"the Treasurer\",\n      \"predicate\": \"is authorized to disburse on a single signature\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"up to one thousand dollars ($1,000)\",\n      \"quote\": \"the Treasurer be authorized to disburse up to one thousand dollars ($1,000) on a single signature\",\n      \"anchor\": \"[\u00b69]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Single-signature authority\",\n      \"predicate\": \"is limited to\",\n      \"predicate_hint\": \"signing authority limit\",\n      \"object\": \"$1,000\",\n      \"quote\": \"Single-signature authority to $1,000\",\n      \"anchor\": \"[tbl1:r2]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "435f3ed2a3586fdc94f511269ed8a3cbf277d512",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"President\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"quillon.b\",\n      \"quote\": \"President, quillon.b\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"vell.ory\",\n      \"quote\": \"Treasurer, vell.ory\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"Assistant Treasurer, kestrel9\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Secretary\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"orinth.vay\",\n      \"quote\": \"Secretary, orinth.vay\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Archivist\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"sablewick\",\n      \"quote\": \"Archivist, sablewick\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"vell.ory\",\n      \"quote\": \"The Treasurer for fiscal year 2023-24 is vell.ory\",\n      \"anchor\": \"[\u00b66]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"holds signing authority on the operating account\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"vell.ory\",\n      \"quote\": \"vell.ory, who holds signing authority on the operating account from 1 July 2023 through 30 June 2024\",\n      \"anchor\": \"[\u00b66]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": \"2024-06-30T23:59:59Z\"\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"will collect dues\",\n      \"predicate_hint\": \"officer duties\",\n      \"object\": \"at the door of each Lantern evening\",\n      \"quote\": \"The Assistant Treasurer, kestrel9, will collect dues at the door of each Lantern evening\",\n      \"anchor\": \"[\u00b67]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"will deposit receipts with\",\n      \"predicate_hint\": \"officer duties\",\n      \"object\": \"the Treasurer\",\n      \"quote\": \"will deposit receipts with the Treasurer\",\n      \"anchor\": \"[\u00b67]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"does not sign on the account\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"The Assistant Treasurer does not sign on the account.\",\n      \"anchor\": \"[\u00b67]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"be set at\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"twenty-five dollars ($25) per member per semester\",\n      \"quote\": \"dues for the 2023-24 year be set at twenty-five dollars ($25) per member per semester\",\n      \"anchor\": \"[\u00b69]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"President\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"quillon.b\",\n      \"quote\": \"President | quillon.b | 2023-07-01 | 2024-06-30\",\n      \"anchor\": \"[tbl1:r2]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": \"2024-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"vell.ory\",\n      \"quote\": \"Treasurer | vell.ory | 2023-07-01 | 2024-06-30\",\n      \"anchor\": \"[tbl1:r3]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": \"2024-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"Assistant Treasurer | kestrel9 | 2023-07-01 | 2024-06-30\",\n      \"anchor\": \"[tbl1:r4]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": \"2024-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"Secretary\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer role\",\n      \"object\": \"orinth.vay\",\n      \"quote\": \"Secretary | orinth.vay | 2023-07-01 | 2024-06-30\",\n      \"anchor\": \"[tbl1:r5]\",\n      \"valid_from\": \"2023-07-01T00:00:00Z\",\n      \"valid_until\": \"2024-06-30T00:00:00Z\"\n    }\n  ]\n}"
+    },
+    {
+      "key": "15ed6d574641ac4543a77835a8c4e0c2dd68e7ac",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"disbursements\",\n      \"predicate\": \"require two signatures\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"two signatures\",\n      \"quote\": \"the Constitution requires two signatures on all disbursements\",\n      \"anchor\": \"[\u00b67]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the Treasurer\",\n      \"predicate\": \"is permitted to sign alone\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"sign alone\",\n      \"quote\": \"the November 2021 motion permits the Treasurer to sign alone\",\n      \"anchor\": \"[\u00b67]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are increased to\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"forty dollars ($40) per member per semester\",\n      \"quote\": \"dues be increased to forty dollars ($40) per member per semester\",\n      \"anchor\": \"[\u00b66]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"fall semester rate\",\n      \"predicate\": \"is set to\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"twenty-five dollars ($25)\",\n      \"quote\": \"the fall semester rate of twenty-five dollars ($25)\",\n      \"anchor\": \"[\u00b66]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "91761d12e676a364792ad51cca6dacd969e77cf6",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"President\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"vell.ory\",\n      \"quote\": \"President, vell.ory\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"Treasurer, kestrel9\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"sable.w\",\n      \"quote\": \"Assistant Treasurer, sable.w\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Secretary\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"orinth.vay\",\n      \"quote\": \"Secretary, orinth.vay\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Equipment Steward\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"sablewood\",\n      \"quote\": \"Equipment Steward, sablewood\",\n      \"anchor\": \"[\u00b65]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"The Treasurer for fiscal year 2024-25 is kestrel9\",\n      \"anchor\": \"[\u00b66]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"holds signing authority on the operating account\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"kestrel9, who holds signing authority on the operating account from 1 July 2024 through 30 June 2025\",\n      \"anchor\": \"[\u00b66]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": \"2025-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are set at\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"forty dollars ($40) per member per semester\",\n      \"quote\": \"dues for the 2024-25 year be set at forty dollars ($40) per member per semester\",\n      \"anchor\": \"[\u00b68]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"President\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"vell.ory\",\n      \"quote\": \"President | vell.ory | 2024-07-01 | 2025-06-30\",\n      \"anchor\": \"[tbl1:r2]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": \"2025-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"kestrel9\",\n      \"quote\": \"Treasurer | kestrel9 | 2024-07-01 | 2025-06-30\",\n      \"anchor\": \"[tbl1:r3]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": \"2025-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"Assistant Treasurer\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"sable.w\",\n      \"quote\": \"Assistant Treasurer | sable.w | 2024-07-01 | 2025-06-30\",\n      \"anchor\": \"[tbl1:r4]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": \"2025-06-30T00:00:00Z\"\n    },\n    {\n      \"subject\": \"Equipment Steward\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"officer holder\",\n      \"object\": \"sablewood\",\n      \"quote\": \"Equipment Steward | sablewood | 2024-07-01 | 2025-06-30\",\n      \"anchor\": \"[tbl1:r5]\",\n      \"valid_from\": \"2024-07-01T00:00:00Z\",\n      \"valid_until\": \"2025-06-30T00:00:00Z\"\n    }\n  ]\n}"
+    },
+    {
+      "key": "7074a6ff0cd02fb4b9ce2ca4ec8897fc7a71f2f5",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"operating account\",\n      \"predicate\": \"is located at\",\n      \"predicate_hint\": \"account location\",\n      \"object\": \"the campus credit union\",\n      \"quote\": \"operating acct at the campus credit union\",\n      \"anchor\": \"[L7-L14]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"treasurer signing authority\",\n      \"predicate\": \"is limited to\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"up to 1000 by myself\",\n      \"quote\": \"i sign things up to 1000 by myself.\",\n      \"anchor\": \"[L7-L14]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"signing authority over 1000\",\n      \"predicate\": \"requires\",\n      \"predicate_hint\": \"signing authority\",\n      \"object\": \"the president too\",\n      \"quote\": \"over that i get the president too.\",\n      \"anchor\": \"[L7-L14]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the spring appeal fund\",\n      \"predicate\": \"is\",\n      \"predicate_hint\": \"fund restriction\",\n      \"object\": \"restricted\",\n      \"quote\": \"the spring appeal fund is restricted.\",\n      \"anchor\": \"[L7-L14]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"are\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"40 a semester now\",\n      \"quote\": \"dues are 40 a semester now.\",\n      \"anchor\": \"[L7-L14]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"dues\",\n      \"predicate\": \"were\",\n      \"predicate_hint\": \"dues amount\",\n      \"object\": \"25 when i started\",\n      \"quote\": \"they were 25 when i started\",\n      \"anchor\": \"[L7-L14]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"last officers meeting\",\n      \"predicate\": \"was held on\",\n      \"predicate_hint\": \"meeting date\",\n      \"object\": \"2026-04-14T19:30:00\",\n      \"quote\": \"last officers meeting was 2026-04-14T19:30:00\",\n      \"anchor\": \"[L24-L26]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"transition paperwork\",\n      \"predicate\": \"must be submitted by\",\n      \"predicate_hint\": \"submission deadline\",\n      \"object\": \"15 May\",\n      \"quote\": \"transition paperwork to student activities by 15 May\",\n      \"anchor\": \"[L24-L26]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "1fee1e207ddf11114be19f573e958558c47574fe",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"projectors\",\n      \"predicate\": \"has inventory count\",\n      \"predicate_hint\": \"inventory count\",\n      \"object\": \"2, one with a lamp replaced in november 2023\",\n      \"quote\": \"2 projectors, one with a lamp replaced in november 2023\",\n      \"anchor\": \"[L7-L9]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"PA equipment\",\n      \"predicate\": \"has inventory count\",\n      \"predicate_hint\": \"inventory count\",\n      \"object\": \"1 PA head, 2 speakers, 4 stands\",\n      \"quote\": \"1 PA head, 2 speakers, 4 stands\",\n      \"anchor\": \"[L7-L9]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"folding chairs\",\n      \"predicate\": \"has inventory count\",\n      \"predicate_hint\": \"inventory count\",\n      \"object\": \"60, of which 4 are cracked and unusable\",\n      \"quote\": \"60 folding chairs, of which 4 are cracked and unusable\",\n      \"anchor\": \"[L7-L9]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"chair replacement\",\n      \"predicate\": \"costs\",\n      \"predicate_hint\": \"replacement cost\",\n      \"object\": \"40 each from the campus vendor\",\n      \"quote\": \"chair replacement is 40 each from the campus vendor\",\n      \"anchor\": \"[L13-L15]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"projector lamp\",\n      \"predicate\": \"cost\",\n      \"predicate_hint\": \"equipment cost\",\n      \"object\": \"225, paid from the equipment fund\",\n      \"quote\": \"the projector lamp was 225, paid from the equipment fund\",\n      \"anchor\": \"[L13-L15]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"equipment fund balance\",\n      \"predicate\": \"was\",\n      \"predicate_hint\": \"fund balance\",\n      \"object\": \"415\",\n      \"quote\": \"equipment fund balance after the lamp was 415\",\n      \"anchor\": \"[L13-L15]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"other recognized organizations\",\n      \"predicate\": \"may borrow\",\n      \"predicate_hint\": \"borrowing policy\",\n      \"object\": \"according to article I of the constitution\",\n      \"quote\": \"other recognized organizations may borrow. the constitution says so in\\n  article I.\",\n      \"anchor\": \"[L19-L22]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"rentals to non-campus groups\",\n      \"predicate\": \"are priced at\",\n      \"predicate_hint\": \"rental fee\",\n      \"object\": \"40 per chair per event\",\n      \"quote\": \"rentals to non-campus groups are 40 per chair per event\",\n      \"anchor\": \"[L19-L22]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "b3455cb3399c44cc1550e941cb951413125dd54d",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Extract every durable institutional fact from the excerpt below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"claims\": [\n    {\n      \"subject\": \"a short noun phrase naming who or what the fac",
+      "role": "fast",
+      "text": "{\n  \"claims\": [\n    {\n      \"subject\": \"the appeal\",\n      \"predicate\": \"has been run the same way since\",\n      \"predicate_hint\": \"appeal procedure\",\n      \"object\": \"2017\",\n      \"quote\": \"we have run it since 2017\",\n      \"anchor\": \"[L7-L8]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the appeal net\",\n      \"predicate\": \"was in 2022\",\n      \"predicate_hint\": \"appeal revenue\",\n      \"object\": \"$1,250\",\n      \"quote\": \"the net was $1,250\",\n      \"anchor\": \"[L7-L8]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the restricted fund\",\n      \"predicate\": \"has been sitting since\",\n      \"predicate_hint\": \"fund status\",\n      \"object\": \"2019\",\n      \"quote\": \"it has been sitting since 2019\",\n      \"anchor\": \"[L12-L17]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    },\n    {\n      \"subject\": \"the dues change\",\n      \"predicate\": \"occurred in\",\n      \"predicate_hint\": \"dues history\",\n      \"object\": \"23-24\",\n      \"quote\": \"the dues change in 23-24\",\n      \"anchor\": \"[L12-L17]\",\n      \"valid_from\": null,\n      \"valid_until\": null\n    }\n  ]\n}"
+    },
+    {
+      "key": "277b3d7b4cde7b057bb06af18cb6e72572796c8e",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_9af30a6ab239caece2cd2f89adb30558\n  subject:   ent:dues\n  relation:  are\n  asserts:   15\n  period:    unbounded .. unbounded\n  quote:     \"dues still 15\"\n\nEXISTING CLAIMS ABO",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "5db6b5383d56f7189bf286257e5da8d9def2b7dd",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_a3c47f6c126e64f5f2095d96d7a53d16\n  subject:   ent:dues\n  relation:  increased to\n  asserts:   20\n  period:    unbounded .. unbounded\n  quote:     \"dues went to 20 this year\"",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "afd06c262ee0250f6334e601d096f8dbc3e0cea4",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_20cac01bc5ddcda42e4e852d8428de16\n  subject:   ent:dues\n  relation:  are\n  asserts:   25 a semester\n  period:    unbounded .. unbounded\n  quote:     \"dues are 25 a semester f",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "66fd51ef54ad468b5dadf5e85c0b3a12b46da43d",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_c822fb67b95564ce4a9360e6a4be8484\n  subject:   ent:dues\n  relation:  increase to\n  asserts:   40 for spring\n  period:    unbounded .. unbounded\n  quote:     \"dues go to 40 fo",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "a681e9bbea2c0a76e210daeadff65c19943e7964",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_b4ee5f98960c1e690322ac5a10f45232\n  subject:   ent:dues\n  relation:  are set at\n  asserts:   25 for fall, 40 for spring\n  period:    unbounded .. unbounded\n  quote:     \"25 f",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "d7bf94d337339d662385ed628dcd83bd15bbaa00",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_51696547824ac6d2b9742c2ca72685ca\n  subject:   ent:dues\n  relation:  are\n  asserts:   25 this semester\n  period:    unbounded .. unbounded\n  quote:     \"dues are still 25 thi",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "c1fdbb832fe58ae743a081804e7fffba51cfc72a",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_fb5bebb0566c6ea010a62d7bcbfb5146\n  subject:   ent:archive-box\n  relation:  is located in\n  asserts:   the office closet\n  period:    unbounded .. unbounded\n  quote:     \"arc",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "9c0e5f3a9320ec23462f1d7bb290124559e4bb87",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_f35bb79dd2eb5547a7fda30c49df0715\n  subject:   ent:dues\n  relation:  was set at\n  asserts:   40\n  period:    unbounded .. unbounded\n  quote:     \"40\"\n\nEXISTING CLAIMS ABOUT T",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "c91a5c6b258354c89bd2c80290d2f254274c1a4b",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_c6eddbab17420c0036f2fb1e1921aa0f\n  subject:   ent:dues\n  relation:  was set at\n  asserts:   25\n  period:    unbounded .. unbounded\n  quote:     \"25\"\n\nEXISTING CLAIMS ABOUT T",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": [\n    {\n      \"claim_id\": \"clm_f35bb79dd2eb5547a7fda30c49df0715\",\n      \"confidence\": 0.9,\n      \"rationale\": \"The new claim asserts dues were set at 25, which directly contradicts the claim that dues were set at 40 for the same unqualified period.\"\n    }\n  ]\n}"
+    },
+    {
+      "key": "dd055d6c178deb54e8dd0e8787586937c6e8ae23",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_3084988dfbf6f706cccaffad075c097c\n  subject:   ent:dues\n  relation:  was set at\n  asserts:   20\n  period:    unbounded .. unbounded\n  quote:     \"20\"\n\nEXISTING CLAIMS ABOUT T",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "25d9ce060d43c2ffd9baf7471ae5c334478a5e67",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_b4f8753a971d71e12d27bde434baf177\n  subject:   ent:the-treasurer\n  relation:  is authorized to disburse on a single signature\n  asserts:   up to one thousand dollars ($1,000)",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "6f864c64da35dc0224c945aef11d8ede8b77a5ff",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_f87a3cae6982d8df10b27f8c338764ed\n  subject:   ent:treasurer\n  relation:  is\n  asserts:   vell.ory\n  period:    unbounded .. unbounded\n  quote:     \"The Treasurer for fiscal ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "2dd953444fcf4bbe1d170b0b074de6d3ff4e469c",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_bd448aeca169a9e546a281cceec1ef7c\n  subject:   ent:treasurer\n  relation:  holds signing authority on the operating account\n  asserts:   vell.ory\n  period:    2023-07-01T00:00",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "4369d26351daf7b73289a7555c02b56b79f15df1",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_419b2c718dd6c807d30c7e085889d2b5\n  subject:   ent:assistant-treasurer\n  relation:  will collect dues\n  asserts:   at the door of each Lantern evening\n  period:    unbounded ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "2e692a03dff93c45a0e5d31978ac94b2e1de9b17",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_caa442abdfbffcdd7d4aa37a40804715\n  subject:   ent:assistant-treasurer\n  relation:  will deposit receipts with\n  asserts:   the Treasurer\n  period:    unbounded .. unbounded\n",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "0c57022504ae3c9b227a966dac36617e3ad3b6bb",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_472736e977fb9444e9e28324629fbce0\n  subject:   ent:dues\n  relation:  be set at\n  asserts:   twenty-five dollars ($25) per member per semester\n  period:    unbounded .. unboun",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "9fa732cba952ea092d82e206ee21c2928dfa1a42",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_518070dba7da792da645ee99b7393f04\n  subject:   ent:president\n  relation:  is\n  asserts:   quillon.b\n  period:    2023-07-01T00:00:00.000Z .. 2024-06-30T00:00:00.000Z\n  quote:",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "9b755cc1f23d898ad64f3c5f051bb0d69a7f18e8",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_f12ad5010a704d4dc7fbf85a43894ae7\n  subject:   ent:treasurer\n  relation:  is\n  asserts:   vell.ory\n  period:    2023-07-01T00:00:00.000Z .. 2024-06-30T00:00:00.000Z\n  quote: ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "bda93b06dbf265934255655102cab0ba665ec566",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_b78c12930bb310997289057ded6714aa\n  subject:   ent:assistant-treasurer\n  relation:  is\n  asserts:   kestrel9\n  period:    2023-07-01T00:00:00.000Z .. 2024-06-30T00:00:00.000Z",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "7cf24e0173f8a63147ab2cca89228ae2cd371026",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_de299f3c3957906703b8aa86731a7264\n  subject:   ent:secretary\n  relation:  is\n  asserts:   orinth.vay\n  period:    2023-07-01T00:00:00.000Z .. 2024-06-30T00:00:00.000Z\n  quote",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "d8e302677d14655f5f75a946fa15686a5546c3ff",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_2838b57154f515805f6665377fd7e2e7\n  subject:   ent:the-treasurer\n  relation:  is permitted to sign alone\n  asserts:   sign alone\n  period:    unbounded .. unbounded\n  quote: ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "202f35e43c6d40649be6e106c49cd3fed30700d1",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_24d5a9e7c965030c59dd890821f3464a\n  subject:   ent:dues\n  relation:  are increased to\n  asserts:   forty dollars ($40) per member per semester\n  period:    unbounded .. unbou",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "090b032edb8b7d2d0943993188ce11b6c261051d",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_0b33907ebc03d2e6faf49f625c0a9a84\n  subject:   ent:treasurer\n  relation:  is\n  asserts:   kestrel9\n  period:    unbounded .. unbounded\n  quote:     \"The Treasurer for fiscal ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "3e9c80c25b75e2cff7e18ee8260e20e2280276f6",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_86818ff844b823ae3fba898f067aafd5\n  subject:   ent:treasurer\n  relation:  holds signing authority on the operating account\n  asserts:   kestrel9\n  period:    2024-07-01T00:00",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "7c9221a2b0763dae1b8f304577782789d696f18c",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_40ce5e59689350dd7b188aa0199433d2\n  subject:   ent:dues\n  relation:  are set at\n  asserts:   forty dollars ($40) per member per semester\n  period:    unbounded .. unbounded\n ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "d89f47ea486204eba4b512a57aee43e6d59175c6",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_84da7c565b34d4a1b64d73f6902662a4\n  subject:   ent:president\n  relation:  is\n  asserts:   vell.ory\n  period:    2024-07-01T00:00:00.000Z .. 2025-06-30T00:00:00.000Z\n  quote: ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "b055b5964d89390e2253493cdeb7192c3b529b10",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_98f29c2a388c91465f3d199941802230\n  subject:   ent:treasurer\n  relation:  is\n  asserts:   kestrel9\n  period:    2024-07-01T00:00:00.000Z .. 2025-06-30T00:00:00.000Z\n  quote: ",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "480466ed2afe64b65c70b4503a48dee6c6c885cc",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_6a12f98ed871563dc64f408e27379428\n  subject:   ent:assistant-treasurer\n  relation:  is\n  asserts:   sable.w\n  period:    2024-07-01T00:00:00.000Z .. 2025-06-30T00:00:00.000Z\n",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "68071ce701f6354dc6114ca8eaf47a5b2bd872e9",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_35ee9e8e2316abe22934d58d7c3b2335\n  subject:   ent:equipment-steward\n  relation:  is\n  asserts:   sablewood\n  period:    2024-07-01T00:00:00.000Z .. 2025-06-30T00:00:00.000Z\n",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "26426fc723dcf72808ae5bb74a896c58d74bed9c",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_9b00d8312c485f850daed83805cb43c4\n  subject:   ent:dues\n  relation:  are\n  asserts:   40 a semester now\n  period:    unbounded .. unbounded\n  quote:     \"dues are 40 a semest",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "dce133af3804638be0934354547f8ca57450f213",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "NEW CLAIM\n  id:        clm_c4a8aeee42b500466c29ccb3705b0d57\n  subject:   ent:dues\n  relation:  were\n  asserts:   25 when i started\n  period:    unbounded .. unbounded\n  quote:     \"they were 25 when i",
+      "role": "reasoning",
+      "text": "{\n  \"contradictions\": []\n}"
+    },
+    {
+      "key": "0dfb0be7ddb5c9b1b62b2a21e0cf196acb2636a5",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "Subject: dues\nRelation: dues amount\nWhy the adjudicator flagged this: The new claim asserts dues were set at 25, which directly contradicts the claim that dues were set at 40 for the same unqualified ",
+      "role": "reasoning",
+      "text": "{\"question\": \"In the budget workbook on Sheet 1, cell B3 lists dues as $40 while cell B12 lists them as $25; could you clarify what amount members were actually charged in practice during this period?\", \"why_it_matters\": \"Accurate revenue figures are needed to reconcile the organization's past income and set baseline expectations for the next term.\"}"
+    },
+    {
+      "key": "258502ebc23af9ad29efe3c4752378d29979ea3f",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "Extract every judgment-shaped operating rule the person asserts in the turn below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"beliefs\": [\n    {\n      \"rule\": \"one imperative sentence statin",
+      "role": "reasoning",
+      "text": "{\n  \"beliefs\": []\n}"
+    },
+    {
+      "key": "e01b6ec398314463439cb93ac0c605a0579d31f7",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Original question: In the budget workbook on Sheet 1, cell B3 lists dues as $40 while cell B12 lists them as $25; could you clarify what amount members were actually charged in practice during this pe",
+      "role": "fast",
+      "text": "{\n  \"question\": \"That's helpful context, but could you clarify whether members were actually charged $40 or $25 for their dues during this period?\"\n}"
+    },
+    {
+      "key": "2f0562b24f9d2a53958a7b25ecd97663dddfb34e",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "Extract every judgment-shaped operating rule the person asserts in the turn below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"beliefs\": [\n    {\n      \"rule\": \"one imperative sentence statin",
+      "role": "reasoning",
+      "text": "{\n  \"beliefs\": [\n    {\n      \"rule\": \"Cite the source before stating any figure or number.\",\n      \"condition\": \"in every draft, whether internal or not\",\n      \"predicate_hint\": \"citation policy\",\n      \"quote\": \"Never state a number without naming where it came from first. Cite the source, then the figure \u2014 that applies to every draft, internal or not.\"\n    }\n  ]\n}"
+    },
+    {
+      "key": "249e3cba8dc2a16e01dc150d95c8c05f2515f409",
+      "model_id": "gemini-3.5-flash",
+      "prompt_preview": "Original question: In the budget workbook on Sheet 1, cell B3 lists dues as $40 while cell B12 lists them as $25; could you clarify what amount members were actually charged in practice during this pe",
+      "role": "fast",
+      "text": "{\n  \"question\": \"Could you clarify whether members were actually charged $40 or $25 in practice during this period?\"\n}"
+    },
+    {
+      "key": "e32e009529df0bea92f53da729c37b08ecf98876",
+      "model_id": "gemini-3.7-flash",
+      "prompt_preview": "Extract every judgment-shaped operating rule the person asserts in the turn below.\n\nReturn JSON only, matching this shape exactly:\n\n{\n  \"beliefs\": [\n    {\n      \"rule\": \"one imperative sentence statin",
+      "role": "reasoning",
+      "text": "{\n  \"beliefs\": []\n}"
+    }
+  ],
+  "note": "Recorded from live Vertex AI calls. Not hand-authored. Replayed by fixtures-driven demo runs so a judge can reproduce the system without credentials.",
+  "recorded_at": "2026-08-31T22:59:30+00:00",
+  "run_id": "rec-20260831T225930Z-d8cc53"
+}

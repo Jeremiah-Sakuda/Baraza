@@ -279,6 +279,60 @@ def diagnose(
 # ------------------------------------------------------------------- checking
 
 
+def register_session_sources(registry: SourceRegistry, events_path: Path) -> list[str]:
+    """Register every interview session in the log as a source of testimony.
+
+    Testimony is a source like any other: a belief's anchor is
+    ``interview:<session_id>#turn:t-N`` and must resolve to the exact turn text
+    it quotes. The registry for that resolution is the event log itself — the
+    session's turns are already durably recorded there, so no second registry
+    file could ever disagree with it. Before this existed the verifier called
+    every belief anchor unresolvable, which was the verifier's gap, not the
+    claims': the anchors pointed at real, logged turns (first cassette-backed
+    run, 2026-08-31).
+    """
+    import json as _json
+
+    from baraza.ingest.sources import Source, SourceFormat, SourceUnit
+
+    notes: list[str] = []
+    if not events_path.exists():
+        return notes
+
+    turns_by_session: dict[str, dict[str, tuple[str, int]]] = {}
+    for line in events_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        event = _json.loads(line)
+        if event.get("event_type") != "session.turn":
+            continue
+        turn = event.get("payload", {}).get("turn", {})
+        sid, tid = turn.get("session_id"), turn.get("turn_id")
+        if sid and tid:
+            turns_by_session.setdefault(sid, {})[f"turn:{tid}"] = (
+                turn.get("text", ""),
+                int(turn.get("occurred_at", 0)),
+            )
+
+    for sid, turns in sorted(turns_by_session.items()):
+        source = Source(
+            source_id=f"interview:{sid}",
+            path=events_path,
+            fmt=SourceFormat.MD,
+            checksum="",
+            observed_at=min(at for _, at in turns.values()),
+            title=f"session {sid}",
+            notes="testimony; units are session turns folded from the event log",
+        )
+        for locator, (text, at) in turns.items():
+            source.units[locator] = SourceUnit(
+                locator=locator, text=text, observed_at=at
+            )
+        registry.register(source)
+        notes.append(f"  interview:{sid[:28]:<28} ok  {len(turns):>4} turns  (from the event log)")
+    return notes
+
+
 def check_claims(
     registry: SourceRegistry, claims: Sequence[Claim]
 ) -> tuple[list[Failure], dict[str, int]]:
@@ -400,6 +454,10 @@ def main(argv: Sequence[str]) -> int:
 
     print()
     print(f"event log: {rel(log_path)}  ({len(claims)} claim(s))")
+
+    session_notes = register_session_sources(registry, log_path)
+    for note in session_notes:
+        print(note)
 
     failures, stats = check_claims(registry, claims)
     all_failures = integrity + failures

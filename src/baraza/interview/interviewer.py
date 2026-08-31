@@ -59,6 +59,7 @@ from baraza.reconcile.agenda import Agenda, AgendaItem
 from baraza.reconcile.detect import ContradictionDetector
 from baraza.schema.claim import Anchor, Claim, Provenance, Tier
 from baraza.schema.contradiction import Contradiction
+from baraza.schema.event import Event, EventType
 from baraza.schema.session import Session, Turn, TurnKind, TurnRole
 from baraza.schema.temporal import EpochMillis, to_epoch_millis
 from baraza.schema.visibility import Audience, Visibility, readable_by
@@ -785,6 +786,23 @@ class PartnerSession:
         )
 
         for claim in extraction.claims:
+            # Externalized before detection, exactly like the turn itself. A
+            # belief that lives only in this object's pool dies with the
+            # process, and the approval path folds the log, so a belief the
+            # log never saw can never be ratified — the first cassette-backed
+            # demo accepted a belief and then compiled a doctrine of zero
+            # rules because this append was the web service's private habit
+            # rather than the session's contract (2026-08-31). Blocked
+            # beliefs are appended too: the collision is adjudicated by the
+            # approval path, which can only adjudicate what the log holds.
+            self.session_store.store.append(
+                Event.create(
+                    event_type=EventType.CLAIM_ASSERTED,
+                    occurred_at=claim.observed_at,
+                    payload={"claim": claim.to_dict()},
+                    actor="partner-session",
+                )
+            )
             detection = self.detector.detect(
                 claim, list(self._pool.values()), aliases=self.aliases
             )

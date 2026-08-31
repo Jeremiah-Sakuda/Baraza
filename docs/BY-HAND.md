@@ -103,7 +103,7 @@ string `not yet measured`.
 ### R7 · Verify the trigger's execution history before quoting it
 
 The Scheduler 403 was root-caused to Scheduler's OAuth path and the fix is the
-`baraza-trigger` OIDC hop (`STOPPED-DEPLOY.md`). Before the video or any doc
+`baraza-trigger` OIDC hop (`docs/deploy-postmortem.md`). Before the video or any doc
 quotes a nightly-run count: check the execution history in the console, and
 remember `scheduler_nightly_runs_completed` stays `not yet measured` until a
 real scheduled run is counted. A manual run is never counted as a scheduled

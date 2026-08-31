@@ -131,13 +131,14 @@ with model responses replayed from **recorded cassettes** — real captured Vert
 responses replayed by prompt hash, never hand-authored text. If a cassette is
 missing, the offline client raises rather than inventing a response.
 
-> **Honest precondition:** until recorded cassettes are committed under
-> `fixtures/cassettes/`, `make demo`, `make demo-agenda` and `make demo-interview`
-> exit **2** before doing any work and say why. Recording them
-> (`python3 scripts/record_cassettes.py --yes`) runs once against live Vertex and
-> costs money, which makes it a supervised step. The status of every target is
-> observed and dated below; **[`docs/BUILD-LOG.md`](docs/BUILD-LOG.md) is the
-> authority on what has landed since.**
+> **The cassette in this tree is real.** `fixtures/cassettes/demo.json` was
+> recorded from live Vertex calls on 2026-08-31 (run
+> `rec-20260831T225930Z-d8cc53`) and the offline replay was then verified
+> byte-deterministic: two clean `make demo` runs produce identical event logs.
+> Re-recording (`python3 scripts/record_cassettes.py --yes`) runs against live
+> Vertex and costs money, which keeps it a supervised step. The status of every
+> target is observed and dated below; **[`docs/BUILD-LOG.md`](docs/BUILD-LOG.md)
+> is the authority on what has landed since.**
 
 Deployed:
 
@@ -153,27 +154,24 @@ make teardown    # removes everything bootstrap created; needs CONFIRM=--yes-des
 approval path promotes a claim. `make verify-models` resolves every pinned model
 ID against live Vertex and exits nonzero on any that does not.
 
-### Status — observed on this tree, 2026-08-31 (post-integration pass)
+### Status — observed on this tree, 2026-08-31 (post-recording)
 
 Each row is the exit code produced by running the command, not an inference.
-This snapshot was taken after the pivot's workstreams landed and were
-integrated; re-run any row before quoting it. `make gate` chains the
-compliance, lint, test, and verification targets; today it stops at
-`verify-anchors` for the same stated reason as the rows below — no cassettes,
-so no event log to verify against.
+Re-run any row before quoting it.
 
 | Command | Observed |
 |---|---|
 | `python3 scripts/compliance.py --no-prd` | **exit 0** — all four invariant lints green |
 | `make compliance` | **exit 0** — BAR-007 PRD audit plus the lints, green |
 | `make test` | **exit 0** — unit, property and integration suites pass; run it for the current count |
-| `make demo` / `demo-agenda` / `demo-interview` | **exit 2** — refuses to start: `fixtures/cassettes/` holds no recordings, and the offline client will not invent one |
-| `make verify-manifest` | **exit 2** — every plant present, zero behaviour observed: no event log exists yet |
-| `make verify-anchors` | **exit 2** — sources re-register from bytes on disk; no citations to verify until an ingest run happens |
-| `make adaptation-metric` | **red on purpose** (the scorer exits 1; `make` reports that as exit 2) — it names each missing input (the determinism replay and the battery outputs `make battery-run` must record) and the exact command that produces it, instead of printing a zero |
+| `make demo` | **exit 0** — the full offline loop replays from the committed cassette, and two clean runs produce **byte-identical** event logs |
+| `make verify-anchors` | **exit 0** — 97 of 97 anchors resolve and every quote is grounded, interview turns included: testimony anchors resolve against the event log itself |
+| `make verify-manifest` | **exit 2, and the number is the point** — 18 of 18 planted problems found, 12 of 17 behaviour probes observed, and each miss is **named in the output** (the live model declined the signing-authority adjudication in this recording; the stub prefilter dropped the authority-creep thread). A detector scored only on its hits cannot be trusted about its misses. |
+| `make adaptation-metric` | **exit 2, half green** — the doctrine determinism replay **passes 50 of 50** under shuffled order and permuted UTC offsets over a doctrine of 1 committed rule; the rule-compliance battery is still `not yet measured` because `make battery-run` has not recorded outputs, and the scorer says exactly that instead of printing a zero |
 
-A README that told you `make demo` works when it does not is the exact failure
-this project spends a compliance script preventing.
+Every measured figure above is also recorded with its run ID and date in
+[`docs/metrics.json`](docs/metrics.json); everything still unmeasured says so
+there in those words.
 
 ---
 
@@ -208,7 +206,7 @@ Cloud service. The full mapping with requirement IDs is in
 | **Vertex AI** | Every model call, through `src/baraza/llm.py`. Reasoning role: `gemini-3.7-flash`. Fast role: `gemini-3.5-flash`. Location: `global`. These three were **live-verified 2026-08-31** against project `baraza-2026` — the same resolution `make verify-models` performs — after the original pins turned out to name a model that does not exist in the catalog. That is why model IDs appear in this table and nowhere else in this file: the pins live in `src/baraza/schema/models.py`, everything resolves through `models.resolve(role)`, and `make compliance` fails the build on a literal written anywhere else in the source tree. |
 | **Agent Development Kit (ADK)** | `src/baraza/agents.py` builds the extractor, reconciler and interviewer as `google.adk.agents.LlmAgent` instances with per-agent tool isolation and transfer disabled. The extractor runs on the live ingestion path through an ADK `Runner`. The approver is deliberately not an agent and has no model. The offline replay path is direct by design, so a replay is never mis-narrated as a live agent loop. |
 | **Firestore** | The append-only event log. Create-only writes; `deploy/firestore.rules` rejects update and delete at the database level — **deployed and verified live** (`scripts/verify_append_only.sh`). |
-| **Cloud Run** | Three surfaces: the private session service (`src/baraza/interview/service.py`, reads as owner), the public dossier surface (`src/baraza/dossier/service.py` — a logged-out judge sees only claims committed **and** readable by `Audience.PUBLIC`), and `baraza-trigger` — the OIDC-guarded hop that lets Scheduler start the reconcile Job after the direct Scheduler→Jobs-API path 403'd (root cause and fix recorded in `STOPPED-DEPLOY.md`). Plus the ingestion and reconcile Cloud Run Jobs, retry-safe because event IDs are content hashes. |
+| **Cloud Run** | Three surfaces: the private session service (`src/baraza/interview/service.py`, reads as owner), the public dossier surface (`src/baraza/dossier/service.py` — a logged-out judge sees only claims committed **and** readable by `Audience.PUBLIC`), and `baraza-trigger` — the OIDC-guarded hop that lets Scheduler start the reconcile Job after the direct Scheduler→Jobs-API path 403'd (root cause and fix recorded in `docs/deploy-postmortem.md`). Plus the ingestion and reconcile Cloud Run Jobs, retry-safe because event IDs are content hashes. |
 | **Cloud Scheduler** | The scheduled initiation trigger. Every event a scheduled run appends is labelled `scheduled=True` and is never counted as organic activity, anywhere — including the video. |
 | **Artifact Registry, Cloud Build** | Container images for the Jobs and services, built and pushed by `make bootstrap` / `deploy/cloudbuild.yaml`. |
 

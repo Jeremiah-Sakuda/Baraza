@@ -229,7 +229,7 @@ offsets across the golden log and asserts identical output.
 
 Cloud Scheduler fires nightly through `baraza-trigger` — the OIDC-guarded hop
 adopted after the direct Scheduler→Jobs-API path 403'd (root cause and fix in
-`STOPPED-DEPLOY.md`; no scope was widened — the same service account does the
+`docs/deploy-postmortem.md`; no scope was widened — the same service account does the
 same thing, one hop later). The reconcile Job re-detects over claims written
 since its last recorded adjudication, regenerates the agenda from open
 contradictions and stale beliefs, appends a `session.proposed` event, and sends
@@ -317,5 +317,5 @@ above, as implemented in the tree at the time of writing (2026-08-31; all unit,
 property and integration tests green — run `make test` for the count, which is
 not transcribed here because a transcribed count is stale on the next commit).
 It is not a deployment report: the README's status table carries observed
-per-command exit codes, `STOPPED-DEPLOY.md` carries the dated deploy evidence,
+per-command exit codes, `docs/deploy-postmortem.md` carries the dated deploy evidence,
 and `docs/BUILD-LOG.md` is the authority on what has landed.

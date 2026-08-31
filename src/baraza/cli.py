@@ -46,6 +46,7 @@ from pathlib import Path
 from baraza.dossier.librarian import Librarian
 from baraza.fold.graph import GraphState, fold
 from baraza.fold.store import EventStore, JsonlEventStore, open_store
+from baraza.ingest.extract import USER_ENTITY_ID
 from baraza.ingest.pipeline import IngestionPipeline, IngestionReport, SourceSpec
 from baraza.ingest.readers import MissingReaderDependency
 from baraza.interview.approval import ApprovalFlow, ApprovalRequest, Decision
@@ -65,10 +66,9 @@ from baraza.reconcile.agenda import DEFAULT_AGENDA_SIZE, Agenda, AgendaGenerator
 from baraza.reconcile.detect import ContradictionDetector, DetectionResult
 from baraza.reconcile.ledger import DisputedLedger
 from baraza.schema import models
-from baraza.schema.claim import Claim
+from baraza.schema.claim import Claim, Provenance, Tier
 from baraza.schema.event import Event, EventType
 from baraza.schema.session import Session, TurnKind, TurnRole
-from baraza.schema.temporal import to_epoch_millis
 from baraza.schema.visibility import Audience, Visibility
 
 __all__ = ["main", "Console", "OnWriteReconciler", "load_corpus_manifest"]
@@ -429,7 +429,16 @@ def stage_ingest(
            "  (BAR-323 deferred drop excluded from the cold ingest)")
     )
 
-    reconciler = OnWriteReconciler(client=client, store=store)
+    # Offline runs replay recorded cassettes and must be byte-deterministic:
+    # the same clean clone, the same command, the same event log. The one
+    # wall-clock instant left in this path was the reconciler's transaction
+    # time, which made exactly one event differ between otherwise identical
+    # runs (observed 2026-08-31). Offline pins it to the replay epoch; live
+    # runs keep real time, because there the transaction instant is a fact.
+    from baraza.interview.replay import REPLAY_EPOCH_SECONDS
+
+    run_instant = int(REPLAY_EPOCH_SECONDS * 1000) if offline else None
+    reconciler = OnWriteReconciler(client=client, store=store, run_instant=run_instant)
     pipeline = IngestionPipeline(
         client=client,
         store=store,
@@ -711,6 +720,29 @@ def stage_approval(
 
     ledger_before = len(DisputedLedger(fold(store.read_all())).rows(audience))
 
+    # The extracted beliefs are ratified alongside the answers. Without this
+    # the demo's doctrine compiled to zero rules — the beliefs the session
+    # mined stayed pending forever, so the scorer's determinism replay was
+    # passing over an empty policy and the doctrine page had nothing to show
+    # (first cassette-backed run, 2026-08-31). Same demo-driver disclosure as
+    # above: in the product a person clicks these.
+    belief_requests: list[ApprovalRequest] = []
+    for claim in fold(store.read_all()).claims.values():
+        if (
+            claim.tier is Tier.PENDING
+            and claim.provenance is Provenance.INTERVIEW
+            and claim.session_id == session.session_id
+            and claim.subject_id == USER_ENTITY_ID
+        ):
+            belief_requests.append(
+                ApprovalRequest(
+                    claim=claim,
+                    decision=Decision.APPROVE,
+                    visibility=visibility,
+                    approver_id="demo-driver",
+                )
+            )
+
     requests: list[ApprovalRequest] = []
     resolved: set[str] = set()
 
@@ -723,9 +755,7 @@ def stage_approval(
     # it silently, and the dossier would show an empty epoch with nothing
     # having errored. Derive the instant from the session instead.
     last_turn_at = max((t.occurred_at for t in session.turns), default=0)
-    occurred_at = max(
-        to_epoch_millis(time.time(), field="approval.occurred_at"), last_turn_at + 1
-    )
+    occurred_at = last_turn_at + 1
 
     for turn in session.turns:
         if turn.role is not TurnRole.OFFICER:
@@ -778,7 +808,7 @@ def stage_approval(
         return 0
 
     result = ApprovalFlow(store).submit(
-        requests, occurred_at=occurred_at, session_id=session.session_id
+        requests + belief_requests, occurred_at=occurred_at, session_id=session.session_id
     )
     for line in result.describe():
         console.detail(line)

@@ -66,6 +66,12 @@ from baraza.schema.session import Turn
 from baraza.schema.temporal import to_iso
 from baraza.schema.visibility import Audience
 
+REPLAY_EPOCH_SECONDS = 1_788_460_800.0
+"""2026-09-03T00:00:00Z, as epoch seconds: the fixed instant every replay
+session opens at. Chosen once and never derived from the machine's clock, so a
+cassette recorded on one day replays byte-identically on any other."""
+
+
 __all__ = [
     "CannedTurn",
     "PartnerScript",
@@ -403,11 +409,23 @@ class PartnerReplayHarness:
         paced: bool = True,
         max_agent_turns: int = 200,
         sleeper: Callable[[float], None] = time.sleep,
-        clock: Callable[[], float] = time.time,
+        clock: Callable[[], float] | None = None,
         on_plan: Callable[[TurnPlan], None] | None = None,
         emit: Callable[[str], None] | None = None,
         on_turn: Callable[[str], None] | None = None,
     ):
+        # Replays are the deterministic surface: same script, same cassette,
+        # same bytes. A wall clock here made the session id differ on every
+        # run, which flowed into every turn anchor, every belief claim hash,
+        # and every detection prompt — so the first offline replay of a
+        # freshly recorded cassette missed on a prompt whose only difference
+        # was the timestamp inside it (2026-08-31). The default clock is
+        # therefore a fixed instant; PartnerSession's own +1ms nudge provides
+        # strict turn ordering from there. Live sessions never use this
+        # harness and keep real time.
+        if clock is None:
+            base = REPLAY_EPOCH_SECONDS
+            clock = lambda: base  # noqa: E731 - a constant, on purpose
         self._watch = _FailureWatchingClient(client)
         self.partner = PartnerSession(
             client=self._watch,

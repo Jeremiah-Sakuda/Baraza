@@ -538,3 +538,36 @@ floor, two site-packages path resolutions (`REPO = Path(__file__).parents[2]`
 is a checkout assumption a container breaks), and ADK constructing its own
 GenAI client from `GOOGLE_*` env nothing set. First live contact remains the
 cheapest audit this project has run.
+
+### 2026-08-31 (closing pass) — the measurements finally ran, and found four bugs
+
+An external evaluation put it plainly: the honesty discipline was being spent
+on disclosure instead of closing. Recording the cassettes closed most of the
+gap and, as first live contact always has in this project, surfaced defects no
+test had seen:
+
+1. **Thinking starvation.** Gemini 3.5+ counts reasoning tokens against
+   `max_output_tokens`; extraction calls returned the literal string `...`
+   after spending 7,314 thought tokens inside a 4,096 budget. Fix: headroom by
+   default, thinking disabled for small mechanical completions.
+2. **Wall clocks in the deterministic surface.** The replay harness opened
+   sessions at wall time, so the session id — and every anchor, claim hash and
+   detection prompt downstream — differed per run; the reconciler and the
+   approval stage each held one more. Replays now run on a fixed epoch and two
+   clean `make demo` runs are byte-identical.
+3. **Beliefs died with the process.** The partner session accepted beliefs
+   into an in-memory pool; only the web service appended them to the log. The
+   approval path folds the log, so the demo compiled a doctrine of zero rules.
+   Externalization is now the session's contract, not the caller's habit.
+4. **The verifier could not see testimony.** Belief anchors point at session
+   turns; the anchor verifier only knew corpus sources. It now registers every
+   session from the event log itself — the one registry that cannot disagree
+   with the turns.
+
+Measured and recorded in `docs/metrics.json` with run IDs: 18/18 plants,
+12/17 behaviour probes (misses named), 97/97 anchors grounded, 50/50
+determinism replays, 1 scheduled initiation. The battery remains honestly
+unmeasured. The signing-authority adjudication miss is the most interesting
+number in the set: the live model declined the flagship cross-document
+contradiction in this recording, and the manifest now proves the system can
+say so about itself.

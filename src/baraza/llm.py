@@ -270,7 +270,7 @@ class LLMClient(ABC):
         system: str = "",
         schema_name: str = "",
         temperature: float = 0.0,
-        max_output_tokens: int = 4096,
+        max_output_tokens: int = 16384,
     ) -> LLMResponse:
         """One request, one response."""
 
@@ -315,13 +315,36 @@ class VertexClient(LLMClient):
     @property
     def client(self):
         if self._client is None:
+            import os
+
             from google import genai
             from google.genai import types
+
+            # Supervised-session credential path. A workstation without
+            # Application Default Credentials can still run a recording or
+            # measurement session by minting a short-lived user token:
+            #
+            #   BARAZA_ACCESS_TOKEN="$(gcloud auth print-access-token)" \
+            #       python3 scripts/record_cassettes.py --yes
+            #
+            # This is the same mechanism that live-verified the model pins on
+            # 2026-08-31. It is deliberately never set in any deploy config:
+            # the deployed services authenticate as their service accounts, a
+            # user token expires within the hour, and an environment variable
+            # is easy to audit for. Absent the variable, behaviour is
+            # unchanged and the SDK falls back to ADC.
+            credentials = None
+            token = os.environ.get("BARAZA_ACCESS_TOKEN")
+            if token:
+                from google.oauth2.credentials import Credentials
+
+                credentials = Credentials(token=token)
 
             self._client = genai.Client(
                 vertexai=True,
                 project=self._project or models.project_id(),
                 location=self._location or models.location(),
+                credentials=credentials,
                 # Milliseconds, per the SDK. An unbounded request is how a
                 # wedged connection holds a Cloud Run execution open all night.
                 http_options=types.HttpOptions(
@@ -338,16 +361,29 @@ class VertexClient(LLMClient):
         system: str = "",
         schema_name: str = "",
         temperature: float = 0.0,
-        max_output_tokens: int = 4096,
+        max_output_tokens: int = 16384,
     ) -> LLMResponse:
         from google.genai import types
 
         model_id = models.resolve(role)
+        # Gemini 3.5+ counts reasoning tokens against max_output_tokens. First
+        # live recording session (2026-08-31): extraction calls returned the
+        # literal string "..." because the model spent 7,314 thought tokens
+        # inside a 4,096 budget and the JSON never arrived. Two-part policy:
+        # the default budget is high enough to think AND answer, and a caller
+        # asking for a small completion is asking for a mechanical one, so
+        # thinking is disabled rather than letting it silently eat the budget.
+        thinking = (
+            types.ThinkingConfig(thinking_budget=0)
+            if max_output_tokens < 2048
+            else None
+        )
         config = types.GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
             system_instruction=system or None,
             response_mime_type="application/json" if schema_name else None,
+            thinking_config=thinking,
         )
         started = time.perf_counter()
         result = self.retry.run(
@@ -492,7 +528,7 @@ class CassetteClient(LLMClient):
         system: str = "",
         schema_name: str = "",
         temperature: float = 0.0,
-        max_output_tokens: int = 4096,
+        max_output_tokens: int = 16384,
     ) -> LLMResponse:
         key = prompt_fingerprint(role=role, prompt=prompt, schema_name=schema_name)
         entry = self._lookup(key, role, prompt)

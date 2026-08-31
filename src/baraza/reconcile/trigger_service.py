@@ -117,7 +117,7 @@ def _run_job_via_rest() -> str:
     REST with a metadata-server token rather than a client library: the request
     is one POST, and this is byte-for-byte the call shape that was proven to
     start executions when made with this SA's token — keeping it identical
-    keeps the STOPPED-DEPLOY.md evidence applicable to this code path.
+    keeps the docs/deploy-postmortem.md evidence applicable to this code path.
     """
     project = os.environ["BARAZA_PROJECT_ID"]
     region = os.environ.get("BARAZA_JOB_REGION", "us-central1")

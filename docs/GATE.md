@@ -35,7 +35,7 @@ authority on what has landed since.
 | `make verify-anchors` | **exit 2** — no citations to verify until an ingest run happens |
 | `make adaptation-metric` | **red on purpose** (the scorer exits 1; `make` reports that as exit 2) — it names each missing input (determinism replay, battery outputs from `make battery-run`) and the command that produces it, rather than printing a zero |
 | Model pins | **live-verified 2026-08-31** against project `baraza-2026` (the resolution `make verify-models` performs); pins in `src/baraza/schema/models.py` only |
-| Deploy | Firestore append-only rules deployed and verified; Cloud Run Jobs and services live; the Scheduler 403 is root-caused with the `baraza-trigger` OIDC-hop fix recorded in `STOPPED-DEPLOY.md`; `scheduler_nightly_runs_completed` remains `not yet measured` |
+| Deploy | Firestore append-only rules deployed and verified; Cloud Run Jobs and services live; the Scheduler 403 is root-caused with the `baraza-trigger` OIDC-hop fix recorded in `docs/deploy-postmortem.md`; `scheduler_nightly_runs_completed` remains `not yet measured` |
 
 The pivot (`docs/pivot/DECISION-dossier.md`, PRD §6) adds workstream
 obligations — scheduled initiation, turn-level belief extraction, the doctrine

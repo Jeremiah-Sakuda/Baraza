@@ -1,7 +1,7 @@
 {
   "_readme": [
-    "Every number Baraza displays anywhere — README, architecture diagram, video",
-    "overlay, console output — traces to an entry in this file, to a live query, or",
+    "Every number Baraza displays anywhere \u2014 README, architecture diagram, video",
+    "overlay, console output \u2014 traces to an entry in this file, to a live query, or",
     "to a script a judge can run. Nothing is typed into a document by hand.",
     "",
     "An entry is either the literal string \"not yet measured\" or an object carrying",
@@ -10,52 +10,127 @@
     "file exists to prevent.",
     "",
     "provenance is one of:",
-    "  \"measured in-process\"  — timed inside a local process; NOT a deployed number",
-    "  \"measured deployed\"    — timed against the deployed Cloud Run surface",
-    "  \"not yet measured\"     — no run has produced this yet",
+    "  \"measured in-process\"  \u2014 timed inside a local process; NOT a deployed number",
+    "  \"measured deployed\"    \u2014 timed against the deployed Cloud Run surface",
+    "  \"not yet measured\"     \u2014 no run has produced this yet",
     "",
     "scripts/compliance.py fails the build on any entry that breaks this shape."
   ],
-
   "metrics": {
     "gemma_prefilter_survival_rate": "not yet measured",
     "gemma_prefilter_mode_used": "not yet measured",
-
     "entity_scorecard_precision": "not yet measured",
     "entity_scorecard_recall": "not yet measured",
-
-    "corpus_documents_ingested": "not yet measured",
+    "corpus_documents_ingested": {
+      "value": 10,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo"
+    },
     "corpus_chunks_total": "not yet measured",
-    "claims_extracted_total": "not yet measured",
-    "claims_committed_total": "not yet measured",
-
-    "contradictions_detected_total": "not yet measured",
-    "contradiction_precision_on_manifest": "not yet measured",
-    "manifest_landmines_found": "not yet measured",
-
-    "agenda_items_generated": "not yet measured",
-    "agenda_items_retired_after_interview": "not yet measured",
-
+    "claims_extracted_total": {
+      "value": 97,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo"
+    },
+    "claims_committed_total": {
+      "value": 4,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo"
+    },
+    "contradictions_detected_total": {
+      "value": 1,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo",
+      "note": "the corpus dues contradiction; the signing-authority plant was adjudicated 'no' by the live model in this recording and is counted as a named behaviour miss"
+    },
+    "contradiction_precision_on_manifest": {
+      "value": "12 of 17 behaviour probes observed; misses named in the output",
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make verify-manifest",
+      "note": "L-15 delegated to BAR-323 (needs two real nights); the misses are printed, not hidden"
+    },
+    "manifest_landmines_found": {
+      "value": "18 of 18",
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make verify-manifest"
+    },
+    "agenda_items_generated": {
+      "value": 1,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo"
+    },
+    "agenda_items_retired_after_interview": {
+      "value": 1,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo"
+    },
     "interview_first_token_ms_replay": "not yet measured",
-
-    "doctrine_determinism_replays": "not yet measured",
-    "doctrine_determinism_result": "not yet measured",
-    "doctrine_committed_rules_total": "not yet measured",
+    "doctrine_determinism_replays": {
+      "value": 50,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make adaptation-metric"
+    },
+    "doctrine_determinism_result": {
+      "value": "PASS \u2014 50 of 50 replays under shuffled order and permuted UTC offsets reproduced the fingerprint",
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make adaptation-metric"
+    },
+    "doctrine_committed_rules_total": {
+      "value": 1,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make adaptation-metric"
+    },
     "doctrine_rule_compliance_pre_commit": "not yet measured",
     "doctrine_rule_compliance_post_commit": "not yet measured",
     "doctrine_rule_compliance_post_retraction": "not yet measured",
     "battery_cases_total": "not yet measured",
-
-    "beliefs_committed_total": "not yet measured",
+    "beliefs_committed_total": {
+      "value": 1,
+      "provenance": "measured in-process",
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "command": "make demo"
+    },
     "beliefs_rejected_total": "not yet measured",
     "contradictions_on_user_detected": "not yet measured",
     "dogfooding_sessions_total": "not yet measured",
-    "initiated_sessions_scheduled_count": "not yet measured",
-
+    "initiated_sessions_scheduled_count": {
+      "value": 1,
+      "provenance": "measured deployed",
+      "run_id": "baraza-reconcile execution via baraza-reconcile-nightly, 2026-08-31",
+      "date": "2026-08-31",
+      "note": "counts Cloud Scheduler-triggered runs only; manual executions are labelled manual and excluded"
+    },
     "scheduler_stub_to_real_replacement_date": "not yet measured",
-
     "kill_survival_resumed_turn_index": "not yet measured"
   },
-
-  "runs": []
+  "runs": [
+    {
+      "run_id": "rec-20260831T225930Z-d8cc53",
+      "date": "2026-08-31",
+      "what": "first cassette recording + offline replay verification: live Vertex calls recorded, then make demo / verify-anchors / verify-manifest / adaptation-metric run against the committed cassette"
+    }
+  ]
 }
