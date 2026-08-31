@@ -74,8 +74,17 @@ from baraza.schema.visibility import Audience, Visibility
 __all__ = ["main", "Console", "OnWriteReconciler", "load_corpus_manifest"]
 
 REPO = Path(__file__).resolve().parents[2]
-OUT_DIR = REPO / "out"
-DEFAULT_CORPUS_MANIFEST = REPO / "fixtures" / "corpus" / "corpus-index.json"
+"""The repo root — in a checkout. In a container the package is pip-installed
+and this resolves into site-packages, which is read-only and holds no fixtures;
+the first live ingest-Job run failed on both counts. Everything derived from it
+therefore falls back to the working directory, which is where the Dockerfiles
+put ``fixtures/`` and the only place a Job may write."""
+
+_IN_CHECKOUT = (REPO / "pyproject.toml").exists()
+OUT_DIR = Path(os.environ.get("BARAZA_OUT_DIR", REPO / "out" if _IN_CHECKOUT else Path.cwd() / "out"))
+DEFAULT_CORPUS_MANIFEST = (
+    (REPO if _IN_CHECKOUT else Path.cwd()) / "fixtures" / "corpus" / "corpus-index.json"
+)
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -220,12 +229,17 @@ def load_corpus_manifest(path: Path, *, include_deferred: bool = False) -> list[
                 f"missing {', '.join(missing)}"
             )
 
-        # Manifest paths are repo-relative. A manifest-relative path is accepted
-        # as a fallback so a hand-written manifest elsewhere still works, but the
-        # error below names both candidates rather than guessing which was meant.
+        # Manifest paths are repo-relative. REPO is derived from __file__, which
+        # is right in a checkout and wrong in a container: pip installs this
+        # module under /opt/baraza/lib/..., while the Dockerfile copies fixtures
+        # into the WORKDIR. First live ingest-Job run failed exactly there, so
+        # the working directory is a candidate too. A manifest-relative path
+        # stays as the final fallback; the error names every candidate rather
+        # than guessing which was meant.
         declared = Path(entry["path"])
         candidates = [
             declared if declared.is_absolute() else REPO / declared,
+            Path.cwd() / declared,
             path.parent / declared,
         ]
         source_path = next((c for c in candidates if c.exists()), None)

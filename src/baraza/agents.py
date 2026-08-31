@@ -333,6 +333,37 @@ def agent_run_config(*, max_turns: int = MAX_AGENT_TURNS) -> RunConfig:
     return RunConfig(max_llm_calls=max_turns)
 
 
+def _prime_adk_backend() -> None:
+    """Point ADK's internal GenAI client at Vertex, from the one pin source.
+
+    ADK constructs its own ``google.genai`` client and selects the backend from
+    ``GOOGLE_GENAI_USE_VERTEXAI`` / ``GOOGLE_CLOUD_PROJECT`` /
+    ``GOOGLE_CLOUD_LOCATION`` — environment this codebase otherwise never sets,
+    because every direct call goes through ``baraza.llm`` with explicit
+    arguments. Unset, ADK falls back to the Gemini API and demands an API key;
+    the first live agent run failed exactly there (ValueError from
+    ``google.genai._api_client`` on every chunk, 2026-08-31).
+
+    ``setdefault``, not assignment: an operator who deliberately exported a
+    different backend keeps it, and tests that inject a fake model never reach
+    a client construction at all. Values come from ``schema.models`` so the
+    project/location story stays single-sourced.
+    """
+    import os
+
+    try:
+        project = models.project_id()
+    except RuntimeError:
+        # No project configured. A fake-model test run never constructs a
+        # client and needs none; a real run fails at client construction with
+        # ADK's own clear message. Priming half an environment here would turn
+        # that loud failure into a confusing one.
+        return
+    os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "TRUE")
+    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", project)
+    os.environ.setdefault("GOOGLE_CLOUD_LOCATION", models.location())
+
+
 def open_runner(agent: LlmAgent, *, app_name: str = "baraza") -> InMemoryRunner:
     """A Runner for a batch agent invocation.
 
@@ -343,6 +374,7 @@ def open_runner(agent: LlmAgent, *, app_name: str = "baraza") -> InMemoryRunner:
     disagree with the first.
     """
     _requires_adk()
+    _prime_adk_backend()
     return InMemoryRunner(agent=agent, app_name=app_name)
 
 

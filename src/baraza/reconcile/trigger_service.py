@@ -1,18 +1,29 @@
-"""The Scheduler-facing trigger service — the fix for the 403 in STOPPED-DEPLOY.md.
+"""The Scheduler-facing trigger service, and the true story of the 403.
 
-Cloud Scheduler could not call the Cloud Run Jobs Admin API directly: with every
-documented grant in place and verified, admin-activity audit logs showed no
-request authenticated as ``baraza-reconcile`` ever reaching the Run API from
-Scheduler, while the same SA's own token against the identical URL started an
-execution (2026-08-15, re-verified 2026-08-31 — see STOPPED-DEPLOY.md). The
-failure was in Scheduler's OAuth token path for that target, not in any IAM
-binding, so no further grant could fix it and none was made.
+For sixteen days Cloud Scheduler's calls to the Jobs Admin API failed
+PERMISSION_DENIED while every documented grant sat verified in place. The
+working theory — recorded in STOPPED-DEPLOY.md at the time and now **disproven** (full postmortem: docs/deploy-postmortem.md) — blamed
+Scheduler's OAuth token minting. The real cause only surfaced when this
+service's own call failed the same way and returned a response body Scheduler
+never showed:
 
-This service is the architectural replacement: Scheduler → OIDC → Cloud Run
-*service* is the well-trodden path, and the service — deployed as
-``baraza-trigger``, running as the ``baraza-reconcile`` SA — calls ``jobs.run``
-itself with its runtime identity, which is exactly the call already proven to
-work. No scope widens: the same SA does the same thing, one hop later.
+    Permission 'run.jobs.runWithOverrides' denied
+
+``:run`` with a ``containerOverrides`` body requires ``run.jobs.runWithOverrides``
+— a *separate* permission from ``run.jobs.run``, and one ``roles/run.invoker``
+does not carry. Every diagnostic that "proved the SA could run the Job" had
+posted an **empty body**, exercising only ``run.jobs.run``; every real trigger
+carried the override. The theory survived because the control and the
+experiment differed in the one byte that mattered. Bootstrap now grants the
+custom role ``baraza_job_trigger`` (exactly ``run.jobs.run`` +
+``run.jobs.runWithOverrides``) on the Job.
+
+The hop is retained on its merits rather than as a workaround: with this
+service as the only caller granted the override permission, the
+``cloud-scheduler`` label is hard-coded server-side below — a constant no
+Scheduler-config edit can spoof — which is a stronger honesty guarantee than a
+mutable message body. Scheduler → OIDC → service is also the auth path whose
+failures produce readable logs, which is what broke the case.
 
 **This path is the only writer of ``BARAZA_RUN_TRIGGER=cloud-scheduler``.** The
 container override below is a constant; nothing a caller sends can change it,

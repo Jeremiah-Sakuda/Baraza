@@ -616,6 +616,40 @@ run "trigger invoker" gcloud run services add-iam-policy-binding "$SVC_TRIGGER" 
   --project="$PROJECT" --quiet
 ok "run.invoker on ${SVC_TRIGGER} scoped to ${SA_RECONCILE} (the Scheduler OIDC identity)"
 
+# run.jobs.runWithOverrides — the permission whose absence was the sixteen-day
+# Scheduler 403 (see STOPPED-DEPLOY.md). :run with a containerOverrides body
+# needs it, roles/run.invoker does not carry it, and the override is what makes
+# a run honestly labelled `scheduled`. Granted as a two-permission custom role
+# on the Job, to the SA the trigger service runs as, and to nothing else.
+if gcloud iam roles describe baraza_job_trigger --project="$PROJECT" >/dev/null 2>&1; then
+  skip "role baraza_job_trigger already exists"
+else
+  run "role baraza_job_trigger" gcloud iam roles create baraza_job_trigger \
+    --project="$PROJECT" \
+    --title="Baraza job trigger" \
+    --description="Start reconcile-Job executions with the scheduled-trigger container override. Exactly run.jobs.run + run.jobs.runWithOverrides." \
+    --permissions="run.jobs.run,run.jobs.runWithOverrides" --quiet
+  ok "role baraza_job_trigger created"
+fi
+run "job trigger binding" gcloud run jobs add-iam-policy-binding "$JOB_RECONCILE" \
+  --region="$REGION" --project="$PROJECT" \
+  --member="serviceAccount:${EMAIL_RECONCILE}" \
+  --role="projects/${PROJECT}/roles/baraza_job_trigger" --quiet
+ok "baraza_job_trigger bound on ${JOB_RECONCILE} to ${SA_RECONCILE}"
+
+# The nightly invitation prints the session URL, which is only knowable after
+# the interview service exists — and the Job deploys before the services. Set
+# it here, after both exist, so a fresh project gets it on the first full run
+# rather than on the second. (First live run printed "not configured".)
+INTERVIEW_URL_FOR_JOB="$(gcloud run services describe "$SVC_INTERVIEW" \
+  --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)"
+if [ -n "$INTERVIEW_URL_FOR_JOB" ]; then
+  run "job session url" gcloud run jobs update "$JOB_RECONCILE" \
+    --region="$REGION" --project="$PROJECT" \
+    --update-env-vars="BARAZA_SESSION_URL=${INTERVIEW_URL_FOR_JOB}" --quiet
+  ok "BARAZA_SESSION_URL -> ${INTERVIEW_URL_FOR_JOB}"
+fi
+
 TRIGGER_URL="$(gcloud run services describe "$SVC_TRIGGER" \
   --region="$REGION" --project="$PROJECT" --format='value(status.url)' 2>/dev/null || true)"
 [ -n "$TRIGGER_URL" ] \

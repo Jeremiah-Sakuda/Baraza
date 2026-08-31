@@ -522,3 +522,19 @@ ledger answers 409 with a stated reason, `run_stub` labels
 replay harness refuses to write a transcript for a run that made zero model
 calls. Rule-compliance and determinism numbers remain not yet measured — the
 scorer names the producer commands and stays red on purpose.
+
+### 2026-08-31 (late) — the sixteen-day 403 was a one-byte diagnostic error
+
+Full postmortem in `docs/deploy-postmortem.md`. The compressed finding: the
+control experiment that "proved the service account could start the Job" posted
+an empty body, so it exercised `run.jobs.run` while every real trigger needed
+`run.jobs.runWithOverrides`. Two weeks of otherwise careful elimination
+inherited that flaw. A verification that does not reproduce the failing input
+byte-for-byte verifies a different claim — the verbatim-quote rule of this
+codebase, applied to debugging.
+
+Deploying also surfaced four defects invisible from the code: the gen2 memory
+floor, two site-packages path resolutions (`REPO = Path(__file__).parents[2]`
+is a checkout assumption a container breaks), and ADK constructing its own
+GenAI client from `GOOGLE_*` env nothing set. First live contact remains the
+cheapest audit this project has run.

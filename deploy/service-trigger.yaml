@@ -83,7 +83,10 @@ spec:
           resources:
             limits:
               cpu: "1"
-              memory: 256Mi
+              # 512Mi is the gen2 execution-environment floor — 256Mi was rejected
+              # at deploy time (first live contact, 2026-08-31). The service is a
+              # single-endpoint hop; it will never approach even this floor.
+              memory: 512Mi
           startupProbe:
             httpGet:
               path: /healthz

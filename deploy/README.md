@@ -61,7 +61,7 @@ BARAZA_PROJECT_ID=your-project make teardown CONFIRM=--yes-destroy
 | Cloud Run service | `baraza-successor` — `allUsers` invoker; the hosted demo URL |
 | Cloud Scheduler | `baraza-reconcile-nightly` — 03:17 UTC daily |
 | Service accounts | `baraza-ingest`, `baraza-reconcile`, `baraza-interview`, `baraza-successor` |
-| Custom IAM roles | `baraza_log_appender`, `baraza_log_reader` |
+| Custom IAM roles | `baraza_log_appender`, `baraza_log_reader`, `baraza_job_trigger` |
 
 ---
 
@@ -72,6 +72,7 @@ Read the **Enforced by** column carefully. It is the honest part.
 | Capability | ingest | reconcile | interview | successor | Enforced by |
 |---|---|---|---|---|---|
 | Create an event (`datastore.entities.create`) | yes | yes | yes | **no** | **IAM** — `baraza_log_appender` vs `baraza_log_reader` |
+| Start a Job execution **with the scheduled override** (`run.jobs.runWithOverrides`) | no | **yes** (via `baraza_job_trigger`, bound on the Job only) | no | no | **IAM** — the permission whose absence was the sixteen-day Scheduler 403; `roles/run.invoker` does not include it |
 | Read events (`get`, `list`) | yes | yes | yes | yes | IAM |
 | **Update an event** | **no** | **no** | **no** | **no** | **IAM** — the permission is in neither custom role |
 | **Delete an event** | **no** | **no** | **no** | **no** | **IAM** — the permission is in neither custom role |
